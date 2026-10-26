@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using LedHub.ViewModels;
 
@@ -17,6 +18,26 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         Closed += (_, _) => viewModel.Shutdown();
         SourceInitialized += (_, _) => UseDarkTitleBar();
+    }
+
+    private void LedCell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        PaintLed(sender);
+    }
+
+    /// <summary>
+    /// Закрашивает светодиоды, по которым ведут мышью с зажатой кнопкой.
+    /// </summary>
+    private void LedCell_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+            PaintLed(sender);
+    }
+
+    private void PaintLed(object sender)
+    {
+        if (sender is FrameworkElement { DataContext: LedCellViewModel cell } && DataContext is MainViewModel viewModel)
+            viewModel.PaintLedCommand.Execute(cell);
     }
 
     [DllImport("dwmapi.dll")]

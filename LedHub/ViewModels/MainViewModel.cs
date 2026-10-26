@@ -15,13 +15,22 @@ public sealed partial class MainViewModel : ObservableObject
         "#00FF00", "#00FFFF", "#0000FF", "#8B00FF", "#FF00FF"
     };
 
+    private static readonly EffectOption[] EffectOptions =
+    {
+        new(EffectKind.Rainbow, "Радуга"),
+        new(EffectKind.Breathing, "Дыхание"),
+        new(EffectKind.Strobe, "Стробоскоп"),
+        new(EffectKind.Candle, "Свеча")
+    };
+
     private readonly DiscoveryService _discovery = new();
+    private readonly EffectRunner _effects = new();
     private readonly AppConfig _config = ConfigStore.Load();
 
     // Пока панель загружает значения выбранной цели, изменения слайдеров не отправляются на ленты
     private bool _isLoadingTarget;
-    private bool _isColorPending;
-    private bool _isSendingColor;
+    private Func<Task>? _pendingSend;
+    private bool _isSending;
 
     [ObservableProperty]
     private string _statusText = "Нажмите «Найти устройства», чтобы начать поиск";
@@ -55,6 +64,14 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private TuyaDpScheme _tuyaDpScheme;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEffectRunning))]
+    [NotifyPropertyChangedFor(nameof(EffectStatus))]
+    private string? _activeEffect;
+
+    [ObservableProperty]
+    private double _effectSpeed = 1;
 
     public MainViewModel()
     {
@@ -101,13 +118,28 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool IsTuyaSelected => SelectedTuya != null;
 
+    public IReadOnlyList<EffectOption> Effects => EffectOptions;
+
+    public bool IsEffectRunning => ActiveEffect != null;
+
+    public string EffectStatus => ActiveEffect != null ? $"Сейчас: {ActiveEffect}" : "Эффект не запущен";
+
+    /// <summary>
+    /// Светодиоды выбранной адресной ленты; пусто, если выбрана группа или обычная лента.
+    /// </summary>
+    public ObservableCollection<LedCellViewModel> LedCells { get; } = new();
+
+    public bool IsAddressableSelected => LedCells.Count > 0;
+
     private RgbColor CurrentColor => new((byte)Red, (byte)Green, (byte)Blue);
 
     /// <summary>
-    /// Закрывает соединения со всеми лентами.
+    /// Останавливает эффекты и закрывает соединения со всеми лентами.
     /// </summary>
     public void Shutdown()
     {
+        _effects.Stop();
+
         foreach (var item in Devices)
             item.Device.Dispose();
     }
@@ -143,10 +175,68 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task TurnOnAsync() => SendToTargetAsync(d => d.SetPowerAsync(true));
+    private async Task TurnOnAsync()
+    {
+        StopEffect();
+        await SendToTargetAsync(d => d.SetPowerAsync(true));
+
+        // Включение восстанавливает сплошной цвет — возвращаем ленте её раскраску по светодиодам
+        if (Target is DeviceItemViewModel { IsPixelMode: true } item)
+            await SendPixelsAsync(item);
+    }
 
     [RelayCommand]
-    private Task TurnOffAsync() => SendToTargetAsync(d => d.SetPowerAsync(false));
+    private async Task TurnOffAsync()
+    {
+        StopEffect();
+        await SendToTargetAsync(d => d.SetPowerAsync(false));
+    }
+
+    [RelayCommand]
+    private void StartEffect(EffectOption effect)
+    {
+        if (Target == null)
+            return;
+
+        var devices = Target.GetDevices().Where(d => d.IsReady).ToList();
+        if (devices.Count == 0)
+        {
+            StatusText = $"{Target.Title}: нет доступных устройств";
+            return;
+        }
+
+        _effects.Start(effect.Kind, devices, () => new EffectSettings(CurrentColor, Brightness, EffectSpeed));
+        ActiveEffect = effect.Title;
+        StatusText = $"{Target.Title}: эффект «{effect.Title}»";
+    }
+
+    [RelayCommand]
+    private void StopEffect()
+    {
+        _effects.Stop();
+        ActiveEffect = null;
+    }
+
+    [RelayCommand]
+    private void PaintLed(LedCellViewModel cell)
+    {
+        if (Target is not DeviceItemViewModel { LedColors: { } colors } item)
+            return;
+
+        StopEffect();
+
+        cell.Color = CurrentColor;
+        colors[cell.Index] = CurrentColor;
+        item.IsPixelMode = true;
+
+        _ = QueueSendAsync(() => SendPixelsAsync(item));
+    }
+
+    [RelayCommand]
+    private void FillLeds() => SetAllLeds(CurrentColor, isPixelMode: false);
+
+    [RelayCommand]
+    private void ClearLeds() => SetAllLeds(new RgbColor(0, 0, 0), isPixelMode: true);
 
     [RelayCommand]
     private void ApplyPreset(string hex)
@@ -271,6 +361,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnTargetChanged(ILightTarget? value)
     {
+        // Эффект привязан к выбранной ленте или группе, поэтому смена выбора его останавливает
+        StopEffect();
+        LoadLedCells();
+
         OnPropertyChanged(nameof(HasTarget));
 
         if (value == null)
@@ -306,6 +400,17 @@ public sealed partial class MainViewModel : ObservableObject
         Target.Color = CurrentColor;
         Target.Brightness = Brightness;
 
+        // Во время эффекта цвет и яркость читаются эффектом на каждом кадре
+        if (IsEffectRunning)
+            return;
+
+        // В режиме светодиодов круг выбирает цвет кисти, а яркость применяется ко всей раскраске
+        if (Target is DeviceItemViewModel { IsPixelMode: true } pixelItem)
+        {
+            _ = QueueSendAsync(() => SendPixelsAsync(pixelItem));
+            return;
+        }
+
         // Участники группы запоминают цвет группы, чтобы при выборе по отдельности панель показывала актуальное
         if (Target is GroupItemViewModel group)
         {
@@ -313,39 +418,108 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 device.Color = CurrentColor;
                 device.Brightness = Brightness;
+                FillLedColors(device, CurrentColor);
             }
         }
+        else if (Target is DeviceItemViewModel item)
+        {
+            FillLedColors(item, CurrentColor);
 
-        _ = PushColorAsync();
+            foreach (var cell in LedCells)
+                cell.Color = CurrentColor;
+        }
+
+        var color = CurrentColor;
+        var brightness = Brightness;
+
+        _ = QueueSendAsync(() => SendToTargetAsync(d => d.SetColorAsync(color, brightness)));
     }
 
     /// <summary>
-    /// Отправляет цвет на ленты, не накапливая очередь: пока идёт отправка, слайдер может сдвинуться
-    /// много раз, но после неё уйдёт только последнее значение.
+    /// Отправляет на ленты без накопления очереди: пока идёт отправка, слайдер может сдвинуться
+    /// много раз, но после неё уйдёт только последнее изменение.
     /// </summary>
-    private async Task PushColorAsync()
+    private async Task QueueSendAsync(Func<Task> send)
     {
-        _isColorPending = true;
-        if (_isSendingColor)
+        _pendingSend = send;
+        if (_isSending)
             return;
 
-        _isSendingColor = true;
+        _isSending = true;
         try
         {
-            while (_isColorPending)
+            while (_pendingSend != null)
             {
-                _isColorPending = false;
+                var next = _pendingSend;
+                _pendingSend = null;
 
-                var color = CurrentColor;
-                var brightness = Brightness;
-
-                await SendToTargetAsync(d => d.SetColorAsync(color, brightness));
+                await next();
             }
         }
         finally
         {
-            _isSendingColor = false;
+            _isSending = false;
         }
+    }
+
+    private async Task SendPixelsAsync(DeviceItemViewModel item)
+    {
+        if (item.Strip == null || item.LedColors == null)
+            return;
+
+        var colors = item.LedColors.ToArray();
+
+        try
+        {
+            await item.Strip.SetLedColorsAsync(colors, item.Brightness);
+            StatusText = $"{item.Title}: готово";
+        }
+        catch (Exception e)
+        {
+            StatusText = $"{item.Title}: {e.Message}";
+        }
+    }
+
+    private void SetAllLeds(RgbColor color, bool isPixelMode)
+    {
+        if (Target is not DeviceItemViewModel { LedColors: { } colors } item)
+            return;
+
+        StopEffect();
+
+        Array.Fill(colors, color);
+        foreach (var cell in LedCells)
+            cell.Color = color;
+
+        item.IsPixelMode = isPixelMode;
+
+        _ = QueueSendAsync(() => SendPixelsAsync(item));
+    }
+
+    /// <summary>
+    /// Запоминает, что лента залита одним цветом.
+    /// </summary>
+    private static void FillLedColors(DeviceItemViewModel item, RgbColor color)
+    {
+        if (item.LedColors != null)
+            Array.Fill(item.LedColors, color);
+
+        item.IsPixelMode = false;
+    }
+
+    private void LoadLedCells()
+    {
+        LedCells.Clear();
+
+        if (Target is DeviceItemViewModel { Strip: { } strip } item)
+        {
+            item.LedColors ??= Enumerable.Repeat(item.Color, strip.LedCount).ToArray();
+
+            for (var i = 0; i < item.LedColors.Length; i++)
+                LedCells.Add(new LedCellViewModel(i, item.LedColors[i]));
+        }
+
+        OnPropertyChanged(nameof(IsAddressableSelected));
     }
 
     private async Task SendToTargetAsync(Func<LedDevice, Task> action)

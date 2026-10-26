@@ -2,6 +2,7 @@ using LedHub.Core;
 using LedHub.Protocols.Ble;
 using LedHub.Protocols.Govee;
 using LedHub.Protocols.MagicHome;
+using LedHub.Protocols.Robobloq;
 using LedHub.Protocols.Serial;
 using LedHub.Protocols.Tuya;
 
@@ -23,7 +24,8 @@ public sealed class DiscoveryService
         new MagicHomeDiscoverer(),
         new GoveeDiscoverer(),
         new TuyaDiscoverer(),
-        new SerialDiscoverer()
+        new SerialDiscoverer(),
+        new RobobloqDiscoverer()
     };
 
     public async Task<DiscoveryResult> DiscoverAllAsync(CancellationToken ct)

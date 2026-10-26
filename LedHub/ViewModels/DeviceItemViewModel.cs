@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using LedHub.Core;
 using LedHub.Protocols.Ble;
+using LedHub.Protocols.Robobloq;
 using LedHub.Protocols.Serial;
 
 namespace LedHub.ViewModels;
@@ -37,13 +38,28 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     public string Icon => Device switch
     {
         BleLedDevice => "",
-        SerialLedDevice => "",
+        SerialLedDevice or RobobloqDevice => "",
         _ => ""
     };
 
     public RgbColor Color { get; set; } = RgbColor.White;
 
     public int Brightness { get; set; } = 100;
+
+    /// <summary>
+    /// Лента как адресная, если она умеет задавать цвет каждого светодиода; иначе null.
+    /// </summary>
+    public IAddressableLedDevice? Strip => Device is IAddressableLedDevice { LedCount: > 0 } strip ? strip : null;
+
+    /// <summary>
+    /// Последние цвета светодиодов из редактора; null, пока лентой не управляли по светодиодам.
+    /// </summary>
+    public RgbColor[]? LedColors { get; set; }
+
+    /// <summary>
+    /// Лента показывает разные цвета на светодиодах: смена цвета на круге задаёт кисть, а не заливку.
+    /// </summary>
+    public bool IsPixelMode { get; set; }
 
     public IReadOnlyList<LedDevice> GetDevices() => new[] { Device };
 

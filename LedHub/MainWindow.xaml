@@ -296,6 +296,83 @@
                     </Grid>
                 </Border>
 
+                <!-- Эффекты рассчитывает приложение, поэтому они работают на любых лентах и синхронно в группе -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,14">
+                            <Button DockPanel.Dock="Right" Command="{Binding StopEffectCommand}" Style="{StaticResource DangerButton}" Padding="12,7"
+                                    Visibility="{Binding IsEffectRunning, Converter={StaticResource BoolToVisibility}}" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE71A;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Остановить"/>
+                                </StackPanel>
+                            </Button>
+                            <StackPanel>
+                                <TextBlock Text="Эффекты" Style="{StaticResource CardTitle}" Margin="0"/>
+                                <TextBlock Text="{Binding EffectStatus}" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <ItemsControl ItemsSource="{Binding Effects}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Title}" Margin="0,0,8,8" Padding="16,8"
+                                            Command="{Binding DataContext.StartEffectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <DockPanel Margin="0,8,0,6">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding EffectSpeed, StringFormat='{}{0:0.0}×'}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Скорость" Style="{StaticResource Hint}"/>
+                        </DockPanel>
+                        <Slider Minimum="0.2" Maximum="3" Value="{Binding EffectSpeed}"/>
+
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                   Text="Эффекты работают, пока приложение открыто. Цвет и яркость можно менять на ходу; на адресных лентах радуга бежит по светодиодам."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Цвет каждого светодиода — только для адресных лент -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                        Visibility="{Binding IsAddressableSelected, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,14">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="Залить всю ленту" Command="{Binding FillLedsCommand}" Padding="12,7"/>
+                                <Button Content="Погасить все" Command="{Binding ClearLedsCommand}" Style="{StaticResource GhostButton}" Padding="12,7" Margin="6,0,0,0"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Светодиоды" Style="{StaticResource CardTitle}" Margin="0"/>
+                                <TextBlock Text="Нажмите или проведите мышью по светодиодам, чтобы закрасить их текущим цветом"
+                                           Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <ItemsControl ItemsSource="{Binding LedCells}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="22" Height="22" CornerRadius="6" Margin="0,0,5,5" Cursor="Hand"
+                                            Background="{Binding Hex}" ToolTip="{Binding Title}"
+                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                            MouseLeftButtonDown="LedCell_MouseLeftButtonDown" MouseEnter="LedCell_MouseEnter"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
                 <!-- Состав выбранной группы -->
                 <Border Style="{StaticResource Card}" Margin="0,16,0,0"
                         Visibility="{Binding IsGroupSelected, Converter={StaticResource BoolToVisibility}}">

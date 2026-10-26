@@ -11,6 +11,7 @@ public sealed class SerialDiscoverer : IDeviceDiscoverer
 {
     private const int BaudRate = 115200;
     private const string HandshakePrefix = "LEDHUB ";
+    private const string LedCountPrefix = "LEDS ";
     private const int PingAttempts = 3;
 
     // Большинство Arduino перезагружаются при открытии порта — ждём, пока стартует прошивка
@@ -52,7 +53,7 @@ public sealed class SerialDiscoverer : IDeviceDiscoverer
 
                 var name = TryReadHandshake(port);
                 if (name != null)
-                    return new SerialLedDevice(port, name);
+                    return new SerialLedDevice(port, name, TryReadLedCount(port));
             }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or TimeoutException or InvalidOperationException)
@@ -66,6 +67,24 @@ public sealed class SerialDiscoverer : IDeviceDiscoverer
 
     private static string? TryReadHandshake(SerialPort port)
     {
+        return TryReadReply(port, HandshakePrefix);
+    }
+
+    /// <summary>
+    /// Спрашивает у прошивки число светодиодов; старая прошивка без команды COUNT не ответит, тогда 0.
+    /// </summary>
+    private static int TryReadLedCount(SerialPort port)
+    {
+        port.DiscardInBuffer();
+        port.WriteLine("COUNT");
+
+        var reply = TryReadReply(port, LedCountPrefix);
+
+        return int.TryParse(reply, out var count) && count > 0 ? count : 0;
+    }
+
+    private static string? TryReadReply(SerialPort port, string prefix)
+    {
         var deadline = DateTime.UtcNow + HandshakeTimeout;
 
         while (DateTime.UtcNow < deadline)
@@ -74,8 +93,8 @@ public sealed class SerialDiscoverer : IDeviceDiscoverer
             {
                 var line = port.ReadLine().Trim();
 
-                if (line.StartsWith(HandshakePrefix, StringComparison.Ordinal))
-                    return line[HandshakePrefix.Length..].Trim();
+                if (line.StartsWith(prefix, StringComparison.Ordinal))
+                    return line[prefix.Length..].Trim();
             }
             catch (TimeoutException)
             {
