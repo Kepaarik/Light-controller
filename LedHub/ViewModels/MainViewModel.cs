@@ -192,7 +192,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string HexSendHint => (Target as DeviceItemViewModel)?.Strip != null
         ? "Рисунок сразу отправляется на ленту: светодиоды идут по порядку номеров шестигранников, внутри — центр и затем по часовой стрелке от верхнего."
-        : "Команда, которой этот контроллер красит отдельные светодиоды, пока неизвестна, поэтому рисунок — макет: он сохраняется, но на стену не уходит. Цветовой круг слева при этом красит все шестигранники целиком.";
+        : "Команда, которой этот контроллер красит отдельные светодиоды, пока неизвестна, поэтому рисунок — макет: он сохраняется, но на стену не уходит.";
 
     public string HexModeHint => HexEditMode switch
     {
@@ -727,9 +727,8 @@ public sealed partial class MainViewModel : ObservableObject
         if (IsEffectRunning)
             return;
 
-        // В редакторах светодиодов и формы круг выбирает цвет кисти, а не заливает ленту.
-        // Ленты, которым рисунок не отправить (MELK), при этом красятся целиком, чтобы стена откликалась
-        if (IsPaintTabSelected && !isBrightnessOnly && Target is DeviceItemViewModel { Strip: not null })
+        // В редакторах светодиодов и формы круг выбирает цвет кисти, а не заливает ленту
+        if (IsPaintTabSelected && !isBrightnessOnly)
             return;
 
         if (Target is DeviceItemViewModel { Strip: not null } stripItem)
