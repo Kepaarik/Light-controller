@@ -52,6 +52,11 @@ public sealed class BleLedDevice : LedDevice, IHardwareEffectsDevice
 
     public IReadOnlyList<HardwareEffect> HardwareEffects => _model?.Effects ?? Array.Empty<HardwareEffect>();
 
+    /// <summary>
+    /// Название известной модели контроллера (например, MELK-OA21); null для прочих.
+    /// </summary>
+    public string? ModelName => _model?.Name;
+
     public override string Address => string.Join(":", Enumerable.Range(0, 6).Reverse().Select(i => ((_device.BluetoothAddress >> (i * 8)) & 0xFF).ToString("X2")));
 
     public override Task SetPowerAsync(bool isOn, CancellationToken ct = default)

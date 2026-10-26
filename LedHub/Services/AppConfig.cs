@@ -1,3 +1,4 @@
+using LedHub.Core;
 using LedHub.Protocols.Tuya;
 
 namespace LedHub.Services;
@@ -18,6 +19,36 @@ public sealed class AppConfig
     /// Имена, которые пользователь дал устройствам, по идентификатору устройства.
     /// </summary>
     public Dictionary<string, string> DeviceNames { get; set; } = new();
+
+    /// <summary>
+    /// Раскладки из шестигранников по идентификатору устройства.
+    /// </summary>
+    public Dictionary<string, HexLayoutConfig> HexLayouts { get; set; } = new();
+}
+
+/// <summary>
+/// Форма, собранная из шестигранников; порядок ячеек — порядок шестигранников в цепочке.
+/// </summary>
+public sealed class HexLayoutConfig
+{
+    public List<HexCellConfig> Cells { get; set; } = new();
+}
+
+/// <summary>
+/// Шестигранник на сетке в осевых координатах (Q, R) и цвета его светодиодов.
+/// </summary>
+public sealed class HexCellConfig
+{
+    public const int LedCount = 7;
+
+    public int Q { get; set; }
+
+    public int R { get; set; }
+
+    /// <summary>
+    /// Центральный светодиод, затем шесть вокруг по часовой стрелке, начиная с верхнего.
+    /// </summary>
+    public RgbColor[] Leds { get; set; } = new RgbColor[LedCount];
 }
 
 public sealed class GroupConfig

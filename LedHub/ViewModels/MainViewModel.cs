@@ -17,6 +17,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private const int ColorTab = 0;
     private const int LedsTab = 2;
+    private const int ShapeTab = 3;
 
     private static readonly int[] BrightnessPresetValues = { 10, 25, 50, 75, 100 };
 
@@ -91,13 +92,32 @@ public sealed partial class MainViewModel : ObservableObject
     private int _hardwareEffectSpeed = 50;
 
     /// <summary>
-    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — светодиоды, 3 — настройки.
+    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — светодиоды, 3 — форма, 4 — настройки.
     /// </summary>
     [ObservableProperty]
     private int _selectedTabIndex;
 
     [ObservableProperty]
     private string _renameText = "";
+
+    /// <summary>
+    /// Форма из шестигранников выбранной ленты; null, если ленте форма не подходит.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HexSummary))]
+    private HexLayoutConfig? _hexLayout;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShapeMode))]
+    [NotifyPropertyChangedFor(nameof(IsPaintLedMode))]
+    [NotifyPropertyChangedFor(nameof(IsPaintHexMode))]
+    private HexEditMode _hexEditMode;
+
+    /// <summary>
+    /// Увеличивается при правках формы из приложения, чтобы холст перерисовался.
+    /// </summary>
+    [ObservableProperty]
+    private int _hexLayoutVersion;
 
     public MainViewModel()
     {
@@ -156,7 +176,50 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool HasHardwareEffects => HardwareEffects.Count > 0;
 
-    private bool IsLedsTabSelected => SelectedTabIndex == LedsTab;
+    public bool SupportsHexLayout => Target is DeviceItemViewModel { SupportsHexLayout: true };
+
+    public string HexSummary => HexLayout == null
+        ? ""
+        : $"Шестигранников: {HexLayout.Cells.Count} · светодиодов: {HexLayout.Cells.Count * HexCellConfig.LedCount}";
+
+    public string HexSendHint => (Target as DeviceItemViewModel)?.Strip != null
+        ? "Рисунок сразу отправляется на ленту: светодиоды идут по порядку номеров шестигранников, внутри — центр и затем по часовой стрелке от верхнего."
+        : "Пока это макет: команда, которой этот контроллер красит отдельные светодиоды, неизвестна. Рисунок сохраняется и начнёт отправляться, когда команда будет добавлена.";
+
+    public bool IsShapeMode
+    {
+        get => HexEditMode == HexEditMode.Shape;
+        set
+        {
+            if (value)
+                HexEditMode = HexEditMode.Shape;
+        }
+    }
+
+    public bool IsPaintLedMode
+    {
+        get => HexEditMode == HexEditMode.PaintLed;
+        set
+        {
+            if (value)
+                HexEditMode = HexEditMode.PaintLed;
+        }
+    }
+
+    public bool IsPaintHexMode
+    {
+        get => HexEditMode == HexEditMode.PaintHex;
+        set
+        {
+            if (value)
+                HexEditMode = HexEditMode.PaintHex;
+        }
+    }
+
+    /// <summary>
+    /// Открыта вкладка, где цветовой круг выбирает кисть, а не заливает ленту.
+    /// </summary>
+    private bool IsPaintTabSelected => SelectedTabIndex is LedsTab or ShapeTab;
 
     public bool IsEffectRunning => ActiveEffect != null;
 
@@ -331,6 +394,50 @@ public sealed partial class MainViewModel : ObservableObject
         StatusText = "Название сохранено";
     }
 
+    /// <summary>
+    /// Холст сообщил о правке формы: обновляем сводку, сохраняем завершённые правки и отправляем рисунок.
+    /// </summary>
+    [RelayCommand]
+    private void HexLayoutChanged(bool isFinished)
+    {
+        OnPropertyChanged(nameof(HexSummary));
+
+        if (isFinished)
+            ConfigStore.Save(_config);
+
+        if (Target is DeviceItemViewModel { Strip: not null } item)
+        {
+            StopEffect();
+            _ = QueueSendAsync(() => SendHexLayoutAsync(item));
+        }
+    }
+
+    [RelayCommand]
+    private void FillHexLayout()
+    {
+        if (HexLayout == null)
+            return;
+
+        foreach (var cell in HexLayout.Cells)
+            Array.Fill(cell.Leds, CurrentColor);
+
+        HexLayoutVersion++;
+        HexLayoutChanged(true);
+    }
+
+    [RelayCommand]
+    private void ClearHexLayout()
+    {
+        if (HexLayout == null)
+            return;
+
+        HexLayout.Cells.Clear();
+        HexEditMode = HexEditMode.Shape;
+
+        HexLayoutVersion++;
+        HexLayoutChanged(true);
+    }
+
     [RelayCommand]
     private void PaintLed(LedCellViewModel cell)
     {
@@ -479,9 +586,14 @@ public sealed partial class MainViewModel : ObservableObject
         StopEffect();
         LoadLedCells();
 
-        // Вкладки светодиодов нет у обычных лент и групп
-        if (SelectedTabIndex == LedsTab && !IsAddressableSelected)
+        HexLayout = LoadHexLayout(value);
+
+        // Вкладки светодиодов и формы есть не у всех лент и не у групп
+        if (SelectedTabIndex == LedsTab && !IsAddressableSelected || SelectedTabIndex == ShapeTab && HexLayout == null)
             SelectedTabIndex = ColorTab;
+
+        OnPropertyChanged(nameof(SupportsHexLayout));
+        OnPropertyChanged(nameof(HexSendHint));
 
         SelectedHardwareEffect = HardwareEffects.FirstOrDefault();
         RenameText = value switch
@@ -532,12 +644,12 @@ public sealed partial class MainViewModel : ObservableObject
         if (IsEffectRunning)
             return;
 
+        // В редакторах светодиодов и формы круг выбирает цвет кисти, а не заливает ленту
+        if (IsPaintTabSelected && !isBrightnessOnly)
+            return;
+
         if (Target is DeviceItemViewModel { Strip: not null } stripItem)
         {
-            // В редакторе светодиодов круг выбирает цвет кисти, а не заливает ленту
-            if (IsLedsTabSelected && !isBrightnessOnly)
-                return;
-
             // Яркость применяется ко всей раскраске, не стирая её
             if (stripItem.IsPixelMode && isBrightnessOnly)
             {
@@ -613,6 +725,50 @@ public sealed partial class MainViewModel : ObservableObject
         {
             StatusText = $"{item.Title}: {e.Message}";
         }
+    }
+
+    /// <summary>
+    /// Отправляет рисунок формы на адресную ленту: шестигранники по порядку, по 7 светодиодов в каждом.
+    /// </summary>
+    private async Task SendHexLayoutAsync(DeviceItemViewModel item)
+    {
+        if (item.Strip == null || HexLayout == null)
+            return;
+
+        var colors = HexLayout.Cells
+            .SelectMany(c => c.Leds)
+            .Concat(Enumerable.Repeat(new RgbColor(0, 0, 0), item.Strip.LedCount))
+            .Take(item.Strip.LedCount)
+            .ToList();
+
+        item.IsPixelMode = true;
+
+        try
+        {
+            await item.Strip.SetLedColorsAsync(colors, item.Brightness);
+            StatusText = $"{item.Title}: рисунок отправлен";
+        }
+        catch (Exception e)
+        {
+            StatusText = $"{item.Title}: {e.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Достаёт сохранённую форму ленты или заводит пустую; null, если ленте форма не подходит.
+    /// </summary>
+    private HexLayoutConfig? LoadHexLayout(ILightTarget? target)
+    {
+        if (target is not DeviceItemViewModel { SupportsHexLayout: true } item)
+            return null;
+
+        if (!_config.HexLayouts.TryGetValue(item.Id, out var layout))
+        {
+            layout = new HexLayoutConfig();
+            _config.HexLayouts[item.Id] = layout;
+        }
+
+        return layout;
     }
 
     private void SetAllLeds(RgbColor color, bool isPixelMode)
