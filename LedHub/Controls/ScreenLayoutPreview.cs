@@ -7,7 +7,7 @@ using LedHub.Services;
 namespace LedHub.Controls;
 
 /// <summary>
-/// Схема ленты вокруг монитора: точки светодиодов окрашены радугой от начала ленты к концу,
+/// Схема ленты вокруг монитора в его пропорциях: точки светодиодов окрашены радугой от начала ленты к концу,
 /// первый светодиод крупнее и подписан «1».
 /// </summary>
 public sealed class ScreenLayoutPreview : FrameworkElement
@@ -27,7 +27,12 @@ public sealed class ScreenLayoutPreview : FrameworkElement
         nameof(Version), typeof(int), typeof(ScreenLayoutPreview),
         new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    private const double Aspect = 16.0 / 9;
+    /// <summary>
+    /// Отношение ширины монитора к высоте так, как он стоит на самом деле.
+    /// </summary>
+    public static readonly DependencyProperty AspectProperty = DependencyProperty.Register(
+        nameof(Aspect), typeof(double), typeof(ScreenLayoutPreview),
+        new FrameworkPropertyMetadata(16.0 / 9, FrameworkPropertyMetadataOptions.AffectsRender));
 
     // Поле вокруг нарисованного экрана под точки светодиодов
     private const double EdgeSpace = 22;
@@ -54,6 +59,12 @@ public sealed class ScreenLayoutPreview : FrameworkElement
         set => SetValue(VersionProperty, value);
     }
 
+    public double Aspect
+    {
+        get => (double)GetValue(AspectProperty);
+        set => SetValue(AspectProperty, value);
+    }
+
     protected override void OnRender(DrawingContext dc)
     {
         if (Layout == null || LedCount <= 0)
@@ -64,8 +75,11 @@ public sealed class ScreenLayoutPreview : FrameworkElement
         var height = width / Aspect;
         var screen = new Rect((ActualWidth - width) / 2, (ActualHeight - height) / 2, width, height);
 
+        // Схема показывает раскладку с той стороны, с какой её описали
+        var label = Layout.IsViewedFromBack ? "монитор, вид сзади" : "монитор, вид спереди";
+
         dc.DrawRoundedRectangle(ScreenFill, ScreenPen, screen, 8, 8);
-        DrawText(dc, "экран, вид спереди", new Point(screen.X + screen.Width / 2, screen.Y + screen.Height / 2), 12, MutedText);
+        DrawText(dc, label, new Point(screen.X + screen.Width / 2, screen.Y + screen.Height / 2), 12, MutedText);
 
         var points = ScreenLayoutMath.Build(Layout, LedCount, Aspect);
         var dotRadius = Math.Clamp(Math.Min(width, height) / 70, 2, 5);

@@ -81,7 +81,7 @@ public sealed class MusicSource : ILightSource, IDisposable
         _hue = (_hue + 0.4) % 360;
     }
 
-    public RgbColor RenderSolid()
+    public RgbColor RenderSolid(LedDevice device)
     {
         switch (_mode)
         {

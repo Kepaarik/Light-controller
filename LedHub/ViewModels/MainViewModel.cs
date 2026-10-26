@@ -16,8 +16,8 @@ public sealed partial class MainViewModel : ObservableObject
     };
 
     private const int ColorTab = 0;
-    private const int LedsTab = 4;
-    private const int ShapeTab = 5;
+    private const int LedsTab = 3;
+    private const int ShapeTab = 4;
 
     private const int MaxRecentColors = 10;
 
@@ -40,6 +40,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     private readonly DiscoveryService _discovery = new();
     private readonly EffectRunner _effects = new();
+
+    // Подсветка мониторов работает отдельно от эффектов выбранной ленты: выбор другой ленты её не останавливает
+    private readonly EffectRunner _monitorSync = new();
 
     // Снимки формы до каждой правки — для отмены
     private readonly Stack<List<HexCellConfig>> _hexUndo = new();
@@ -108,7 +111,7 @@ public sealed partial class MainViewModel : ObservableObject
     private int _hardwareEffectSpeed = 50;
 
     /// <summary>
-    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — музыка, 3 — экран, 4 — светодиоды, 5 — форма, 6 — настройки.
+    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — музыка, 3 — светодиоды, 4 — форма, 5 — настройки.
     /// </summary>
     [ObservableProperty]
     private int _selectedTabIndex;
@@ -144,18 +147,23 @@ public sealed partial class MainViewModel : ObservableObject
     private string _newSceneName = "";
 
     /// <summary>
-    /// Раскладка выбранной адресной ленты вокруг монитора; null для обычных лент и групп.
+    /// Открыта страница подсветки мониторов вместо управления лентой или группой.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasScreenLayout))]
-    [NotifyPropertyChangedFor(nameof(ScreenLayoutSummary))]
-    private ScreenLayoutConfig? _screenLayout;
+    [NotifyPropertyChangedFor(nameof(IsEmptyStateVisible))]
+    private bool _isMonitorPageOpen;
+
+    [ObservableProperty]
+    private bool _isMonitorSyncRunning;
+
+    [ObservableProperty]
+    private string _monitorSyncStatus = "Подсветка мониторов выключена";
 
     /// <summary>
-    /// Увеличивается при правках раскладки, чтобы схема перерисовалась.
+    /// Яркость подсветки мониторов — своя, независимая от яркости выбранной ленты.
     /// </summary>
     [ObservableProperty]
-    private int _screenLayoutVersion;
+    private int _monitorBrightness = 100;
 
     /// <summary>
     /// Чувствительность к музыке с компьютера: 1 — обычная, больше — ярче на тихих местах.
@@ -202,35 +210,17 @@ public sealed partial class MainViewModel : ObservableObject
         new(MusicMode.RainbowBeat, "Радуга по битам", "Цвет перескакивает по радуге на каждом ударе")
     };
 
-    public IReadOnlyList<CornerOption> CornerOptions { get; } = new CornerOption[]
+    public IReadOnlyList<RotationOption> RotationOptions { get; } = new RotationOption[]
     {
-        new(ScreenCorner.BottomRight, "Снизу справа"),
-        new(ScreenCorner.TopRight, "Сверху справа"),
-        new(ScreenCorner.TopLeft, "Сверху слева"),
-        new(ScreenCorner.BottomLeft, "Снизу слева")
+        new(MonitorRotation.None, "Как в Windows"),
+        new(MonitorRotation.Clockwise90, "Повёрнут по часовой (90°)"),
+        new(MonitorRotation.Upside180, "Вверх ногами (180°)"),
+        new(MonitorRotation.CounterClockwise270, "Повёрнут против часовой (270°)")
     };
 
-    public bool HasScreenLayout => ScreenLayout != null;
+    public ObservableCollection<MonitorItemViewModel> Monitors { get; } = new();
 
-    /// <summary>
-    /// Число светодиодов выбранной адресной ленты; 0, если выбрана обычная лента или группа.
-    /// </summary>
-    public int StripLedCount => (Target as DeviceItemViewModel)?.Strip?.LedCount ?? 0;
-
-    public string ScreenLayoutSummary
-    {
-        get
-        {
-            if (ScreenLayout == null || StripLedCount == 0)
-                return "";
-
-            var used = ScreenLayoutMath.Build(ScreenLayout, StripLedCount, 16.0 / 9).Count(p => p != null);
-
-            return used == StripLedCount
-                ? $"Светодиодов на ленте: {StripLedCount}, все разложены по краям"
-                : $"Светодиодов на ленте: {StripLedCount}, разложено по краям: {used} — остальные будут погашены";
-        }
-    }
+    public bool IsEmptyStateVisible => !HasTarget && !IsMonitorPageOpen;
 
     public ObservableCollection<string> RecentColors { get; } = new();
 
@@ -372,6 +362,7 @@ public sealed partial class MainViewModel : ObservableObject
     public void Shutdown()
     {
         _effects.Stop();
+        _monitorSync.Stop();
 
         foreach (var item in Devices)
             item.Device.Dispose();
@@ -384,6 +375,7 @@ public sealed partial class MainViewModel : ObservableObject
         Target = null;
         SelectedDevice = null;
         SelectedGroup = null;
+        StopMonitorSync();
         Shutdown();
         Devices.Clear();
 
@@ -418,6 +410,10 @@ public sealed partial class MainViewModel : ObservableObject
 
         foreach (var group in Groups)
             group.Refresh();
+
+        // Карточки мониторов ссылаются на ленты — после поиска связываем их с новыми
+        if (IsMonitorPageOpen)
+            RefreshMonitors();
 
         StatusText = result.Errors.Count == 0
             ? $"Найдено устройств: {Devices.Count}"
@@ -469,19 +465,65 @@ public sealed partial class MainViewModel : ObservableObject
             option.IsActive = option == effect;
     }
 
+    /// <summary>
+    /// Открывает страницу подсветки мониторов; выбранная лента или группа при этом сбрасывается.
+    /// </summary>
     [RelayCommand]
-    private void StartScreenSync()
+    private void OpenMonitorPage()
     {
+        Target = null;
+        SelectedDevice = null;
+        SelectedGroup = null;
+
+        RefreshMonitors();
+        IsMonitorPageOpen = true;
+    }
+
+    [RelayCommand]
+    private void ClearMonitorDevice(MonitorItemViewModel monitor)
+    {
+        monitor.Device = null;
+    }
+
+    /// <summary>
+    /// Запускает подсветку всех мониторов, к которым привязаны ленты.
+    /// </summary>
+    [RelayCommand]
+    private void StartMonitorSync()
+    {
+        // Одна лента может быть выбрана у нескольких мониторов — берём первый по порядку
+        var bindings = Monitors
+            .Where(m => m.Device is { Device.IsReady: true })
+            .GroupBy(m => m.Device!.Device)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        if (bindings.Count == 0)
+        {
+            MonitorSyncStatus = "Выберите ленту хотя бы для одного монитора";
+            return;
+        }
+
         try
         {
-            var source = new ScreenSource(device => GetScreenLayout(device.Id));
-            if (!StartLightSource(source, "Подсветка под экран"))
-                source.Dispose();
+            var source = new MonitorSyncSource(device => bindings.TryGetValue(device, out var monitor) ? monitor.Binding : null);
+            _monitorSync.Start(source, bindings.Keys.ToList(), () => new EffectSettings(RgbColor.White, MonitorBrightness, 1));
         }
         catch (Exception e)
         {
-            StatusText = $"Не удалось захватить экран: {e.Message}";
+            MonitorSyncStatus = $"Не удалось захватить экран: {e.Message}";
+            return;
         }
+
+        IsMonitorSyncRunning = true;
+        MonitorSyncStatus = $"Подсветка работает: мониторов — {bindings.Values.Distinct().Count()}, лент — {bindings.Count}";
+    }
+
+    [RelayCommand]
+    private void StopMonitorSync()
+    {
+        _monitorSync.Stop();
+        IsMonitorSyncRunning = false;
+        MonitorSyncStatus = "Подсветка мониторов выключена";
     }
 
     [RelayCommand]
@@ -919,11 +961,11 @@ public sealed partial class MainViewModel : ObservableObject
         StopEffect();
         LoadLedCells();
 
-        HexLayout = LoadHexLayout(value);
-        ScreenLayout = value is DeviceItemViewModel { Strip: not null } addressable ? GetScreenLayout(addressable.Id) : null;
-        OnPropertyChanged(nameof(StripLedCount));
-        OnPropertyChanged(nameof(ScreenLayoutSummary));
+        // Выбор ленты или группы закрывает страницу мониторов
+        if (value != null)
+            IsMonitorPageOpen = false;
 
+        HexLayout = LoadHexLayout(value);
         _hexUndo.Clear();
         UndoHexCommand.NotifyCanExecuteChanged();
 
@@ -953,6 +995,7 @@ public sealed partial class MainViewModel : ObservableObject
         };
 
         OnPropertyChanged(nameof(HasTarget));
+        OnPropertyChanged(nameof(IsEmptyStateVisible));
         OnPropertyChanged(nameof(HardwareEffects));
         OnPropertyChanged(nameof(HasHardwareEffects));
 
@@ -978,25 +1021,6 @@ public sealed partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(PreviewHex));
         OnPropertyChanged(nameof(SelectedColor));
-    }
-
-    partial void OnScreenLayoutChanged(ScreenLayoutConfig? oldValue, ScreenLayoutConfig? newValue)
-    {
-        if (oldValue != null)
-            oldValue.PropertyChanged -= OnScreenLayoutEdited;
-
-        if (newValue != null)
-            newValue.PropertyChanged += OnScreenLayoutEdited;
-    }
-
-    /// <summary>
-    /// Правка раскладки сразу сохраняется; запущенная подсветка подхватит её на следующем кадре.
-    /// </summary>
-    private void OnScreenLayoutEdited(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        ConfigStore.Save(_config);
-        ScreenLayoutVersion++;
-        OnPropertyChanged(nameof(ScreenLayoutSummary));
     }
 
     partial void OnMusicGainChanged(double value)
@@ -1326,6 +1350,28 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         return layout;
+    }
+
+    /// <summary>
+    /// Пересобирает карточки мониторов: заново находит мониторы и ленты, выбранные для них.
+    /// </summary>
+    private void RefreshMonitors()
+    {
+        foreach (var monitor in Monitors)
+            monitor.Detach();
+
+        Monitors.Clear();
+
+        foreach (var info in MonitorList.GetAll())
+        {
+            if (!_config.Monitors.TryGetValue(info.Key, out var config))
+            {
+                config = new MonitorConfig();
+                _config.Monitors[info.Key] = config;
+            }
+
+            Monitors.Add(new MonitorItemViewModel(info, config, RotationOptions, FindDevice, GetScreenLayout, () => ConfigStore.Save(_config)));
+        }
     }
 
     /// <summary>

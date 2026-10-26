@@ -13,9 +13,9 @@ public interface ILightSource
     void BeginFrame(double phase, EffectSettings settings);
 
     /// <summary>
-    /// Один цвет для обычной ленты.
+    /// Один цвет для обычной ленты; лента передаётся, если источнику важно, какая это лента.
     /// </summary>
-    RgbColor RenderSolid();
+    RgbColor RenderSolid(LedDevice device);
 
     /// <summary>
     /// Цвета всех светодиодов адресной ленты по порядку; лента передаётся, если источнику важна её раскладка.

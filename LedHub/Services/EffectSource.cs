@@ -22,7 +22,7 @@ public sealed class EffectSource : ILightSource
         _color = settings.Color;
     }
 
-    public RgbColor RenderSolid()
+    public RgbColor RenderSolid(LedDevice device)
     {
         return RenderPixel(_kind, _phase, _color, 0);
     }

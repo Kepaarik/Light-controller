@@ -23,6 +23,23 @@ public enum ScreenCorner
 }
 
 /// <summary>
+/// Насколько монитор физически повёрнут относительно того, как Windows выводит на него картинку.
+/// </summary>
+public enum MonitorRotation
+{
+    /// <summary>Как в Windows — ориентация в системе совпадает с реальной.</summary>
+    None,
+
+    /// <summary>Монитор повёрнут на 90° по часовой стрелке, а Windows об этом не знает.</summary>
+    Clockwise90,
+
+    Upside180,
+
+    /// <summary>Монитор повёрнут на 90° против часовой стрелки, а Windows об этом не знает.</summary>
+    CounterClockwise270
+}
+
+/// <summary>
 /// Место светодиода на краю экрана: X и Y от 0 до 1, сторона — чтобы знать, куда «смотреть» внутрь картинки.
 /// </summary>
 public readonly record struct LedPoint(double X, double Y, ScreenSide Side);
@@ -63,7 +80,6 @@ public sealed partial class ScreenLayoutConfig : ObservableObject
     private ScreenCorner _startCorner = ScreenCorner.BottomRight;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsCounterClockwise))]
     private bool _isClockwise;
 
     /// <summary>
@@ -73,16 +89,23 @@ public sealed partial class ScreenLayoutConfig : ObservableObject
     private int _offset;
 
     /// <summary>
-    /// Обратная сторона IsClockwise для переключателя направления.
+    /// Раскладка описана так, как её видно сзади монитора (при монтаже): левая и правая стороны меняются местами.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsViewedFromFront))]
+    private bool _isViewedFromBack;
+
+    /// <summary>
+    /// Обратная сторона IsViewedFromBack для переключателя ориентации ленты.
     /// </summary>
     [JsonIgnore]
-    public bool IsCounterClockwise
+    public bool IsViewedFromFront
     {
-        get => !IsClockwise;
+        get => !IsViewedFromBack;
         set
         {
             if (value)
-                IsClockwise = false;
+                IsViewedFromBack = false;
         }
     }
 }

@@ -3,12 +3,10 @@ using System.Runtime.InteropServices;
 namespace LedHub.Services;
 
 /// <summary>
-/// Снимает основной экран сразу уменьшенным до маленького кадра: так захват дешёвый даже 20 раз в секунду.
+/// Снимает монитор сразу уменьшенным до маленького кадра: так захват дешёвый даже 20 раз в секунду.
 /// </summary>
 public sealed class ScreenGrabber : IDisposable
 {
-    private const int SmCxScreen = 0;
-    private const int SmCyScreen = 1;
     private const int Halftone = 4;
     private const int SrcCopy = 0x00CC0020;
 
@@ -59,15 +57,16 @@ public sealed class ScreenGrabber : IDisposable
     public int Height { get; }
 
     /// <summary>
-    /// Снимает экран; пиксели в формате BGRA, строки сверху вниз.
+    /// Снимает монитор; пиксели в формате BGRA, строки сверху вниз.
+    /// Контекст рабочего стола охватывает все мониторы, поэтому достаточно координат нужного.
     /// </summary>
-    public byte[] Capture()
+    public byte[] Capture(MonitorInfo monitor)
     {
         var screenDc = GetDC(IntPtr.Zero);
         try
         {
-            StretchBlt(_memoryDc, 0, 0, Width, Height, screenDc, 0, 0,
-                GetSystemMetrics(SmCxScreen), GetSystemMetrics(SmCyScreen), SrcCopy);
+            StretchBlt(_memoryDc, 0, 0, Width, Height, screenDc, monitor.Left, monitor.Top,
+                monitor.Width, monitor.Height, SrcCopy);
         }
         finally
         {
@@ -107,9 +106,6 @@ public sealed class ScreenGrabber : IDisposable
 
     [DllImport("user32.dll")]
     private static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
-
-    [DllImport("user32.dll")]
-    private static extern int GetSystemMetrics(int index);
 
     [DllImport("gdi32.dll")]
     private static extern IntPtr CreateCompatibleDC(IntPtr hdc);

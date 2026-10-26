@@ -33,9 +33,27 @@ public sealed class AppConfig
     public Dictionary<string, ScreenLayoutConfig> ScreenLayouts { get; set; } = new();
 
     /// <summary>
+    /// Настройки подсветки по мониторам, по системному имени монитора.
+    /// </summary>
+    public Dictionary<string, MonitorConfig> Monitors { get; set; } = new();
+
+    /// <summary>
     /// Недавно выбранные цвета в формате #RRGGBB, самый свежий первым.
     /// </summary>
     public List<string> RecentColors { get; set; } = new();
+}
+
+/// <summary>
+/// Какая лента подсвечивает монитор и как монитор повёрнут.
+/// </summary>
+public sealed class MonitorConfig
+{
+    /// <summary>
+    /// Идентификатор ленты; null — монитор без подсветки.
+    /// </summary>
+    public string? DeviceId { get; set; }
+
+    public MonitorRotation Rotation { get; set; }
 }
 
 /// <summary>

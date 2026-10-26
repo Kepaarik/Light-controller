@@ -102,7 +102,7 @@ public sealed class EffectRunner
                 return;
             }
 
-            await device.SetColorAsync(source.RenderSolid(), settings.Brightness, ct);
+            await device.SetColorAsync(source.RenderSolid(device), settings.Brightness, ct);
         }
         catch (Exception)
         {
