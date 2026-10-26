@@ -9,6 +9,8 @@ public interface ILightTarget
 {
     string Title { get; }
 
+    string Subtitle { get; }
+
     /// <summary>
     /// Последний выставленный цвет; сами контроллеры своё состояние не сообщают.
     /// </summary>

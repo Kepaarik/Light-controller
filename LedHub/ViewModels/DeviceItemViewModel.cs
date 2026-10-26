@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using LedHub.Core;
+using LedHub.Protocols.Ble;
+using LedHub.Protocols.Serial;
 
 namespace LedHub.ViewModels;
 
@@ -26,6 +28,18 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     public string? StatusText => Device.StatusText;
 
     public string Title => Device.Name;
+
+    public string Subtitle => $"{Device.Protocol} · {Device.Address}";
+
+    /// <summary>
+    /// Значок способа подключения из шрифта Segoe Fluent Icons / MDL2 Assets.
+    /// </summary>
+    public string Icon => Device switch
+    {
+        BleLedDevice => "",
+        SerialLedDevice => "",
+        _ => ""
+    };
 
     public RgbColor Color { get; set; } = RgbColor.White;
 

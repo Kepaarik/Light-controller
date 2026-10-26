@@ -15,6 +15,33 @@ public readonly record struct RgbColor(byte R, byte G, byte B)
     }
 
     /// <summary>
+    /// Создаёт цвет из HSV: тон 0–360, насыщенность и значение 0–1.
+    /// </summary>
+    public static RgbColor FromHsv(double hue, double saturation, double value)
+    {
+        hue = (hue % 360 + 360) % 360;
+
+        var chroma = value * saturation;
+        var x = chroma * (1 - Math.Abs(hue / 60 % 2 - 1));
+        var m = value - chroma;
+
+        var (r, g, b) = hue switch
+        {
+            < 60 => (chroma, x, 0.0),
+            < 120 => (x, chroma, 0.0),
+            < 180 => (0.0, chroma, x),
+            < 240 => (0.0, x, chroma),
+            < 300 => (x, 0.0, chroma),
+            _ => (chroma, 0.0, x)
+        };
+
+        return new RgbColor(
+            (byte)Math.Round((r + m) * 255),
+            (byte)Math.Round((g + m) * 255),
+            (byte)Math.Round((b + m) * 255));
+    }
+
+    /// <summary>
     /// Возвращает цвет, приглушённый до указанной яркости (0–100 %).
     /// </summary>
     public RgbColor Scale(int brightness)

@@ -27,6 +27,8 @@ public sealed class GroupItemViewModel : ObservableObject, ILightTarget
 
     public string Summary => $"{Members.Count(m => m.IsOnline)} из {Members.Count} в сети";
 
+    public string Subtitle => Summary;
+
     public ObservableCollection<GroupMemberViewModel> Members { get; } = new();
 
     public RgbColor Color { get; set; } = RgbColor.White;
@@ -53,5 +55,6 @@ public sealed class GroupItemViewModel : ObservableObject, ILightTarget
             Members.Add(new GroupMemberViewModel(member.Id, member.Name, _findDevice(member.Id) != null));
 
         OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(Subtitle));
     }
 }

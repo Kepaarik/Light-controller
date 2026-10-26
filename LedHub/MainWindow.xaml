@@ -4,216 +4,380 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:LedHub.ViewModels"
+        xmlns:controls="clr-namespace:LedHub.Controls"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
-        Title="LedHub — управление лентами"
-        Width="1200" Height="740" MinWidth="980" MinHeight="600"
+        Title="LedHub"
+        Width="1240" Height="800" MinWidth="1080" MinHeight="680"
+        WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBrush}"
         Foreground="{StaticResource TextBrush}"
-        FontFamily="Segoe UI" FontSize="13">
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
 
-    <Grid Margin="16">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="340"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="380"/>
-            <ColumnDefinition Width="320"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
 
-        <!-- Найденные устройства -->
-        <Border Grid.Column="0" Style="{StaticResource Panel}">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Устройства" Style="{StaticResource Header}"/>
-                <Button DockPanel.Dock="Top" Content="Найти устройства" Command="{Binding ScanCommand}" Style="{StaticResource AccentButton}"/>
-                <ProgressBar DockPanel.Dock="Top" Height="3" Margin="0,8,0,0" IsIndeterminate="True" BorderThickness="0"
-                             Foreground="{StaticResource AccentBrush}" Background="Transparent"
-                             Visibility="{Binding ScanCommand.IsRunning, Converter={StaticResource BoolToVisibility}}"/>
-                <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Margin="0,8,0,0"
-                           Text="Отметьте ленты галочками, чтобы создать из них группу или добавить в выбранную."/>
+        <!-- Боковая панель: группы и найденные устройства -->
+        <Border Grid.RowSpan="2" Background="{StaticResource SidebarBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+            <Grid Margin="16,20,16,16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <ListBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Margin="0,12,0,0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Style="{StaticResource Hint}">
-                                        <Run Text="{Binding Protocol, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Address, Mode=OneWay}"/>
-                                    </TextBlock>
-                                    <TextBlock Text="{Binding StatusText}" Style="{StaticResource Warning}"/>
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
+                <StackPanel Orientation="Horizontal" Margin="4,0,0,20">
+                    <Border Width="40" Height="40" CornerRadius="12">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Offset="0" Color="#7C6CFF"/>
+                                <GradientStop Offset="1" Color="#FF6FB5"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <TextBlock Text="&#xEA80;" Style="{StaticResource Icon}" FontSize="20" Foreground="White" HorizontalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="LedHub" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Все ленты в одном месте" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1">
+                    <Button Command="{Binding ScanCommand}" Style="{StaticResource AccentButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Text="Найти устройства"/>
+                        </StackPanel>
+                    </Button>
+                    <ProgressBar IsIndeterminate="True" Margin="6,6,6,0"
+                                 Visibility="{Binding ScanCommand.IsRunning, Converter={StaticResource BoolToVisibility}}"/>
+                </StackPanel>
+
+                <TextBlock Grid.Row="2" Text="ГРУППЫ" Style="{StaticResource SectionLabel}"/>
+
+                <Grid Grid.Row="3">
+                    <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" MaxHeight="210">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource AccentSoftBrush}">
+                                        <TextBlock Text="&#xE902;" Style="{StaticResource Icon}" FontSize="15"
+                                                   Foreground="{StaticResource AccentHoverBrush}" HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Summary}" Style="{StaticResource Hint}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="Групп пока нет — отметьте ленты и создайте группу ниже" Margin="4,0,0,4">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Groups.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <Grid Grid.Row="4" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}" Tag="Название новой группы"/>
+                    <Button Grid.Column="1" Command="{Binding CreateGroupCommand}" Margin="8,0,0,0" Padding="12,0"
+                            ToolTip="Создать группу из отмеченных устройств">
+                        <TextBlock Text="&#xE710;" Style="{StaticResource Icon}" FontSize="14"/>
+                    </Button>
+                </Grid>
+
+                <DockPanel Grid.Row="5">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding Devices.Count}" Style="{StaticResource SectionLabel}" Margin="0,20,4,8"/>
+                    <TextBlock Text="УСТРОЙСТВА" Style="{StaticResource SectionLabel}"/>
+                </DockPanel>
+
+                <Grid Grid.Row="6">
+                    <ListBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" ToolTip="Отметить для группы"/>
+                                    <Border Grid.Column="1" Width="34" Height="34" CornerRadius="10" Margin="12,0,0,0"
+                                            Background="{StaticResource ControlBrush}">
+                                        <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" FontSize="15" HorizontalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Subtitle}" Style="{StaticResource Hint}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding StatusText}" Style="{StaticResource Warning}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="Нажмите «Найти устройства», чтобы найти ленты по Bluetooth, Wi-Fi и USB" Margin="4,0,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Devices.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <TextBlock Grid.Row="7" Style="{StaticResource Hint}" Margin="4,12,0,0"
+                           Text="Галочками отмечаются ленты для новой группы или для добавления в выбранную."/>
+            </Grid>
         </Border>
 
-        <!-- Группы -->
-        <Border Grid.Column="1" Style="{StaticResource Panel}" Margin="12,0">
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Top" Text="Группы" Style="{StaticResource Header}"/>
-                <TextBlock DockPanel.Dock="Top" Text="Название новой группы" Style="{StaticResource Hint}" Margin="0,0,0,4"/>
-                <TextBox DockPanel.Dock="Top" Text="{Binding NewGroupName, UpdateSourceTrigger=PropertyChanged}"/>
-                <Button DockPanel.Dock="Top" Content="Создать из отмеченных" Command="{Binding CreateGroupCommand}" Margin="0,8,0,0"/>
+        <!-- Пустое состояние, пока ничего не выбрано -->
+        <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HasTarget}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <Border Width="88" Height="88" CornerRadius="44" Background="{StaticResource CardBrush}" HorizontalAlignment="Center">
+                <TextBlock Text="&#xEA80;" Style="{StaticResource Icon}" FontSize="36" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="Выберите ленту или группу" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,20,0,6"/>
+            <TextBlock Text="Слева — найденные устройства и ваши группы" Style="{StaticResource Hint}" HorizontalAlignment="Center"/>
+        </StackPanel>
 
-                <StackPanel DockPanel.Dock="Bottom">
-                    <UniformGrid Columns="2" Margin="0,8,0,0">
-                        <Button Content="Добавить отмеченные" Command="{Binding AddCheckedToGroupCommand}" Margin="0,0,4,0"/>
-                        <Button Content="Удалить группу" Command="{Binding DeleteGroupCommand}" Margin="4,0,0,0"/>
-                    </UniformGrid>
+        <!-- Управление выбранной лентой или группой -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding HasTarget, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Margin="32,28,32,16">
 
-                    <TextBlock Text="Состав группы" Style="{StaticResource SubHeader}"/>
-                    <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Target.Title}" FontSize="26" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Target.Subtitle}" Style="{StaticResource Hint}" FontSize="13" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="12" Padding="4" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding TurnOnCommand}" Style="{StaticResource AccentButton}" Padding="18,9">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7E8;" Style="{StaticResource Icon}" FontSize="14" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Включить"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding TurnOffCommand}" Style="{StaticResource GhostButton}" Padding="18,9" Margin="4,0,0,0">
+                                <TextBlock Text="Выключить"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Border Style="{StaticResource Card}" Margin="0,24,0,0" Padding="28">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <controls:ColorWheel Width="290" Height="290" VerticalAlignment="Top"
+                                             SelectedColor="{Binding SelectedColor}"/>
+
+                        <StackPanel Grid.Column="1" Margin="36,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="56" Height="56" CornerRadius="16" Background="{Binding PreviewHex}">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="28" ShadowDepth="0" Opacity="0.7" Color="{Binding PreviewHex}"/>
+                                    </Border.Effect>
+                                </Border>
+                                <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="Текущий цвет" Style="{StaticResource Hint}"/>
+                                    <TextBlock Text="{Binding PreviewHex}" FontSize="20" FontWeight="SemiBold" FontFamily="Cascadia Mono, Consolas"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <DockPanel Margin="0,24,0,6">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Brightness, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
+                                <TextBlock Text="Яркость" Style="{StaticResource Hint}"/>
+                            </DockPanel>
+                            <Slider Minimum="1" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Foreground="Transparent"
+                                    Value="{Binding Brightness}">
+                                <Slider.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                        <GradientStop Offset="0" Color="#26272E"/>
+                                        <GradientStop Offset="1" Color="{Binding PreviewHex}"/>
+                                    </LinearGradientBrush>
+                                </Slider.Background>
+                            </Slider>
+
+                            <TextBlock Text="Быстрый выбор" Style="{StaticResource Hint}" Margin="0,22,0,10"/>
+                            <ItemsControl ItemsSource="{Binding Presets}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource SwatchButton}" Background="{Binding}" ToolTip="{Binding}"
+                                                Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Точная настройка RGB" Style="{StaticResource Hint}" Margin="0,12,0,4"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="36"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Text="R" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+                                <Slider Grid.Column="1" Maximum="255" IsSnapToTickEnabled="True" TickFrequency="1"
+                                        Foreground="#FF5A64" Value="{Binding Red}"/>
+                                <TextBlock Grid.Column="2" Text="{Binding Red}" TextAlignment="Right" VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Row="1" Text="G" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+                                <Slider Grid.Row="1" Grid.Column="1" Maximum="255" IsSnapToTickEnabled="True" TickFrequency="1"
+                                        Foreground="#4CD98A" Value="{Binding Green}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Green}" TextAlignment="Right" VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Row="2" Text="B" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+                                <Slider Grid.Row="2" Grid.Column="1" Maximum="255" IsSnapToTickEnabled="True" TickFrequency="1"
+                                        Foreground="#4C8DFF" Value="{Binding Blue}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Blue}" TextAlignment="Right" VerticalAlignment="Center"/>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Состав выбранной группы -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                        Visibility="{Binding IsGroupSelected, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button Command="{Binding AddCheckedToGroupCommand}" Padding="12,7">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE710;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Добавить отмеченные"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding DeleteGroupCommand}" Style="{StaticResource DangerButton}" Padding="12,7" Margin="6,0,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE74D;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Удалить группу"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Text="Состав группы" Style="{StaticResource CardTitle}" Margin="0" VerticalAlignment="Center"/>
+                        </DockPanel>
+
                         <ItemsControl ItemsSource="{Binding SelectedGroup.Members}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <DockPanel Margin="0,0,0,2">
-                                        <Button DockPanel.Dock="Right" Content="✕" ToolTip="Убрать из группы" Style="{StaticResource IconButton}"
-                                                Command="{Binding DataContext.RemoveMemberCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"/>
-                                        <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Text" Value="{Binding Name}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsOnline}" Value="False">
-                                                            <Setter Property="Text" Value="{Binding Name, StringFormat='{}{0} (не найдено)'}"/>
-                                                            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </DockPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </StackPanel>
-
-                <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" Margin="0,12,0,0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding Summary}" Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-        </Border>
-
-        <!-- Управление выбранной лентой или группой -->
-        <Border Grid.Column="2" Style="{StaticResource Panel}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                    <TextBlock Text="Управление" Style="{StaticResource Header}"/>
-                    <TextBlock FontSize="16" TextTrimming="CharacterEllipsis"
-                               Text="{Binding Target.Title, FallbackValue='Выберите устройство или группу'}"/>
-
-                    <StackPanel IsEnabled="{Binding HasTarget}" Margin="0,12,0,0">
-                        <UniformGrid Columns="2">
-                            <Button Content="Включить" Command="{Binding TurnOnCommand}" Style="{StaticResource AccentButton}" Margin="0,0,4,0"/>
-                            <Button Content="Выключить" Command="{Binding TurnOffCommand}" Margin="4,0,0,0"/>
-                        </UniformGrid>
-
-                        <Border Height="64" CornerRadius="8" Margin="0,16,0,0" Background="{Binding PreviewHex}"
-                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"/>
-
-                        <TextBlock Text="Цвет" Style="{StaticResource SubHeader}"/>
-
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Красный" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="0" Maximum="255" IsSnapToTickEnabled="True" TickFrequency="1"
-                                    Value="{Binding Red}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="{Binding Red}" TextAlignment="Right" VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Зелёный" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="0" Maximum="255" IsSnapToTickEnabled="True" TickFrequency="1"
-                                    Value="{Binding Green}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="{Binding Green}" TextAlignment="Right" VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Синий" VerticalAlignment="Center"/>
-                            <Slider Grid.Column="1" Minimum="0" Maximum="255" IsSnapToTickEnabled="True" TickFrequency="1"
-                                    Value="{Binding Blue}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="2" Text="{Binding Blue}" TextAlignment="Right" VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <TextBlock Text="Яркость" Style="{StaticResource SubHeader}"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="50"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider Minimum="1" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1"
-                                    Value="{Binding Brightness}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="{Binding Brightness, StringFormat='{}{0} %'}" TextAlignment="Right" VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <TextBlock Text="Быстрый выбор" Style="{StaticResource SubHeader}"/>
-                        <ItemsControl ItemsSource="{Binding Presets}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Style="{StaticResource SwatchButton}" Background="{Binding}" ToolTip="{Binding}"
-                                            Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"/>
+                                    <Border Background="{StaticResource ControlBrush}" CornerRadius="8" Padding="12,4,4,4" Margin="0,4,0,0">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" ToolTip="Убрать из группы"
+                                                    Command="{Binding DataContext.RemoveMemberCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="&#xE711;" Style="{StaticResource Icon}" FontSize="11"/>
+                                            </Button>
+                                            <Ellipse x:Name="Dot" Width="8" Height="8" Fill="#4CD98A" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                            <TextBlock x:Name="MemberName" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                                            <Setter TargetName="Dot" Property="Fill" Value="{StaticResource MutedBrush}"/>
+                                            <Setter TargetName="MemberName" Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                            <Setter TargetName="MemberName" Property="Text" Value="{Binding Name, StringFormat='{}{0} — не найдено'}"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
+                </Border>
 
-                    <!-- Tuya требует локальный ключ устройства -->
-                    <Border Visibility="{Binding IsTuyaSelected, Converter={StaticResource BoolToVisibility}}"
-                            Background="{StaticResource ControlBrush}" CornerRadius="8" Padding="12" Margin="0,16,0,0">
-                        <StackPanel>
-                            <TextBlock Text="Настройки Tuya" FontWeight="SemiBold"/>
-                            <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,8"
-                                       Text="Tuya шифрует локальное управление ключом устройства (Local Key). Его можно получить через tinytuya wizard или на iot.tuya.com."/>
-                            <TextBlock Text="Local Key" Style="{StaticResource Hint}" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding TuyaLocalKey, UpdateSourceTrigger=PropertyChanged}"/>
-                            <TextBlock Text="Набор DP: V2 — DP 20–24 (большинство лент), V1 — DP 1–5 (старые)" Style="{StaticResource Hint}" Margin="0,8,0,4"/>
-                            <ComboBox ItemsSource="{Binding TuyaDpSchemes}" SelectedItem="{Binding TuyaDpScheme}"/>
-                            <Button Content="Сохранить" Command="{Binding SaveTuyaSettingsCommand}" Margin="0,10,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
+                <!-- Tuya требует локальный ключ устройства -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                        Visibility="{Binding IsTuyaSelected, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="Настройки Tuya" Style="{StaticResource CardTitle}" Margin="0,0,0,4"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                                   Text="Tuya шифрует локальное управление ключом устройства (Local Key). Его можно получить через tinytuya wizard или на iot.tuya.com."/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding TuyaLocalKey, UpdateSourceTrigger=PropertyChanged}" Tag="Local Key (16 символов)"/>
+                            <ComboBox Grid.Column="1" Margin="8,0,0,0" VerticalContentAlignment="Center"
+                                      ItemsSource="{Binding TuyaDpSchemes}" SelectedItem="{Binding TuyaDpScheme}"/>
+                            <Button Grid.Column="2" Content="Сохранить" Command="{Binding SaveTuyaSettingsCommand}"
+                                    Style="{StaticResource AccentButton}" Margin="8,0,0,0"/>
+                        </Grid>
+                        <TextBlock Text="Набор DP: V2 — DP 20–24 (большинство лент), V1 — DP 1–5 (старые контроллеры)"
+                                   Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Строка статуса -->
+        <Border Grid.Row="1" Grid.Column="1" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="32,10">
+            <DockPanel>
+                <TextBlock Text="&#xE946;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource MutedBrush}" Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding StatusText}" Style="{StaticResource Hint}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding StatusText}"/>
+            </DockPanel>
         </Border>
-
-        <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Margin="2,12,2,0" Text="{Binding StatusText}" Style="{StaticResource Hint}"/>
     </Grid>
 </Window>

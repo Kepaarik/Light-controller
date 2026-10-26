@@ -74,6 +74,29 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string PreviewHex => CurrentColor.ToHex();
 
+    /// <summary>
+    /// Цвет, выбранный на цветовом круге; хранится в тех же каналах, что и RGB-слайдеры.
+    /// </summary>
+    public RgbColor SelectedColor
+    {
+        get => CurrentColor;
+        set
+        {
+            if (value == CurrentColor)
+                return;
+
+            _isLoadingTarget = true;
+            Red = value.R;
+            Green = value.G;
+            Blue = value.B;
+            _isLoadingTarget = false;
+
+            OnColorEdited();
+        }
+    }
+
+    public bool IsGroupSelected => SelectedGroup != null;
+
     public TuyaDevice? SelectedTuya => SelectedDevice?.Device as TuyaDevice;
 
     public bool IsTuyaSelected => SelectedTuya != null;
@@ -237,6 +260,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedGroupChanged(GroupItemViewModel? value)
     {
+        OnPropertyChanged(nameof(IsGroupSelected));
+
         if (value == null)
             return;
 
@@ -259,6 +284,7 @@ public sealed partial class MainViewModel : ObservableObject
         _isLoadingTarget = false;
 
         OnPropertyChanged(nameof(PreviewHex));
+        OnPropertyChanged(nameof(SelectedColor));
     }
 
     partial void OnRedChanged(int value) => OnColorEdited();
@@ -272,6 +298,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnColorEdited()
     {
         OnPropertyChanged(nameof(PreviewHex));
+        OnPropertyChanged(nameof(SelectedColor));
 
         if (_isLoadingTarget || Target == null)
             return;
