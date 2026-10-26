@@ -16,9 +16,8 @@ public sealed partial class MainViewModel : ObservableObject
     };
 
     private const int ColorTab = 0;
-    private const int MusicTab = 2;
-    private const int LedsTab = 3;
-    private const int ShapeTab = 4;
+    private const int LedsTab = 4;
+    private const int ShapeTab = 5;
 
     private const int MaxRecentColors = 10;
 
@@ -50,6 +49,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     // Цвет попадает в недавние, только когда его перестали менять, а не на каждом шаге ползунка
     private CancellationTokenSource? _recentColorDelay;
+
+    // Запущенные подсветка под экран и музыка — чтобы менять их настройки на лету
+    private ScreenSource? _screenSource;
+    private MusicSource? _musicSource;
 
     private readonly AppConfig _config = ConfigStore.Load();
 
@@ -106,7 +109,7 @@ public sealed partial class MainViewModel : ObservableObject
     private int _hardwareEffectSpeed = 50;
 
     /// <summary>
-    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — музыка, 3 — светодиоды, 4 — форма, 5 — настройки.
+    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — музыка, 3 — экран, 4 — светодиоды, 5 — форма, 6 — настройки.
     /// </summary>
     [ObservableProperty]
     private int _selectedTabIndex;
@@ -141,6 +144,18 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _newSceneName = "";
 
+    /// <summary>
+    /// Обход краёв экрана в обратную сторону для адресной ленты за монитором.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isScreenReversed;
+
+    /// <summary>
+    /// Чувствительность к музыке с компьютера: 1 — обычная, больше — ярче на тихих местах.
+    /// </summary>
+    [ObservableProperty]
+    private double _musicGain = 1;
+
     [ObservableProperty]
     private bool _isSleepTimerMenuOpen;
 
@@ -172,6 +187,13 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     public ObservableCollection<SceneConfig> Scenes { get; } = new();
+
+    public IReadOnlyList<MusicModeOption> MusicModes { get; } = new MusicModeOption[]
+    {
+        new(MusicMode.Pulse, "Пульс", "Яркость цвета кисти следует за громкостью; на адресной ленте — шкала от центра"),
+        new(MusicMode.Spectrum, "Спектр", "Басы — красный, середина — зелёный, высокие — синий; на адресной ленте — полосы спектра"),
+        new(MusicMode.RainbowBeat, "Радуга по битам", "Цвет перескакивает по радуге на каждом ударе")
+    };
 
     public ObservableCollection<string> RecentColors { get; } = new();
 
@@ -403,32 +425,70 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void StartEffect(EffectOption effect)
     {
-        if (Target == null)
+        if (!StartLightSource(new EffectSource(effect.Kind), effect.Title))
             return;
-
-        var devices = Target.GetDevices().Where(d => d.IsReady).ToList();
-        if (devices.Count == 0)
-        {
-            StatusText = $"{Target.Title}: нет доступных устройств";
-            return;
-        }
-
-        _effects.Start(effect.Kind, devices, () => new EffectSettings(CurrentColor, Brightness, EffectSpeed));
 
         foreach (var option in _effectOptions)
             option.IsActive = option == effect;
+    }
 
-        ActiveEffect = effect.Title;
-        StatusText = $"{Target.Title}: эффект «{effect.Title}»";
+    [RelayCommand]
+    private void StartScreenSync()
+    {
+        try
+        {
+            var source = new ScreenSource { IsReversed = IsScreenReversed };
+            if (StartLightSource(source, "Подсветка под экран"))
+                _screenSource = source;
+            else
+                source.Dispose();
+        }
+        catch (Exception e)
+        {
+            StatusText = $"Не удалось захватить экран: {e.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void StartMusic(MusicModeOption option)
+    {
+        MusicSource source;
+
+        try
+        {
+            source = new MusicSource(option.Mode) { Gain = MusicGain };
+        }
+        catch (Exception e)
+        {
+            // Например, в системе нет устройства вывода звука
+            StatusText = $"Не удалось слушать звук компьютера: {e.Message}";
+            return;
+        }
+
+        if (!StartLightSource(source, $"Музыка: {option.Title}"))
+        {
+            source.Dispose();
+            return;
+        }
+
+        _musicSource = source;
+
+        foreach (var mode in MusicModes)
+            mode.IsActive = mode == option;
     }
 
     [RelayCommand]
     private void StopEffect()
     {
         _effects.Stop();
+        _screenSource = null;
+        _musicSource = null;
 
         foreach (var option in _effectOptions)
             option.IsActive = false;
+
+        foreach (var mode in MusicModes)
+            mode.IsActive = false;
 
         ActiveEffect = null;
     }
@@ -832,10 +892,8 @@ public sealed partial class MainViewModel : ObservableObject
         // Готовую форму открываем сразу для рисования, пустую — для сборки
         HexEditMode = HexLayout?.Cells.Count > 0 ? HexEditMode.PaintLed : HexEditMode.Shape;
 
-        // Вкладки музыки, светодиодов и формы есть не у всех лент и не у групп
-        if (SelectedTabIndex == MusicTab && !HasMicrophone
-            || SelectedTabIndex == LedsTab && !IsAddressableSelected
-            || SelectedTabIndex == ShapeTab && HexLayout == null)
+        // Вкладки светодиодов и формы есть не у всех лент и не у групп
+        if (SelectedTabIndex == LedsTab && !IsAddressableSelected || SelectedTabIndex == ShapeTab && HexLayout == null)
             SelectedTabIndex = ColorTab;
 
         OnPropertyChanged(nameof(SupportsHexLayout));
@@ -882,6 +940,18 @@ public sealed partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(PreviewHex));
         OnPropertyChanged(nameof(SelectedColor));
+    }
+
+    partial void OnIsScreenReversedChanged(bool value)
+    {
+        if (_screenSource != null)
+            _screenSource.IsReversed = value;
+    }
+
+    partial void OnMusicGainChanged(double value)
+    {
+        if (_musicSource != null)
+            _musicSource.Gain = value;
     }
 
     partial void OnSelectedMicrophoneModeChanged(HardwareEffect? value)
@@ -1039,6 +1109,30 @@ public sealed partial class MainViewModel : ObservableObject
         {
             StatusText = $"{item.Title}: {e.Message}";
         }
+    }
+
+    /// <summary>
+    /// Запускает источник кадров — эффект, экран или музыку — на выбранной ленте или группе.
+    /// </summary>
+    private bool StartLightSource(ILightSource source, string title)
+    {
+        if (Target == null)
+            return false;
+
+        var devices = Target.GetDevices().Where(d => d.IsReady).ToList();
+        if (devices.Count == 0)
+        {
+            StatusText = $"{Target.Title}: нет доступных устройств";
+            return false;
+        }
+
+        StopEffect();
+        _effects.Start(source, devices, () => new EffectSettings(CurrentColor, Brightness, EffectSpeed));
+
+        ActiveEffect = title;
+        StatusText = $"{Target.Title}: {title}";
+
+        return true;
     }
 
     /// <summary>

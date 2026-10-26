@@ -563,16 +563,66 @@
                 </StackPanel>
                 </TabItem>
 
-                <TabItem Visibility="{Binding HasMicrophone, Converter={StaticResource BoolToVisibility}}">
+                <TabItem>
                     <TabItem.Header>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8D6;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
                             <TextBlock Text="Музыка"/>
                         </StackPanel>
                     </TabItem.Header>
+                <StackPanel>
+
+                <!-- Музыка с компьютера: ленты реагируют на звук, который играет в колонках или наушниках -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,14">
+                            <Button DockPanel.Dock="Right" Command="{Binding StopEffectCommand}" Style="{StaticResource DangerButton}" Padding="12,7"
+                                    Visibility="{Binding IsEffectRunning, Converter={StaticResource BoolToVisibility}}" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE71A;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Остановить"/>
+                                </StackPanel>
+                            </Button>
+                            <StackPanel>
+                                <TextBlock Text="Музыка с компьютера" Style="{StaticResource CardTitle}" Margin="0"/>
+                                <TextBlock Text="{Binding EffectStatus}" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <ItemsControl ItemsSource="{Binding MusicModes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="3"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource EffectTile}" HorizontalContentAlignment="Stretch"
+                                            Command="{Binding DataContext.StartMusicCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Margin="6,4">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                                            <TextBlock Text="{Binding Description}" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <DockPanel Margin="0,8,0,6">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding MusicGain, StringFormat='{}{0:0.0}×'}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Чувствительность" Style="{StaticResource Hint}"/>
+                        </DockPanel>
+                        <Slider Minimum="0.5" Maximum="3" Value="{Binding MusicGain}"/>
+
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                   Text="Звук берётся с устройства вывода по умолчанию — микрофон не нужен. Громкость подстраивается сама; цвет кисти для «Пульса» и яркость меняются на вкладке «Цвет» прямо во время музыки."/>
+                    </StackPanel>
+                </Border>
 
                 <!-- Встроенный микрофон контроллера: лента сама реагирует на звук рядом с ней -->
-                <Border Style="{StaticResource Card}">
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                        Visibility="{Binding HasMicrophone, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,14">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -610,6 +660,62 @@
                             <TextBlock Text="Чувствительность" Style="{StaticResource Hint}"/>
                         </DockPanel>
                         <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding MicrophoneSensitivity}"/>
+                    </StackPanel>
+                </Border>
+                </StackPanel>
+                </TabItem>
+
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7F4;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Экран"/>
+                        </StackPanel>
+                    </TabItem.Header>
+
+                <!-- Подсветка под экран: ленты повторяют цвета картинки на мониторе -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,14">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Command="{Binding StartScreenSyncCommand}" Style="{StaticResource AccentButton}" Padding="14,7">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Запустить"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding StopEffectCommand}" Style="{StaticResource DangerButton}" Padding="12,7" Margin="6,0,0,0"
+                                        Visibility="{Binding IsEffectRunning, Converter={StaticResource BoolToVisibility}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE71A;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Остановить"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Подсветка под экран" Style="{StaticResource CardTitle}" Margin="0"/>
+                                <TextBlock Text="{Binding EffectStatus}" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
+                                   Text="Ленты 20 раз в секунду подхватывают цвета основного монитора. Обычная лента светится средним цветом картинки, адресная за монитором — цветами краёв: правый край снизу вверх, верх справа налево, левый край сверху вниз. Яркость меняется на вкладке «Цвет» прямо во время работы."/>
+
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <CheckBox IsChecked="{Binding IsScreenReversed}" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                <TextBlock Text="Обратное направление"/>
+                                <TextBlock Text="Если цвета на ленте за монитором идут зеркально — лента начинается слева, а не справа"
+                                           Style="{StaticResource Hint}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,14,0,0"
+                                   Text="Игры в эксклюзивном полноэкранном режиме Windows может не отдавать — тогда включите в игре оконный режим без рамки."/>
                     </StackPanel>
                 </Border>
                 </TabItem>
