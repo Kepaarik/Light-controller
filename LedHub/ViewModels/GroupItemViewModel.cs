@@ -7,9 +7,13 @@ namespace LedHub.ViewModels;
 
 public sealed record GroupMemberViewModel(string Id, string Name, bool IsOnline);
 
-public sealed class GroupItemViewModel : ObservableObject, ILightTarget
+public sealed partial class GroupItemViewModel : ObservableObject, ILightTarget
 {
     private readonly Func<string, DeviceItemViewModel?> _findDevice;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ColorHex))]
+    private RgbColor _color = RgbColor.White;
 
     public GroupItemViewModel(GroupConfig config, Func<string, DeviceItemViewModel?> findDevice)
     {
@@ -31,9 +35,17 @@ public sealed class GroupItemViewModel : ObservableObject, ILightTarget
 
     public ObservableCollection<GroupMemberViewModel> Members { get; } = new();
 
-    public RgbColor Color { get; set; } = RgbColor.White;
+    public string ColorHex => Color.ToHex();
 
     public int Brightness { get; set; } = 100;
+
+    public void Rename(string name)
+    {
+        Config.Name = name;
+
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(Title));
+    }
 
     public IReadOnlyList<LedDevice> GetDevices()
     {
@@ -52,7 +64,10 @@ public sealed class GroupItemViewModel : ObservableObject, ILightTarget
         Members.Clear();
 
         foreach (var member in Config.Members)
-            Members.Add(new GroupMemberViewModel(member.Id, member.Name, _findDevice(member.Id) != null));
+        {
+            var device = _findDevice(member.Id);
+            Members.Add(new GroupMemberViewModel(member.Id, device?.Name ?? member.Name, device != null));
+        }
 
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(Subtitle));

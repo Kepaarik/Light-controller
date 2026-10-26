@@ -8,7 +8,7 @@ namespace LedHub.Protocols.Robobloq;
 /// Подсветка монитора Robobloq (приложение SyncLight), подключённая по USB HID.
 /// Формат команд соответствует драйверу Robobloq Monitor Light Strip из OpenRGB.
 /// </summary>
-public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice
+public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IHardwareEffectsDevice
 {
     public const int VendorId = 0x1A86;
     public const int ProductId = 0xFE07;
@@ -22,11 +22,26 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice
 
     private const byte CommandSetSyncScreen = 0x80;
     private const byte CommandReadDeviceInfo = 0x82;
+    private const byte CommandSetEffect = 0x85;
     private const byte CommandSetColor = 0x86;
     private const byte CommandSetBrightness = 0x87;
+    private const byte CommandSetEffectSpeed = 0x8A;
     private const byte CommandTurnOff = 0x97;
 
+    private const byte EffectCategoryDynamic = 0x02;
+
     private static readonly TimeSpan ReplyTimeout = TimeSpan.FromSeconds(1);
+
+    private static readonly IReadOnlyList<HardwareEffect> DynamicEffects = new HardwareEffect[]
+    {
+        new(0x00, "Радужная волна"),
+        new(0x01, "Дыхание"),
+        new(0x02, "Вращение"),
+        new(0x03, "Ритм"),
+        new(0x04, "Вихрь"),
+        new(0x05, "Лимон"),
+        new(0x06, "Электро")
+    };
 
     private readonly HidStream _stream;
     private readonly string _devicePath;
@@ -62,6 +77,8 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice
     public override bool IsReady => _ledCount > 0;
 
     public int LedCount => _ledCount;
+
+    public IReadOnlyList<HardwareEffect> HardwareEffects => DynamicEffects;
 
     public override string? StatusText => IsReady
         ? null
@@ -115,6 +132,14 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice
 
         await SendMultiReportAsync(CommandSetSyncScreen, payload, ct);
         await SendBrightnessAsync(brightness, ct);
+    }
+
+    public async Task StartHardwareEffectAsync(int effectId, int speed, CancellationToken ct = default)
+    {
+        await SendAsync(new[] { CommandSetEffect, EffectCategoryDynamic, (byte)effectId }, ct);
+
+        // Лента ждёт обратную шкалу: 0 — быстро, 100 — медленно
+        await SendAsync(new[] { CommandSetEffectSpeed, (byte)(100 - Math.Clamp(speed, 0, 100)) }, ct);
     }
 
     public override void Dispose()

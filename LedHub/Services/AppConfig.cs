@@ -13,6 +13,11 @@ public sealed class AppConfig
     /// Настройки Tuya-устройств по их Device ID.
     /// </summary>
     public Dictionary<string, TuyaDeviceConfig> Tuya { get; set; } = new();
+
+    /// <summary>
+    /// Имена, которые пользователь дал устройствам, по идентификатору устройства.
+    /// </summary>
+    public Dictionary<string, string> DeviceNames { get; set; } = new();
 }
 
 public sealed class GroupConfig

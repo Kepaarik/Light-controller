@@ -11,6 +11,19 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     [ObservableProperty]
     private bool _isChecked;
 
+    /// <summary>
+    /// Имя, которое дал пользователь; null — показывать имя самого устройства.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Name))]
+    [NotifyPropertyChangedFor(nameof(Title))]
+    [NotifyPropertyChangedFor(nameof(Subtitle))]
+    private string? _customName;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ColorHex))]
+    private RgbColor _color = RgbColor.White;
+
     public DeviceItemViewModel(LedDevice device)
     {
         Device = device;
@@ -20,7 +33,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
 
     public string Id => Device.Id;
 
-    public string Name => Device.Name;
+    public string Name => CustomName ?? Device.Name;
 
     public string Protocol => Device.Protocol;
 
@@ -28,9 +41,21 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
 
     public string? StatusText => Device.StatusText;
 
-    public string Title => Device.Name;
+    public string Title => Name;
 
-    public string Subtitle => $"{Device.Protocol} · {Device.Address}";
+    public string Subtitle => CustomName != null
+        ? $"{Device.Name} · {Device.Protocol} · {Device.Address}"
+        : $"{Device.Protocol} · {Device.Address}";
+
+    /// <summary>
+    /// Последний выставленный цвет для значка в списке.
+    /// </summary>
+    public string ColorHex => Color.ToHex();
+
+    /// <summary>
+    /// Есть ли у контроллера встроенные эффекты.
+    /// </summary>
+    public IHardwareEffectsDevice? HardwareEffects => Device is IHardwareEffectsDevice { HardwareEffects.Count: > 0 } effects ? effects : null;
 
     /// <summary>
     /// Значок способа подключения из шрифта Segoe Fluent Icons / MDL2 Assets.
@@ -41,8 +66,6 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
         SerialLedDevice or RobobloqDevice => "",
         _ => ""
     };
-
-    public RgbColor Color { get; set; } = RgbColor.White;
 
     public int Brightness { get; set; } = 100;
 

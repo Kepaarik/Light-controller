@@ -15,12 +15,23 @@ public sealed partial class MainViewModel : ObservableObject
         "#00FF00", "#00FFFF", "#0000FF", "#8B00FF", "#FF00FF"
     };
 
-    private static readonly EffectOption[] EffectOptions =
+    private const int ColorTab = 0;
+    private const int LedsTab = 2;
+
+    private static readonly int[] BrightnessPresetValues = { 10, 25, 50, 75, 100 };
+
+    private readonly EffectOption[] _effectOptions =
     {
-        new(EffectKind.Rainbow, "Радуга"),
-        new(EffectKind.Breathing, "Дыхание"),
-        new(EffectKind.Strobe, "Стробоскоп"),
-        new(EffectKind.Candle, "Свеча")
+        new(EffectKind.Rainbow, "Радуга", "#FF3B5C", "#3B7BFF"),
+        new(EffectKind.ColorCycle, "Смена цветов", "#FFD23B", "#B23BFF"),
+        new(EffectKind.Breathing, "Дыхание", "#5B7BFF", "#101634"),
+        new(EffectKind.Wave, "Волна", "#3BE8FF", "#0F2F4F"),
+        new(EffectKind.Comet, "Комета", "#FFF3B0", "#2A1E66"),
+        new(EffectKind.Twinkle, "Звёзды", "#FFFFFF", "#1B1D3A"),
+        new(EffectKind.Fire, "Огонь", "#FFC03B", "#E02400"),
+        new(EffectKind.Police, "Полиция", "#FF2A2A", "#2A5BFF"),
+        new(EffectKind.Strobe, "Стробоскоп", "#FFFFFF", "#3A3A44"),
+        new(EffectKind.Candle, "Свеча", "#FFC46B", "#7A3A00")
     };
 
     private readonly DiscoveryService _discovery = new();
@@ -73,6 +84,21 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private double _effectSpeed = 1;
 
+    [ObservableProperty]
+    private HardwareEffect? _selectedHardwareEffect;
+
+    [ObservableProperty]
+    private int _hardwareEffectSpeed = 50;
+
+    /// <summary>
+    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — светодиоды, 3 — настройки.
+    /// </summary>
+    [ObservableProperty]
+    private int _selectedTabIndex;
+
+    [ObservableProperty]
+    private string _renameText = "";
+
     public MainViewModel()
     {
         foreach (var group in _config.Groups)
@@ -118,7 +144,19 @@ public sealed partial class MainViewModel : ObservableObject
 
     public bool IsTuyaSelected => SelectedTuya != null;
 
-    public IReadOnlyList<EffectOption> Effects => EffectOptions;
+    public IReadOnlyList<EffectOption> Effects => _effectOptions;
+
+    public IReadOnlyList<int> BrightnessPresets => BrightnessPresetValues;
+
+    /// <summary>
+    /// Встроенные эффекты контроллера выбранной ленты; пусто для групп и лент без таких эффектов.
+    /// </summary>
+    public IReadOnlyList<HardwareEffect> HardwareEffects =>
+        (Target as DeviceItemViewModel)?.HardwareEffects?.HardwareEffects ?? Array.Empty<HardwareEffect>();
+
+    public bool HasHardwareEffects => HardwareEffects.Count > 0;
+
+    private bool IsLedsTabSelected => SelectedTabIndex == LedsTab;
 
     public bool IsEffectRunning => ActiveEffect != null;
 
@@ -163,7 +201,11 @@ public sealed partial class MainViewModel : ObservableObject
             if (device is TuyaDevice tuya)
                 ApplyTuyaSettings(tuya);
 
-            Devices.Add(new DeviceItemViewModel(device));
+            var item = new DeviceItemViewModel(device);
+            if (_config.DeviceNames.TryGetValue(device.Id, out var customName))
+                item.CustomName = customName;
+
+            Devices.Add(item);
         }
 
         foreach (var group in Groups)
@@ -206,6 +248,10 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         _effects.Start(effect.Kind, devices, () => new EffectSettings(CurrentColor, Brightness, EffectSpeed));
+
+        foreach (var option in _effectOptions)
+            option.IsActive = option == effect;
+
         ActiveEffect = effect.Title;
         StatusText = $"{Target.Title}: эффект «{effect.Title}»";
     }
@@ -214,7 +260,75 @@ public sealed partial class MainViewModel : ObservableObject
     private void StopEffect()
     {
         _effects.Stop();
+
+        foreach (var option in _effectOptions)
+            option.IsActive = false;
+
         ActiveEffect = null;
+    }
+
+    [RelayCommand]
+    private async Task StartHardwareEffectAsync()
+    {
+        if (Target is not DeviceItemViewModel { HardwareEffects: { } device } item || SelectedHardwareEffect == null)
+            return;
+
+        // Программный эффект перебивал бы встроенный своими кадрами
+        StopEffect();
+
+        try
+        {
+            await device.StartHardwareEffectAsync(SelectedHardwareEffect.Id, HardwareEffectSpeed);
+            StatusText = $"{item.Title}: встроенный эффект «{SelectedHardwareEffect.Title}»";
+        }
+        catch (Exception e)
+        {
+            StatusText = $"{item.Title}: {e.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void SetBrightness(int value)
+    {
+        Brightness = value;
+    }
+
+    [RelayCommand]
+    private void Rename()
+    {
+        var name = RenameText.Trim();
+
+        switch (Target)
+        {
+            case DeviceItemViewModel device:
+                // Пустое имя возвращает название, которое сообщает само устройство
+                device.CustomName = name.Length > 0 ? name : null;
+
+                if (device.CustomName == null)
+                    _config.DeviceNames.Remove(device.Id);
+                else
+                    _config.DeviceNames[device.Id] = name;
+
+                // Группы хранят имя участника, чтобы показывать его, даже когда устройство не найдено
+                foreach (var member in _config.Groups.SelectMany(g => g.Members).Where(m => m.Id == device.Id))
+                    member.Name = device.Name;
+
+                foreach (var group in Groups)
+                    group.Refresh();
+
+                RenameText = device.Name;
+                break;
+
+            case GroupItemViewModel group when name.Length > 0:
+                group.Rename(name);
+                break;
+
+            default:
+                return;
+        }
+
+        ConfigStore.Save(_config);
+        StatusText = "Название сохранено";
     }
 
     [RelayCommand]
@@ -365,7 +479,21 @@ public sealed partial class MainViewModel : ObservableObject
         StopEffect();
         LoadLedCells();
 
+        // Вкладки светодиодов нет у обычных лент и групп
+        if (SelectedTabIndex == LedsTab && !IsAddressableSelected)
+            SelectedTabIndex = ColorTab;
+
+        SelectedHardwareEffect = HardwareEffects.FirstOrDefault();
+        RenameText = value switch
+        {
+            DeviceItemViewModel device => device.Name,
+            GroupItemViewModel group => group.Name,
+            _ => ""
+        };
+
         OnPropertyChanged(nameof(HasTarget));
+        OnPropertyChanged(nameof(HardwareEffects));
+        OnPropertyChanged(nameof(HasHardwareEffects));
 
         if (value == null)
             return;
@@ -387,9 +515,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnBlueChanged(int value) => OnColorEdited();
 
-    partial void OnBrightnessChanged(int value) => OnColorEdited();
+    partial void OnBrightnessChanged(int value) => OnColorEdited(isBrightnessOnly: true);
 
-    private void OnColorEdited()
+    private void OnColorEdited(bool isBrightnessOnly = false)
     {
         OnPropertyChanged(nameof(PreviewHex));
         OnPropertyChanged(nameof(SelectedColor));
@@ -404,11 +532,18 @@ public sealed partial class MainViewModel : ObservableObject
         if (IsEffectRunning)
             return;
 
-        // В режиме светодиодов круг выбирает цвет кисти, а яркость применяется ко всей раскраске
-        if (Target is DeviceItemViewModel { IsPixelMode: true } pixelItem)
+        if (Target is DeviceItemViewModel { Strip: not null } stripItem)
         {
-            _ = QueueSendAsync(() => SendPixelsAsync(pixelItem));
-            return;
+            // В редакторе светодиодов круг выбирает цвет кисти, а не заливает ленту
+            if (IsLedsTabSelected && !isBrightnessOnly)
+                return;
+
+            // Яркость применяется ко всей раскраске, не стирая её
+            if (stripItem.IsPixelMode && isBrightnessOnly)
+            {
+                _ = QueueSendAsync(() => SendPixelsAsync(stripItem));
+                return;
+            }
         }
 
         // Участники группы запоминают цвет группы, чтобы при выборе по отдельности панель показывала актуальное

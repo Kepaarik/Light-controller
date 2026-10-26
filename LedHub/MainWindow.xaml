@@ -76,10 +76,15 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource AccentSoftBrush}">
-                                        <TextBlock Text="&#xE902;" Style="{StaticResource Icon}" FontSize="15"
-                                                   Foreground="{StaticResource AccentHoverBrush}" HorizontalAlignment="Center"/>
-                                    </Border>
+                                    <Grid>
+                                        <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource AccentSoftBrush}">
+                                            <TextBlock Text="&#xE902;" Style="{StaticResource Icon}" FontSize="15"
+                                                       Foreground="{StaticResource AccentHoverBrush}" HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <!-- Последний выставленный цвет группы -->
+                                        <Ellipse Width="11" Height="11" Fill="{Binding ColorHex}" Stroke="{StaticResource SidebarBrush}" StrokeThickness="2"
+                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"/>
+                                    </Grid>
                                     <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding Summary}" Style="{StaticResource Hint}"/>
@@ -130,10 +135,14 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <CheckBox IsChecked="{Binding IsChecked}" VerticalAlignment="Center" ToolTip="Отметить для группы"/>
-                                    <Border Grid.Column="1" Width="34" Height="34" CornerRadius="10" Margin="12,0,0,0"
-                                            Background="{StaticResource ControlBrush}">
-                                        <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" FontSize="15" HorizontalAlignment="Center"/>
-                                    </Border>
+                                    <Grid Grid.Column="1" Margin="12,0,0,0">
+                                        <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource ControlBrush}">
+                                            <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" FontSize="15" HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <!-- Последний выставленный цвет ленты -->
+                                        <Ellipse Width="11" Height="11" Fill="{Binding ColorHex}" Stroke="{StaticResource SidebarBrush}" StrokeThickness="2"
+                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"/>
+                                    </Grid>
                                     <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding Subtitle}" Style="{StaticResource Hint}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
@@ -211,7 +220,17 @@
                     </Border>
                 </Grid>
 
-                <Border Style="{StaticResource Card}" Margin="0,24,0,0" Padding="28">
+                <!-- Разделы управления разнесены по вкладкам, чтобы не листать длинную страницу -->
+                <TabControl SelectedIndex="{Binding SelectedTabIndex}" Margin="0,24,0,0">
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE790;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Цвет"/>
+                        </StackPanel>
+                    </TabItem.Header>
+
+                <Border Style="{StaticResource Card}" Padding="28">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -247,6 +266,21 @@
                                     </LinearGradientBrush>
                                 </Slider.Background>
                             </Slider>
+
+                            <ItemsControl ItemsSource="{Binding BrightnessPresets}" Margin="0,8,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource ChipButton}" Content="{Binding}" ContentStringFormat="{}{0} %"
+                                                Command="{Binding DataContext.SetBrightnessCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
                             <TextBlock Text="Быстрый выбор" Style="{StaticResource Hint}" Margin="0,22,0,10"/>
                             <ItemsControl ItemsSource="{Binding Presets}">
@@ -296,8 +330,19 @@
                     </Grid>
                 </Border>
 
+                </TabItem>
+
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE945;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Эффекты"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                <StackPanel>
+
                 <!-- Эффекты рассчитывает приложение, поэтому они работают на любых лентах и синхронно в группе -->
-                <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,14">
                             <Button DockPanel.Dock="Right" Command="{Binding StopEffectCommand}" Style="{StaticResource DangerButton}" Padding="12,7"
@@ -321,9 +366,22 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding Title}" Margin="0,0,8,8" Padding="16,8"
+                                    <Button Style="{StaticResource EffectTile}" Width="118"
                                             Command="{Binding DataContext.StartEffectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                            CommandParameter="{Binding}"/>
+                                            CommandParameter="{Binding}">
+                                        <StackPanel>
+                                            <Border Height="48" CornerRadius="8">
+                                                <Border.Background>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                        <GradientStop Offset="0" Color="{Binding PreviewFrom}"/>
+                                                        <GradientStop Offset="1" Color="{Binding PreviewTo}"/>
+                                                    </LinearGradientBrush>
+                                                </Border.Background>
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource TextBrush}" Margin="4,8,4,2"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -339,9 +397,48 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Цвет каждого светодиода — только для адресных лент -->
+                <!-- Эффекты, зашитые в контроллер: идут плавно и работают даже при закрытом приложении -->
                 <Border Style="{StaticResource Card}" Margin="0,16,0,0"
-                        Visibility="{Binding IsAddressableSelected, Converter={StaticResource BoolToVisibility}}">
+                        Visibility="{Binding HasHardwareEffects, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,14">
+                            <Button DockPanel.Dock="Right" Command="{Binding StartHardwareEffectCommand}" Style="{StaticResource AccentButton}"
+                                    Padding="14,7" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Запустить"/>
+                                </StackPanel>
+                            </Button>
+                            <StackPanel>
+                                <TextBlock Text="Эффекты контроллера" Style="{StaticResource CardTitle}" Margin="0"/>
+                                <TextBlock Text="Встроены в саму ленту и продолжают работать, даже когда LedHub закрыт"
+                                           Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <ListBox ItemsSource="{Binding HardwareEffects}" SelectedItem="{Binding SelectedHardwareEffect}" MaxHeight="260"
+                                 DisplayMemberPath="Title"/>
+
+                        <DockPanel Margin="0,12,0,6">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding HardwareEffectSpeed, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Скорость" Style="{StaticResource Hint}"/>
+                        </DockPanel>
+                        <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding HardwareEffectSpeed}"/>
+                    </StackPanel>
+                </Border>
+                </StackPanel>
+                </TabItem>
+
+                <TabItem Visibility="{Binding IsAddressableSelected, Converter={StaticResource BoolToVisibility}}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE80A;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Светодиоды"/>
+                        </StackPanel>
+                    </TabItem.Header>
+
+                <!-- Цвет каждого светодиода — только для адресных лент -->
+                <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,14">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -355,21 +452,65 @@
                             </StackPanel>
                         </DockPanel>
 
-                        <ItemsControl ItemsSource="{Binding LedCells}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Width="22" Height="22" CornerRadius="6" Margin="0,0,5,5" Cursor="Hand"
-                                            Background="{Binding Hex}" ToolTip="{Binding Title}"
-                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                                            MouseLeftButtonDown="LedCell_MouseLeftButtonDown" MouseEnter="LedCell_MouseEnter"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Кисть: на этой вкладке круг выбирает цвет для закрашивания, а не заливает ленту -->
+                            <StackPanel Margin="0,0,28,0">
+                                <controls:ColorWheel Width="190" Height="190" SelectedColor="{Binding SelectedColor}"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                                    <Border Width="18" Height="18" CornerRadius="9" Background="{Binding PreviewHex}" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding PreviewHex}" FontFamily="Cascadia Mono, Consolas" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding LedCells}" VerticalAlignment="Top">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="22" Height="22" CornerRadius="6" Margin="0,0,5,5" Cursor="Hand"
+                                                Background="{Binding Hex}" ToolTip="{Binding Title}"
+                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                                MouseLeftButtonDown="LedCell_MouseLeftButtonDown" MouseEnter="LedCell_MouseEnter"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                </TabItem>
+
+                <TabItem>
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE713;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Настройки"/>
+                        </StackPanel>
+                    </TabItem.Header>
+                <StackPanel>
+
+                <!-- Своё название ленты или группы -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Название" Style="{StaticResource CardTitle}" Margin="0,0,0,4"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                                   Text="Удобное имя вместо заводского, например «Шестигранники над столом». Пустое поле вернёт заводское имя ленты."/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding RenameText, UpdateSourceTrigger=PropertyChanged}" Tag="Название"/>
+                            <Button Grid.Column="1" Content="Сохранить" Command="{Binding RenameCommand}"
+                                    Style="{StaticResource AccentButton}" Margin="8,0,0,0"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -445,6 +586,9 @@
                                    Style="{StaticResource Hint}" Margin="0,10,0,0"/>
                     </StackPanel>
                 </Border>
+                </StackPanel>
+                </TabItem>
+                </TabControl>
             </StackPanel>
         </ScrollViewer>
 

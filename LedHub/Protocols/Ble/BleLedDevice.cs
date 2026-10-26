@@ -18,7 +18,7 @@ public enum BleVariant
 /// <summary>
 /// Лента с дешёвым Bluetooth LE контроллером.
 /// </summary>
-public sealed class BleLedDevice : LedDevice
+public sealed class BleLedDevice : LedDevice, IHardwareEffectsDevice
 {
     public static readonly (BleVariant Variant, Guid Service, Guid Characteristic)[] Variants =
     {
@@ -29,13 +29,16 @@ public sealed class BleLedDevice : LedDevice
     private readonly BluetoothLEDevice _device;
     private readonly GattCharacteristic _characteristic;
     private readonly BleVariant _variant;
+    private readonly ElkModel? _model;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private int? _sentBrightness;
 
     public BleLedDevice(BluetoothLEDevice device, GattCharacteristic characteristic, BleVariant variant, string name)
     {
         _device = device;
         _characteristic = characteristic;
         _variant = variant;
+        _model = variant == BleVariant.ElkBledom ? ElkModel.Find(name) : null;
         Name = name;
     }
 
@@ -43,7 +46,11 @@ public sealed class BleLedDevice : LedDevice
 
     public override string Name { get; }
 
-    public override string Protocol => _variant == BleVariant.ElkBledom ? "BLE · ELK-BLEDOM" : "BLE · Triones";
+    public override string Protocol => _model != null
+        ? $"BLE · {_model.Name}"
+        : _variant == BleVariant.ElkBledom ? "BLE · ELK-BLEDOM" : "BLE · Triones";
+
+    public IReadOnlyList<HardwareEffect> HardwareEffects => _model?.Effects ?? Array.Empty<HardwareEffect>();
 
     public override string Address => string.Join(":", Enumerable.Range(0, 6).Reverse().Select(i => ((_device.BluetoothAddress >> (i * 8)) & 0xFF).ToString("X2")));
 
@@ -60,9 +67,42 @@ public sealed class BleLedDevice : LedDevice
         return WriteAsync(command, ct);
     }
 
-    public override Task SetColorAsync(RgbColor color, int brightness, CancellationToken ct = default)
+    public override async Task SetColorAsync(RgbColor color, int brightness, CancellationToken ct = default)
     {
-        // Яркость передаём через сам цвет — так одинаково работает на всех вариантах контроллеров
+        // У известной модели есть своя яркость: без неё лента остаётся на яркости из приложения телефона
+        if (_model != null)
+        {
+            await WriteAsync(new byte[] { 0x7E, 0x00, 0x05, 0x03, color.R, color.G, color.B, 0x00, 0xEF }, ct);
+
+            if (brightness != _sentBrightness)
+            {
+                await WriteAsync(ElkModel.BrightnessCommand(brightness), ct);
+                _sentBrightness = brightness;
+            }
+
+            return;
+        }
+
+        await SetScaledColorAsync(color, brightness, ct);
+    }
+
+    public async Task StartHardwareEffectAsync(int effectId, int speed, CancellationToken ct = default)
+    {
+        if (_model == null)
+            throw new NotSupportedException("У этой модели нет известных встроенных эффектов");
+
+        await WriteAsync(ElkModel.EffectCommand(effectId), ct);
+
+        // Некоторые контроллеры ELK теряют команду, пришедшую сразу за предыдущей
+        await Task.Delay(150, ct);
+        await WriteAsync(ElkModel.EffectSpeedCommand(speed), ct);
+    }
+
+    /// <summary>
+    /// Яркость передаётся через сам цвет — так одинаково работает на всех вариантах контроллеров.
+    /// </summary>
+    private Task SetScaledColorAsync(RgbColor color, int brightness, CancellationToken ct)
+    {
         var c = color.Scale(brightness);
 
         var command = _variant == BleVariant.ElkBledom
