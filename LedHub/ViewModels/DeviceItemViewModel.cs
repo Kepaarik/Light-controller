@@ -61,6 +61,11 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     public IHardwareEffectsDevice? HardwareEffects => Device is IHardwareEffectsDevice { HardwareEffects.Count: > 0 } effects ? effects : null;
 
     /// <summary>
+    /// Встроенный микрофон контроллера, если он есть.
+    /// </summary>
+    public IMicrophoneDevice? Microphone => Device is IMicrophoneDevice { MicrophoneModes.Count: > 0 } microphone ? microphone : null;
+
+    /// <summary>
     /// Значок способа подключения из шрифта Segoe Fluent Icons / MDL2 Assets.
     /// </summary>
     public string Icon => Device switch

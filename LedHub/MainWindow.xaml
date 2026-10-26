@@ -442,6 +442,49 @@
                         <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding HardwareEffectSpeed}"/>
                     </StackPanel>
                 </Border>
+
+                <!-- Встроенный микрофон контроллера: лента сама реагирует на звук рядом с ней -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                        Visibility="{Binding HasMicrophone, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,14">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Command="{Binding EnableMicrophoneCommand}" Style="{StaticResource AccentButton}" Padding="14,7">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE720;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Включить"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding DisableMicrophoneCommand}" Style="{StaticResource GhostButton}" Padding="14,7" Margin="6,0,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xF781;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Выключить"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Микрофон контроллера" Style="{StaticResource CardTitle}" Margin="0"/>
+                                <TextBlock Text="Лента сама зажигает светодиоды в такт звуку рядом с ней — голосу, музыке"
+                                           Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <TextBlock Text="Музыкальный режим" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                        <ListBox ItemsSource="{Binding MicrophoneModes}" SelectedItem="{Binding SelectedMicrophoneMode}" DisplayMemberPath="Title">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                        </ListBox>
+
+                        <DockPanel Margin="0,12,0,6">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding MicrophoneSensitivity, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Чувствительность" Style="{StaticResource Hint}"/>
+                        </DockPanel>
+                        <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding MicrophoneSensitivity}"/>
+                    </StackPanel>
+                </Border>
                 </StackPanel>
                 </TabItem>
 

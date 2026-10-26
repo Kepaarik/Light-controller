@@ -46,24 +46,45 @@ public sealed class ElkModel
         new(207, "Синяя прокрутка")
     };
 
+    /// <summary>
+    /// Музыкальные режимы встроенного микрофона (ExternalMicEqMode из официального приложения).
+    /// </summary>
+    private static readonly IReadOnlyList<HardwareEffect> MicrophoneModeList = new HardwareEffect[]
+    {
+        new(0, "Энергичный"),
+        new(1, "Ритм"),
+        new(2, "Спектр"),
+        new(3, "Прокрутка"),
+        new(4, "Энергичный 2"),
+        new(5, "Ритм 2"),
+        new(6, "Спектр 2"),
+        new(7, "Прокрутка 2")
+    };
+
     // Включены только модели, у которых команды включения, выключения и цвета совпадают с общими для ELK-BLEDOM
     private static readonly ElkModel[] Models =
     {
-        new("MELK-OA21", StripXEffects),
-        new("MELK-OA10", MelkOxEffects),
-        new("MELK-OC10", MelkOxEffects),
-        new("MELK-OF10", MelkOxEffects)
+        new("MELK-OA21", StripXEffects, hasMicrophone: true),
+        new("MELK-OA10", MelkOxEffects, hasMicrophone: false),
+        new("MELK-OC10", MelkOxEffects, hasMicrophone: false),
+        new("MELK-OF10", MelkOxEffects, hasMicrophone: false)
     };
 
-    private ElkModel(string name, IReadOnlyList<HardwareEffect> effects)
+    private ElkModel(string name, IReadOnlyList<HardwareEffect> effects, bool hasMicrophone)
     {
         Name = name;
         Effects = effects;
+        MicrophoneModes = hasMicrophone ? MicrophoneModeList : Array.Empty<HardwareEffect>();
     }
 
     public string Name { get; }
 
     public IReadOnlyList<HardwareEffect> Effects { get; }
+
+    /// <summary>
+    /// Музыкальные режимы встроенного микрофона; пусто, если микрофон у модели не подтверждён.
+    /// </summary>
+    public IReadOnlyList<HardwareEffect> MicrophoneModes { get; }
 
     /// <summary>
     /// Находит модель по имени Bluetooth-устройства; null, если модель неизвестна.
@@ -99,6 +120,31 @@ public sealed class ElkModel
         var value = (byte)Math.Round(Math.Clamp(speed, 0, 100) * 255 / 100.0);
 
         return new byte[] { 0x7E, 0x04, 0x02, value, 0xFF, 0xFF, 0xFF, 0x00, 0xEF };
+    }
+
+    /// <summary>
+    /// Включение встроенного микрофона; проверено на MELK-OA21.
+    /// </summary>
+    public static byte[] MicrophoneEnabledCommand(bool isEnabled)
+    {
+        return new byte[] { 0x7E, 0x04, 0x07, isEnabled ? (byte)0x01 : (byte)0x00, 0xFF, 0xFF, 0xFF, 0x00, 0xEF };
+    }
+
+    /// <summary>
+    /// Музыкальный режим микрофона 0–7: команда MODE с параметрами [0x80 + режим, 4], как в Lotus Lamp X
+    /// (setSymphonyMicRhythmMode). Второй байт — поле длины, контроллер его не проверяет.
+    /// </summary>
+    public static byte[] MicrophoneModeCommand(int modeId)
+    {
+        return new byte[] { 0x7E, 0x05, 0x03, (byte)(0x80 + Math.Clamp(modeId, 0, 7)), 0x04, 0xFF, 0xFF, 0x00, 0xEF };
+    }
+
+    /// <summary>
+    /// Чувствительность микрофона, 0–100.
+    /// </summary>
+    public static byte[] MicrophoneSensitivityCommand(int sensitivity)
+    {
+        return new byte[] { 0x7E, 0x04, 0x06, (byte)Math.Clamp(sensitivity, 0, 100), 0xFF, 0xFF, 0xFF, 0x00, 0xEF };
     }
 
     // Имена в рекламе бывают с пробелами и в разном регистре: "MELK-OA21 16", "melk-oa2116"

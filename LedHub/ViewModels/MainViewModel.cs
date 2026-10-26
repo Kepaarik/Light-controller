@@ -121,6 +121,12 @@ public sealed partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(DevicesPlaceholder))]
     private bool _isScanning;
 
+    [ObservableProperty]
+    private HardwareEffect? _selectedMicrophoneMode;
+
+    [ObservableProperty]
+    private int _microphoneSensitivity = 50;
+
     /// <summary>
     /// Увеличивается при правках формы из приложения, чтобы холст перерисовался.
     /// </summary>
@@ -183,6 +189,14 @@ public sealed partial class MainViewModel : ObservableObject
         (Target as DeviceItemViewModel)?.HardwareEffects?.HardwareEffects ?? Array.Empty<HardwareEffect>();
 
     public bool HasHardwareEffects => HardwareEffects.Count > 0;
+
+    /// <summary>
+    /// Музыкальные режимы встроенного микрофона выбранной ленты; пусто, если микрофона нет.
+    /// </summary>
+    public IReadOnlyList<HardwareEffect> MicrophoneModes =>
+        (Target as DeviceItemViewModel)?.Microphone?.MicrophoneModes ?? Array.Empty<HardwareEffect>();
+
+    public bool HasMicrophone => MicrophoneModes.Count > 0;
 
     public bool SupportsHexLayout => Target is DeviceItemViewModel { SupportsHexLayout: true };
 
@@ -396,6 +410,14 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = $"{item.Title}: {e.Message}";
         }
     }
+
+    [RelayCommand]
+    private Task EnableMicrophoneAsync() =>
+        SendToMicrophoneAsync(m => m.SetMicrophoneEnabledAsync(true), "микрофон включён — лента реагирует на звук рядом с ней");
+
+    [RelayCommand]
+    private Task DisableMicrophoneAsync() =>
+        SendToMicrophoneAsync(m => m.SetMicrophoneEnabledAsync(false), "микрофон выключен");
 
     [RelayCommand]
     private void SetBrightness(int value)
@@ -679,6 +701,13 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HexSendHint));
 
         SelectedHardwareEffect = HardwareEffects.FirstOrDefault();
+
+        // Сброс выбранного режима не должен уходить на ленту командой
+        _isLoadingTarget = true;
+        SelectedMicrophoneMode = null;
+        _isLoadingTarget = false;
+        OnPropertyChanged(nameof(MicrophoneModes));
+        OnPropertyChanged(nameof(HasMicrophone));
         RenameText = value switch
         {
             DeviceItemViewModel device => device.Name,
@@ -702,6 +731,27 @@ public sealed partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(PreviewHex));
         OnPropertyChanged(nameof(SelectedColor));
+    }
+
+    partial void OnSelectedMicrophoneModeChanged(HardwareEffect? value)
+    {
+        if (_isLoadingTarget || value == null)
+            return;
+
+        // Режим имеет смысл только с включённым микрофоном, поэтому включаем его вместе с режимом
+        _ = SendToMicrophoneAsync(async m =>
+        {
+            await m.SetMicrophoneEnabledAsync(true);
+            await m.SetMicrophoneModeAsync(value.Id);
+        }, $"музыкальный режим «{value.Title}»");
+    }
+
+    partial void OnMicrophoneSensitivityChanged(int value)
+    {
+        if (_isLoadingTarget)
+            return;
+
+        _ = QueueSendAsync(() => SendToMicrophoneAsync(m => m.SetMicrophoneSensitivityAsync(value), $"чувствительность микрофона {value} %"));
     }
 
     partial void OnRedChanged(int value) => OnColorEdited();
@@ -830,6 +880,28 @@ public sealed partial class MainViewModel : ObservableObject
         {
             await item.Strip.SetLedColorsAsync(colors, item.Brightness);
             StatusText = $"{item.Title}: рисунок отправлен";
+        }
+        catch (Exception e)
+        {
+            StatusText = $"{item.Title}: {e.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Отправляет команду встроенному микрофону выбранной ленты.
+    /// </summary>
+    private async Task SendToMicrophoneAsync(Func<IMicrophoneDevice, Task> action, string doneText)
+    {
+        if (Target is not DeviceItemViewModel { Microphone: { } microphone } item)
+            return;
+
+        // Программный эффект перебивал бы музыкальный режим своими кадрами
+        StopEffect();
+
+        try
+        {
+            await action(microphone);
+            StatusText = $"{item.Title}: {doneText}";
         }
         catch (Exception e)
         {

@@ -18,7 +18,7 @@ public enum BleVariant
 /// <summary>
 /// Лента с дешёвым Bluetooth LE контроллером.
 /// </summary>
-public sealed class BleLedDevice : LedDevice, IHardwareEffectsDevice
+public sealed class BleLedDevice : LedDevice, IHardwareEffectsDevice, IMicrophoneDevice
 {
     public static readonly (BleVariant Variant, Guid Service, Guid Characteristic)[] Variants =
     {
@@ -56,6 +56,8 @@ public sealed class BleLedDevice : LedDevice, IHardwareEffectsDevice
     /// Название известной модели контроллера (например, MELK-OA21); null для прочих.
     /// </summary>
     public string? ModelName => _model?.Name;
+
+    public IReadOnlyList<HardwareEffect> MicrophoneModes => _model?.MicrophoneModes ?? Array.Empty<HardwareEffect>();
 
     public override string Address => string.Join(":", Enumerable.Range(0, 6).Reverse().Select(i => ((_device.BluetoothAddress >> (i * 8)) & 0xFF).ToString("X2")));
 
@@ -101,6 +103,21 @@ public sealed class BleLedDevice : LedDevice, IHardwareEffectsDevice
         // Некоторые контроллеры ELK теряют команду, пришедшую сразу за предыдущей
         await Task.Delay(150, ct);
         await WriteAsync(ElkModel.EffectSpeedCommand(speed), ct);
+    }
+
+    public Task SetMicrophoneEnabledAsync(bool isEnabled, CancellationToken ct = default)
+    {
+        return WriteAsync(ElkModel.MicrophoneEnabledCommand(isEnabled), ct);
+    }
+
+    public Task SetMicrophoneModeAsync(int modeId, CancellationToken ct = default)
+    {
+        return WriteAsync(ElkModel.MicrophoneModeCommand(modeId), ct);
+    }
+
+    public Task SetMicrophoneSensitivityAsync(int sensitivity, CancellationToken ct = default)
+    {
+        return WriteAsync(ElkModel.MicrophoneSensitivityCommand(sensitivity), ct);
     }
 
     /// <summary>
