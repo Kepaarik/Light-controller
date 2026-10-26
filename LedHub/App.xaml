@@ -395,6 +395,20 @@
             </Setter>
         </Style>
 
+        <!-- Быстрое включение в списке: акцентная, когда лента включена, приглушённая — когда выключена или неизвестно -->
+        <Style x:Key="PowerToggle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+            <Setter Property="Padding" Value="7"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="ToolTip" Value="Включить или выключить"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOn}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="ChipButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Padding" Value="10,5"/>
             <Setter Property="Margin" Value="0,0,6,0"/>

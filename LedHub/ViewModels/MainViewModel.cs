@@ -37,6 +37,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     private readonly DiscoveryService _discovery = new();
     private readonly EffectRunner _effects = new();
+
+    // Снимки формы до каждой правки — для отмены
+    private readonly Stack<List<HexCellConfig>> _hexUndo = new();
     private readonly AppConfig _config = ConfigStore.Load();
 
     // Пока панель загружает значения выбранной цели, изменения слайдеров не отправляются на ленты
@@ -111,7 +114,12 @@ public sealed partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsShapeMode))]
     [NotifyPropertyChangedFor(nameof(IsPaintLedMode))]
     [NotifyPropertyChangedFor(nameof(IsPaintHexMode))]
+    [NotifyPropertyChangedFor(nameof(HexModeHint))]
     private HexEditMode _hexEditMode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DevicesPlaceholder))]
+    private bool _isScanning;
 
     /// <summary>
     /// Увеличивается при правках формы из приложения, чтобы холст перерисовался.
@@ -184,7 +192,20 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string HexSendHint => (Target as DeviceItemViewModel)?.Strip != null
         ? "Рисунок сразу отправляется на ленту: светодиоды идут по порядку номеров шестигранников, внутри — центр и затем по часовой стрелке от верхнего."
-        : "Пока это макет: команда, которой этот контроллер красит отдельные светодиоды, неизвестна. Рисунок сохраняется и начнёт отправляться, когда команда будет добавлена.";
+        : "Команда, которой этот контроллер красит отдельные светодиоды, пока неизвестна, поэтому рисунок — макет: он сохраняется, но на стену не уходит. Цветовой круг слева при этом красит все шестигранники целиком.";
+
+    public string HexModeHint => HexEditMode switch
+    {
+        HexEditMode.Shape => "Клик по «+» добавляет шестигранник, клик по шестиграннику убирает его. Номер — порядок в цепочке от питания.",
+        HexEditMode.PaintLed => "Ведите мышью с зажатой кнопкой, чтобы красить светодиоды. Правый клик — пипетка, Ctrl+Z — отменить.",
+        _ => "Клик или протяжка красит шестигранник целиком. Правый клик — пипетка, Ctrl+Z — отменить."
+    };
+
+    public string DevicesPlaceholder => IsScanning
+        ? "Ищу ленты по Bluetooth, Wi-Fi и USB…"
+        : "Ленты не найдены. Проверьте, что они включены, и нажмите «Найти устройства»";
+
+    private bool CanUndoHex => _hexUndo.Count > 0;
 
     public bool IsShapeMode
     {
@@ -257,7 +278,16 @@ public sealed partial class MainViewModel : ObservableObject
 
         StatusText = "Идёт поиск: Bluetooth, Wi-Fi (Magic Home, Govee, Tuya), USB…";
 
-        var result = await _discovery.DiscoverAllAsync(CancellationToken.None);
+        IsScanning = true;
+        DiscoveryResult result;
+        try
+        {
+            result = await _discovery.DiscoverAllAsync(CancellationToken.None);
+        }
+        finally
+        {
+            IsScanning = false;
+        }
 
         foreach (var device in result.Devices.OrderBy(d => d.Protocol).ThenBy(d => d.Name))
         {
@@ -279,11 +309,27 @@ public sealed partial class MainViewModel : ObservableObject
             : $"Найдено устройств: {Devices.Count}. Проблемы: {string.Join("; ", result.Errors)}";
     }
 
+    /// <summary>
+    /// Быстрое включение и выключение из списка, без выбора ленты или группы.
+    /// </summary>
+    [RelayCommand]
+    private async Task TogglePowerAsync(ILightTarget target)
+    {
+        var turnOn = target.IsOn != true;
+
+        if (target == Target)
+            StopEffect();
+
+        await SendToAsync(target, d => d.SetPowerAsync(turnOn));
+        SetPowerState(target, turnOn);
+    }
+
     [RelayCommand]
     private async Task TurnOnAsync()
     {
         StopEffect();
         await SendToTargetAsync(d => d.SetPowerAsync(true));
+        SetPowerState(Target, true);
 
         // Включение восстанавливает сплошной цвет — возвращаем ленте её раскраску по светодиодам
         if (Target is DeviceItemViewModel { IsPixelMode: true } item)
@@ -295,6 +341,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         StopEffect();
         await SendToTargetAsync(d => d.SetPowerAsync(false));
+        SetPowerState(Target, false);
     }
 
     [RelayCommand]
@@ -412,11 +459,40 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Холст начинает правку: запоминаем форму, чтобы правку можно было отменить.
+    /// </summary>
+    [RelayCommand]
+    private void HexEditStarting()
+    {
+        if (HexLayout == null)
+            return;
+
+        _hexUndo.Push(CloneCells(HexLayout.Cells));
+        UndoHexCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUndoHex))]
+    private void UndoHex()
+    {
+        if (HexLayout == null || _hexUndo.Count == 0)
+            return;
+
+        HexLayout.Cells.Clear();
+        HexLayout.Cells.AddRange(_hexUndo.Pop());
+        UndoHexCommand.NotifyCanExecuteChanged();
+
+        HexLayoutVersion++;
+        HexLayoutChanged(true);
+    }
+
     [RelayCommand]
     private void FillHexLayout()
     {
         if (HexLayout == null)
             return;
+
+        HexEditStarting();
 
         foreach (var cell in HexLayout.Cells)
             Array.Fill(cell.Leds, CurrentColor);
@@ -430,6 +506,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (HexLayout == null)
             return;
+
+        HexEditStarting();
 
         HexLayout.Cells.Clear();
         HexEditMode = HexEditMode.Shape;
@@ -587,6 +665,11 @@ public sealed partial class MainViewModel : ObservableObject
         LoadLedCells();
 
         HexLayout = LoadHexLayout(value);
+        _hexUndo.Clear();
+        UndoHexCommand.NotifyCanExecuteChanged();
+
+        // Готовую форму открываем сразу для рисования, пустую — для сборки
+        HexEditMode = HexLayout?.Cells.Count > 0 ? HexEditMode.PaintLed : HexEditMode.Shape;
 
         // Вкладки светодиодов и формы есть не у всех лент и не у групп
         if (SelectedTabIndex == LedsTab && !IsAddressableSelected || SelectedTabIndex == ShapeTab && HexLayout == null)
@@ -644,8 +727,9 @@ public sealed partial class MainViewModel : ObservableObject
         if (IsEffectRunning)
             return;
 
-        // В редакторах светодиодов и формы круг выбирает цвет кисти, а не заливает ленту
-        if (IsPaintTabSelected && !isBrightnessOnly)
+        // В редакторах светодиодов и формы круг выбирает цвет кисти, а не заливает ленту.
+        // Ленты, которым рисунок не отправить (MELK), при этом красятся целиком, чтобы стена откликалась
+        if (IsPaintTabSelected && !isBrightnessOnly && Target is DeviceItemViewModel { Strip: not null })
             return;
 
         if (Target is DeviceItemViewModel { Strip: not null } stripItem)
@@ -754,6 +838,13 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    private static List<HexCellConfig> CloneCells(IEnumerable<HexCellConfig> cells)
+    {
+        return cells
+            .Select(c => new HexCellConfig { Q = c.Q, R = c.R, Leds = (RgbColor[])c.Leds.Clone() })
+            .ToList();
+    }
+
     /// <summary>
     /// Достаёт сохранённую форму ленты или заводит пустую; null, если ленте форма не подходит.
     /// </summary>
@@ -813,13 +904,32 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsAddressableSelected));
     }
 
-    private async Task SendToTargetAsync(Func<LedDevice, Task> action)
+    /// <summary>
+    /// Запоминает, включена ли цель; у группы то же состояние получают и её ленты.
+    /// </summary>
+    private void SetPowerState(ILightTarget? target, bool isOn)
     {
-        if (Target == null)
+        if (target == null)
             return;
 
-        var title = Target.Title;
-        var devices = Target.GetDevices();
+        target.IsOn = isOn;
+
+        if (target is GroupItemViewModel group)
+        {
+            foreach (var device in Devices.Where(d => group.Config.Members.Any(m => m.Id == d.Id)))
+                device.IsOn = isOn;
+        }
+    }
+
+    private Task SendToTargetAsync(Func<LedDevice, Task> action) => SendToAsync(Target, action);
+
+    private async Task SendToAsync(ILightTarget? target, Func<LedDevice, Task> action)
+    {
+        if (target == null)
+            return;
+
+        var title = target.Title;
+        var devices = target.GetDevices();
         var failures = new List<string>();
 
         if (devices.Count == 0)

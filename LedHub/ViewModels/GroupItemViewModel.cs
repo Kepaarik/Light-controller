@@ -15,6 +15,9 @@ public sealed partial class GroupItemViewModel : ObservableObject, ILightTarget
     [NotifyPropertyChangedFor(nameof(ColorHex))]
     private RgbColor _color = RgbColor.White;
 
+    [ObservableProperty]
+    private bool? _isOn;
+
     public GroupItemViewModel(GroupConfig config, Func<string, DeviceItemViewModel?> findDevice)
     {
         Config = config;

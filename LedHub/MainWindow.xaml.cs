@@ -18,6 +18,9 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         Closed += (_, _) => viewModel.Shutdown();
         SourceInitialized += (_, _) => UseDarkTitleBar();
+
+        // Ленты ищутся сразу при запуске, чтобы не нажимать «Найти устройства» каждый раз
+        Loaded += async (_, _) => await viewModel.ScanCommand.ExecuteAsync(null);
     }
 
     private void LedCell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

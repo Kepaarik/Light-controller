@@ -24,6 +24,9 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     [NotifyPropertyChangedFor(nameof(ColorHex))]
     private RgbColor _color = RgbColor.White;
 
+    [ObservableProperty]
+    private bool? _isOn;
+
     public DeviceItemViewModel(LedDevice device)
     {
         Device = device;

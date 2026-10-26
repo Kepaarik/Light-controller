@@ -20,7 +20,7 @@ public sealed class HexCanvas : FrameworkElement
 
     public static readonly DependencyProperty ModeProperty = DependencyProperty.Register(
         nameof(Mode), typeof(HexEditMode), typeof(HexCanvas),
-        new FrameworkPropertyMetadata(HexEditMode.Shape, FrameworkPropertyMetadataOptions.AffectsRender));
+        new FrameworkPropertyMetadata(HexEditMode.Shape, FrameworkPropertyMetadataOptions.AffectsRender, OnModeChanged));
 
     public static readonly DependencyProperty BrushColorProperty = DependencyProperty.Register(
         nameof(BrushColor), typeof(RgbColor), typeof(HexCanvas),
@@ -39,6 +39,12 @@ public sealed class HexCanvas : FrameworkElement
     public static readonly DependencyProperty ChangedCommandProperty = DependencyProperty.Register(
         nameof(ChangedCommand), typeof(ICommand), typeof(HexCanvas));
 
+    /// <summary>
+    /// Вызывается перед правкой, пока раскладка ещё прежняя, — чтобы правку можно было отменить.
+    /// </summary>
+    public static readonly DependencyProperty EditStartingCommandProperty = DependencyProperty.Register(
+        nameof(EditStartingCommand), typeof(ICommand), typeof(HexCanvas));
+
     private const double MaxHexRadius = 46;
     private const double LedRingRatio = 0.55;
     private const double LedRadiusRatio = 0.16;
@@ -52,11 +58,17 @@ public sealed class HexCanvas : FrameworkElement
     private static readonly Brush GhostText = Freeze(new SolidColorBrush(Color.FromRgb(0x6A, 0x6F, 0x82)));
     private static readonly Brush NumberText = Freeze(new SolidColorBrush(Color.FromArgb(0xB0, 0xFF, 0xFF, 0xFF)));
     private static readonly Brush OffLed = Freeze(new SolidColorBrush(Color.FromRgb(0x2A, 0x2D, 0x38)));
+    private static readonly Pen AddHoverPen = Freeze(new Pen(Freeze(new SolidColorBrush(Color.FromRgb(0x7C, 0x6C, 0xFF))), 2.5));
+    private static readonly Pen RemoveHoverPen = Freeze(new Pen(Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x7A))), 2.5));
+    private static readonly Pen LedHoverPen = Freeze(new Pen(Brushes.White, 2));
 
     // Геометрия последней отрисовки: по ней мышь переводится в шестигранник
     private double _radius;
     private Point _origin;
     private bool _isPainting;
+
+    // Где сейчас мышь — подсвечиваем то, что изменится по клику
+    private Point? _hover;
 
     public HexCanvas()
     {
@@ -91,6 +103,12 @@ public sealed class HexCanvas : FrameworkElement
     {
         get => (ICommand?)GetValue(ChangedCommandProperty);
         set => SetValue(ChangedCommandProperty, value);
+    }
+
+    public ICommand? EditStartingCommand
+    {
+        get => (ICommand?)GetValue(EditStartingCommandProperty);
+        set => SetValue(EditStartingCommandProperty, value);
     }
 
     protected override void OnRender(DrawingContext dc)
@@ -129,6 +147,9 @@ public sealed class HexCanvas : FrameworkElement
             if (Mode == HexEditMode.Shape)
                 DrawText(dc, (i + 1).ToString(CultureInfo.InvariantCulture), center + new Vector(0, _radius * 0.8), _radius * 0.24, NumberText);
         }
+
+        if (_hover is { } hover)
+            DrawHover(dc, hover, ghosts);
     }
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -137,6 +158,7 @@ public sealed class HexCanvas : FrameworkElement
             return;
 
         var position = e.GetPosition(this);
+        EditStartingCommand?.Execute(null);
 
         if (Mode == HexEditMode.Shape)
         {
@@ -151,8 +173,18 @@ public sealed class HexCanvas : FrameworkElement
 
     protected override void OnMouseMove(MouseEventArgs e)
     {
+        _hover = e.GetPosition(this);
+
         if (_isPainting)
-            PaintAt(e.GetPosition(this));
+            PaintAt(_hover.Value);
+
+        InvalidateVisual();
+    }
+
+    protected override void OnMouseLeave(MouseEventArgs e)
+    {
+        _hover = null;
+        InvalidateVisual();
     }
 
     protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
@@ -178,6 +210,47 @@ public sealed class HexCanvas : FrameworkElement
 
         SetCurrentValue(BrushColorProperty, hit.Cell.Leds[hit.Led]);
         e.Handled = true;
+    }
+
+    private static void OnModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        // Курсор подсказывает, что сделает клик: собрать форму или рисовать
+        ((HexCanvas)d).Cursor = (HexEditMode)e.NewValue == HexEditMode.Shape ? Cursors.Hand : Cursors.Pen;
+    }
+
+    /// <summary>
+    /// Подсветка под мышью: в режиме формы — что добавится (акцент) или удалится (красный),
+    /// при рисовании — светодиод или шестигранник, который закрасится.
+    /// </summary>
+    private void DrawHover(DrawingContext dc, Point hover, List<(int Q, int R)> ghosts)
+    {
+        var (q, r) = HexAt(hover);
+        var cell = FindCell(q, r);
+
+        if (Mode == HexEditMode.Shape)
+        {
+            if (cell != null)
+                dc.DrawGeometry(null, RemoveHoverPen, HexGeometry(CenterOf(q, r), _radius * 0.94));
+            else if (ghosts.Contains((q, r)))
+                dc.DrawGeometry(null, AddHoverPen, HexGeometry(CenterOf(q, r), _radius * 0.94));
+
+            return;
+        }
+
+        if (cell == null)
+            return;
+
+        if (Mode == HexEditMode.PaintHex)
+        {
+            dc.DrawGeometry(null, AddHoverPen, HexGeometry(CenterOf(q, r), _radius * 0.94));
+            return;
+        }
+
+        if (FindLed(hover) is { } hit)
+        {
+            var ledRadius = _radius * LedRadiusRatio * 1.45;
+            dc.DrawEllipse(null, LedHoverPen, CenterOf(q, r) + LedOffset(hit.Led), ledRadius, ledRadius);
+        }
     }
 
     private void ToggleHexAt(Point position)

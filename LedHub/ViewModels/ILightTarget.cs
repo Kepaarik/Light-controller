@@ -18,5 +18,10 @@ public interface ILightTarget
 
     int Brightness { get; set; }
 
+    /// <summary>
+    /// Включена ли лента по последней команде из приложения; null — ещё не включали и не выключали.
+    /// </summary>
+    bool? IsOn { get; set; }
+
     IReadOnlyList<LedDevice> GetDevices();
 }
