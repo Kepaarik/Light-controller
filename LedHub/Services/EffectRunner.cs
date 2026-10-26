@@ -96,7 +96,7 @@ public sealed class EffectRunner
         {
             if (device is IAddressableLedDevice { LedCount: > 0 } strip)
             {
-                var colors = source.RenderStrip(strip.LedCount);
+                var colors = source.RenderStrip(device, strip.LedCount);
 
                 await strip.SetLedColorsAsync(colors, settings.Brightness, ct);
                 return;

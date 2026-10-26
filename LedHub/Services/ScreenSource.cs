@@ -3,7 +3,8 @@ using LedHub.Core;
 namespace LedHub.Services;
 
 /// <summary>
-/// Подсветка под экран: обычные ленты светятся средним цветом экрана, адресные — цветами его краёв.
+/// Подсветка под экран: обычные ленты светятся средним цветом экрана, адресные — цветами его краёв
+/// по своей раскладке вокруг монитора.
 /// </summary>
 public sealed class ScreenSource : ILightSource, IDisposable
 {
@@ -20,14 +21,18 @@ public sealed class ScreenSource : ILightSource, IDisposable
     private const double SaturationBoost = 1.35;
 
     private readonly ScreenGrabber _grabber = new(FrameWidth, FrameHeight);
-    private readonly Dictionary<int, (double R, double G, double B)[]> _stripStates = new();
+    private readonly Func<LedDevice, ScreenLayoutConfig> _layoutFor;
+    private readonly Dictionary<string, (double R, double G, double B)[]> _stripStates = new();
     private byte[] _pixels = Array.Empty<byte>();
     private (double R, double G, double B) _solidState;
 
     /// <summary>
-    /// Обход краёв в обратную сторону — если лента за монитором начинается слева, а не справа.
+    /// layoutFor — раскладка ленты вокруг монитора; читается на каждом кадре, поэтому её можно менять на ходу.
     /// </summary>
-    public bool IsReversed { get; set; }
+    public ScreenSource(Func<LedDevice, ScreenLayoutConfig> layoutFor)
+    {
+        _layoutFor = layoutFor;
+    }
 
     public void BeginFrame(double phase, EffectSettings settings)
     {
@@ -42,23 +47,23 @@ public sealed class ScreenSource : ILightSource, IDisposable
         return ToColor(_solidState);
     }
 
-    public IReadOnlyList<RgbColor> RenderStrip(int ledCount)
+    public IReadOnlyList<RgbColor> RenderStrip(LedDevice device, int ledCount)
     {
-        if (!_stripStates.TryGetValue(ledCount, out var states))
+        if (!_stripStates.TryGetValue(device.Id, out var states) || states.Length != ledCount)
         {
             states = new (double R, double G, double B)[ledCount];
-            _stripStates[ledCount] = states;
+            _stripStates[device.Id] = states;
         }
 
+        var points = ScreenLayoutMath.Build(_layoutFor(device), ledCount, (double)FrameWidth / FrameHeight);
         var colors = new RgbColor[ledCount];
 
         for (var i = 0; i < ledCount; i++)
         {
-            var position = (i + 0.5) / ledCount;
-            if (IsReversed)
-                position = 1 - position;
+            // Светодиоды, не попавшие ни на одну сторону, гасим
+            var target = points[i] is { } point ? Boost(SamplePoint(point)) : new RgbColor(0, 0, 0);
 
-            states[i] = Smooth(states[i], Boost(SampleEdge(position)));
+            states[i] = Smooth(states[i], target);
             colors[i] = ToColor(states[i]);
         }
 
@@ -71,28 +76,20 @@ public sealed class ScreenSource : ILightSource, IDisposable
     }
 
     /// <summary>
-    /// Цвет края экрана в точке обхода: правый край снизу вверх, верхний справа налево, левый сверху вниз —
-    /// так обычно идёт лента за монитором.
+    /// Цвет картинки у края экрана рядом со светодиодом: полоса от края внутрь кадра.
     /// </summary>
-    private RgbColor SampleEdge(double position)
+    private RgbColor SamplePoint(LedPoint point)
     {
-        var perimeter = 2 * FrameHeight + FrameWidth;
-        var distance = position * perimeter;
+        var x = (int)Math.Round(point.X * (FrameWidth - 1));
+        var y = (int)Math.Round(point.Y * (FrameHeight - 1));
 
-        if (distance < FrameHeight)
+        return point.Side switch
         {
-            var y = (int)(FrameHeight - 1 - distance);
-            return Average(FrameWidth - EdgeDepth, FrameWidth - 1, y - 2, y + 2);
-        }
-
-        if (distance < FrameHeight + FrameWidth)
-        {
-            var x = (int)(FrameWidth - 1 - (distance - FrameHeight));
-            return Average(x - 2, x + 2, 0, EdgeDepth - 1);
-        }
-
-        var leftY = (int)(distance - FrameHeight - FrameWidth);
-        return Average(0, EdgeDepth - 1, leftY - 2, leftY + 2);
+            ScreenSide.Left => Average(0, EdgeDepth - 1, y - 2, y + 2),
+            ScreenSide.Right => Average(FrameWidth - EdgeDepth, FrameWidth - 1, y - 2, y + 2),
+            ScreenSide.Top => Average(x - 2, x + 2, 0, EdgeDepth - 1),
+            _ => Average(x - 2, x + 2, FrameHeight - EdgeDepth, FrameHeight - 1)
+        };
     }
 
     private RgbColor Average(int x0, int x1, int y0, int y1)

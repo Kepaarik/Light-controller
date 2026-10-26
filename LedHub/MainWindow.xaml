@@ -673,6 +673,8 @@
                         </StackPanel>
                     </TabItem.Header>
 
+                <StackPanel>
+
                 <!-- Подсветка под экран: ленты повторяют цвета картинки на мониторе -->
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -699,25 +701,101 @@
                         </DockPanel>
 
                         <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
-                                   Text="Ленты 20 раз в секунду подхватывают цвета основного монитора. Обычная лента светится средним цветом картинки, адресная за монитором — цветами краёв: правый край снизу вверх, верх справа налево, левый край сверху вниз. Яркость меняется на вкладке «Цвет» прямо во время работы."/>
-
-                        <Grid Margin="0,14,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <CheckBox IsChecked="{Binding IsScreenReversed}" VerticalAlignment="Center"/>
-                            <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                                <TextBlock Text="Обратное направление"/>
-                                <TextBlock Text="Если цвета на ленте за монитором идут зеркально — лента начинается слева, а не справа"
-                                           Style="{StaticResource Hint}"/>
-                            </StackPanel>
-                        </Grid>
+                                   Text="Ленты 20 раз в секунду подхватывают цвета основного монитора. Обычная лента светится средним цветом картинки, адресная за монитором — цветами краёв по своей раскладке (настраивается ниже). Яркость меняется на вкладке «Цвет» прямо во время работы."/>
 
                         <TextBlock Style="{StaticResource Hint}" Margin="0,14,0,0"
                                    Text="Игры в эксклюзивном полноэкранном режиме Windows может не отдавать — тогда включите в игре оконный режим без рамки."/>
                     </StackPanel>
                 </Border>
+
+                <!-- Расположение адресной ленты вокруг монитора: стороны, начало, направление, число светодиодов -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                        Visibility="{Binding HasScreenLayout, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="Расположение ленты" Style="{StaticResource CardTitle}" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding ScreenLayoutSummary}" Style="{StaticResource Hint}" Margin="0,0,0,12"/>
+
+                        <Border Background="{StaticResource WindowBrush}" CornerRadius="10" Height="230">
+                            <controls:ScreenLayoutPreview Layout="{Binding ScreenLayout}" LedCount="{Binding StripLedCount}"
+                                                          Version="{Binding ScreenLayoutVersion}"/>
+                        </Border>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                                   Text="Цвет точек идёт радугой от начала ленты к концу, «1» — первый светодиод. Схема перестраивается сразу, подсветка подхватывает изменения на ходу."/>
+
+                        <Grid Margin="0,16,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="24"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel>
+                                <TextBlock Text="Стороны и число светодиодов (0 — автоматически)" Style="{StaticResource Hint}" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="70"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                        <RowDefinition/>
+                                    </Grid.RowDefinitions>
+
+                                    <CheckBox IsChecked="{Binding ScreenLayout.UseLeft}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="Слева" VerticalAlignment="Center" Margin="10,0"/>
+                                    <TextBox Grid.Column="2" Text="{Binding ScreenLayout.LeftCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,3"/>
+
+                                    <CheckBox Grid.Row="1" IsChecked="{Binding ScreenLayout.UseTop}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="Сверху" VerticalAlignment="Center" Margin="10,0"/>
+                                    <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding ScreenLayout.TopCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,3"/>
+
+                                    <CheckBox Grid.Row="2" IsChecked="{Binding ScreenLayout.UseRight}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Справа" VerticalAlignment="Center" Margin="10,0"/>
+                                    <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding ScreenLayout.RightCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,3"/>
+
+                                    <CheckBox Grid.Row="3" IsChecked="{Binding ScreenLayout.UseBottom}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="Снизу" VerticalAlignment="Center" Margin="10,0"/>
+                                    <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding ScreenLayout.BottomCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,3"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Начало ленты" Style="{StaticResource Hint}" Margin="0,0,0,8"/>
+                                <ListBox ItemsSource="{Binding CornerOptions}" DisplayMemberPath="Title"
+                                         SelectedValuePath="Corner" SelectedValue="{Binding ScreenLayout.StartCorner}">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="2"/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                </ListBox>
+
+                                <TextBlock Text="Направление" Style="{StaticResource Hint}" Margin="0,10,0,8"/>
+                                <UniformGrid Columns="2">
+                                    <RadioButton Style="{StaticResource SegmentRadio}" GroupName="ScreenDirection" Margin="0,0,4,0"
+                                                 IsChecked="{Binding ScreenLayout.IsClockwise}">
+                                        <TextBlock Text="По часовой"/>
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource SegmentRadio}" GroupName="ScreenDirection" Margin="4,0,0,0"
+                                                 IsChecked="{Binding ScreenLayout.IsCounterClockwise}">
+                                        <TextBlock Text="Против часовой"/>
+                                    </RadioButton>
+                                </UniformGrid>
+
+                                <DockPanel Margin="0,12,0,6">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding ScreenLayout.Offset}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Сдвиг начала, светодиодов" Style="{StaticResource Hint}"/>
+                                </DockPanel>
+                                <Slider Minimum="0" Maximum="{Binding StripLedCount}" IsSnapToTickEnabled="True" TickFrequency="1"
+                                        Value="{Binding ScreenLayout.Offset}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                </StackPanel>
                 </TabItem>
 
                 <TabItem Visibility="{Binding IsAddressableSelected, Converter={StaticResource BoolToVisibility}}">

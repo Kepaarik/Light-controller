@@ -96,7 +96,7 @@ public sealed class MusicSource : ILightSource, IDisposable
         }
     }
 
-    public IReadOnlyList<RgbColor> RenderStrip(int ledCount)
+    public IReadOnlyList<RgbColor> RenderStrip(LedDevice device, int ledCount)
     {
         var colors = new RgbColor[ledCount];
 

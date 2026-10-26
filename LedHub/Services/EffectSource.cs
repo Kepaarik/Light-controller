@@ -27,7 +27,7 @@ public sealed class EffectSource : ILightSource
         return RenderPixel(_kind, _phase, _color, 0);
     }
 
-    public IReadOnlyList<RgbColor> RenderStrip(int ledCount)
+    public IReadOnlyList<RgbColor> RenderStrip(LedDevice device, int ledCount)
     {
         return Enumerable.Range(0, ledCount)
             .Select(i => RenderPixel(_kind, _phase, _color, i / (double)ledCount))

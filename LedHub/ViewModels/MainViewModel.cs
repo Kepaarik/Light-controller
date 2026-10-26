@@ -50,8 +50,7 @@ public sealed partial class MainViewModel : ObservableObject
     // Цвет попадает в недавние, только когда его перестали менять, а не на каждом шаге ползунка
     private CancellationTokenSource? _recentColorDelay;
 
-    // Запущенные подсветка под экран и музыка — чтобы менять их настройки на лету
-    private ScreenSource? _screenSource;
+    // Запущенная музыка — чтобы менять чувствительность на лету
     private MusicSource? _musicSource;
 
     private readonly AppConfig _config = ConfigStore.Load();
@@ -145,10 +144,18 @@ public sealed partial class MainViewModel : ObservableObject
     private string _newSceneName = "";
 
     /// <summary>
-    /// Обход краёв экрана в обратную сторону для адресной ленты за монитором.
+    /// Раскладка выбранной адресной ленты вокруг монитора; null для обычных лент и групп.
     /// </summary>
     [ObservableProperty]
-    private bool _isScreenReversed;
+    [NotifyPropertyChangedFor(nameof(HasScreenLayout))]
+    [NotifyPropertyChangedFor(nameof(ScreenLayoutSummary))]
+    private ScreenLayoutConfig? _screenLayout;
+
+    /// <summary>
+    /// Увеличивается при правках раскладки, чтобы схема перерисовалась.
+    /// </summary>
+    [ObservableProperty]
+    private int _screenLayoutVersion;
 
     /// <summary>
     /// Чувствительность к музыке с компьютера: 1 — обычная, больше — ярче на тихих местах.
@@ -194,6 +201,36 @@ public sealed partial class MainViewModel : ObservableObject
         new(MusicMode.Spectrum, "Спектр", "Басы — красный, середина — зелёный, высокие — синий; на адресной ленте — полосы спектра"),
         new(MusicMode.RainbowBeat, "Радуга по битам", "Цвет перескакивает по радуге на каждом ударе")
     };
+
+    public IReadOnlyList<CornerOption> CornerOptions { get; } = new CornerOption[]
+    {
+        new(ScreenCorner.BottomRight, "Снизу справа"),
+        new(ScreenCorner.TopRight, "Сверху справа"),
+        new(ScreenCorner.TopLeft, "Сверху слева"),
+        new(ScreenCorner.BottomLeft, "Снизу слева")
+    };
+
+    public bool HasScreenLayout => ScreenLayout != null;
+
+    /// <summary>
+    /// Число светодиодов выбранной адресной ленты; 0, если выбрана обычная лента или группа.
+    /// </summary>
+    public int StripLedCount => (Target as DeviceItemViewModel)?.Strip?.LedCount ?? 0;
+
+    public string ScreenLayoutSummary
+    {
+        get
+        {
+            if (ScreenLayout == null || StripLedCount == 0)
+                return "";
+
+            var used = ScreenLayoutMath.Build(ScreenLayout, StripLedCount, 16.0 / 9).Count(p => p != null);
+
+            return used == StripLedCount
+                ? $"Светодиодов на ленте: {StripLedCount}, все разложены по краям"
+                : $"Светодиодов на ленте: {StripLedCount}, разложено по краям: {used} — остальные будут погашены";
+        }
+    }
 
     public ObservableCollection<string> RecentColors { get; } = new();
 
@@ -437,10 +474,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         try
         {
-            var source = new ScreenSource { IsReversed = IsScreenReversed };
-            if (StartLightSource(source, "Подсветка под экран"))
-                _screenSource = source;
-            else
+            var source = new ScreenSource(device => GetScreenLayout(device.Id));
+            if (!StartLightSource(source, "Подсветка под экран"))
                 source.Dispose();
         }
         catch (Exception e)
@@ -481,7 +516,6 @@ public sealed partial class MainViewModel : ObservableObject
     private void StopEffect()
     {
         _effects.Stop();
-        _screenSource = null;
         _musicSource = null;
 
         foreach (var option in _effectOptions)
@@ -886,6 +920,10 @@ public sealed partial class MainViewModel : ObservableObject
         LoadLedCells();
 
         HexLayout = LoadHexLayout(value);
+        ScreenLayout = value is DeviceItemViewModel { Strip: not null } addressable ? GetScreenLayout(addressable.Id) : null;
+        OnPropertyChanged(nameof(StripLedCount));
+        OnPropertyChanged(nameof(ScreenLayoutSummary));
+
         _hexUndo.Clear();
         UndoHexCommand.NotifyCanExecuteChanged();
 
@@ -942,10 +980,23 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedColor));
     }
 
-    partial void OnIsScreenReversedChanged(bool value)
+    partial void OnScreenLayoutChanged(ScreenLayoutConfig? oldValue, ScreenLayoutConfig? newValue)
     {
-        if (_screenSource != null)
-            _screenSource.IsReversed = value;
+        if (oldValue != null)
+            oldValue.PropertyChanged -= OnScreenLayoutEdited;
+
+        if (newValue != null)
+            newValue.PropertyChanged += OnScreenLayoutEdited;
+    }
+
+    /// <summary>
+    /// Правка раскладки сразу сохраняется; запущенная подсветка подхватит её на следующем кадре.
+    /// </summary>
+    private void OnScreenLayoutEdited(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        ConfigStore.Save(_config);
+        ScreenLayoutVersion++;
+        OnPropertyChanged(nameof(ScreenLayoutSummary));
     }
 
     partial void OnMusicGainChanged(double value)
@@ -1260,6 +1311,21 @@ public sealed partial class MainViewModel : ObservableObject
         return cells
             .Select(c => new HexCellConfig { Q = c.Q, R = c.R, Leds = (RgbColor[])c.Leds.Clone() })
             .ToList();
+    }
+
+    /// <summary>
+    /// Достаёт сохранённую раскладку ленты вокруг монитора или заводит стандартную: правая, верхняя
+    /// и левая стороны, начало снизу справа, против часовой стрелки.
+    /// </summary>
+    private ScreenLayoutConfig GetScreenLayout(string deviceId)
+    {
+        if (!_config.ScreenLayouts.TryGetValue(deviceId, out var layout))
+        {
+            layout = new ScreenLayoutConfig();
+            _config.ScreenLayouts[deviceId] = layout;
+        }
+
+        return layout;
     }
 
     /// <summary>

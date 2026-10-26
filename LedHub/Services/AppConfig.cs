@@ -28,6 +28,11 @@ public sealed class AppConfig
     public List<SceneConfig> Scenes { get; set; } = new();
 
     /// <summary>
+    /// Раскладки адресных лент вокруг монитора для подсветки под экран, по идентификатору устройства.
+    /// </summary>
+    public Dictionary<string, ScreenLayoutConfig> ScreenLayouts { get; set; } = new();
+
+    /// <summary>
     /// Недавно выбранные цвета в формате #RRGGBB, самый свежий первым.
     /// </summary>
     public List<string> RecentColors { get; set; } = new();

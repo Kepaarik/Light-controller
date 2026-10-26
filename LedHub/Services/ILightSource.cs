@@ -18,7 +18,7 @@ public interface ILightSource
     RgbColor RenderSolid();
 
     /// <summary>
-    /// Цвета всех светодиодов адресной ленты по порядку.
+    /// Цвета всех светодиодов адресной ленты по порядку; лента передаётся, если источнику важна её раскладка.
     /// </summary>
-    IReadOnlyList<RgbColor> RenderStrip(int ledCount);
+    IReadOnlyList<RgbColor> RenderStrip(LedDevice device, int ledCount);
 }
