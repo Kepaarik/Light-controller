@@ -83,9 +83,10 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     public IAddressableLedDevice? Strip => Device is IAddressableLedDevice { LedCount: > 0 } strip ? strip : null;
 
     /// <summary>
-    /// Можно ли собрать для ленты форму из шестигранников: адресные ленты и известные модели MELK.
+    /// Можно ли собрать для ленты форму из шестигранников: только адресные ленты, которым рисунок можно отправить.
+    /// MELK сюда не входит — его контроллер не принимает цвета отдельных светодиодов (проверено на стене).
     /// </summary>
-    public bool SupportsHexLayout => Strip != null || Device is BleLedDevice { ModelName: not null };
+    public bool SupportsHexLayout => Strip != null;
 
     /// <summary>
     /// Последние цвета светодиодов из редактора; null, пока лентой не управляли по светодиодам.

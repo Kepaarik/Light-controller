@@ -38,6 +38,8 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -72,7 +74,7 @@
                 <TextBlock Grid.Row="2" Text="ГРУППЫ" Style="{StaticResource SectionLabel}"/>
 
                 <Grid Grid.Row="3">
-                    <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" MaxHeight="210">
+                    <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" MaxHeight="160">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid>
@@ -129,12 +131,59 @@
                     </Button>
                 </Grid>
 
-                <DockPanel Grid.Row="5">
+                <TextBlock Grid.Row="5" Text="СЦЕНЫ" Style="{StaticResource SectionLabel}"/>
+
+                <!-- Сцены: сохранённое состояние всех лент, включается одним кликом -->
+                <StackPanel Grid.Row="6">
+                    <ItemsControl ItemsSource="{Binding Scenes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource ControlBrush}" CornerRadius="8" Margin="0,0,6,6">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource GhostButton}" Foreground="{StaticResource TextBrush}" Padding="10,6"
+                                                ToolTip="Включить сцену"
+                                                Command="{Binding DataContext.ApplySceneCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="10" Margin="0,0,6,0"
+                                                           Foreground="{StaticResource AccentHoverBrush}"/>
+                                                <TextBlock Text="{Binding Name}"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Style="{StaticResource GhostButton}" Padding="6,6" ToolTip="Удалить сцену"
+                                                Command="{Binding DataContext.DeleteSceneCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="&#xE711;" Style="{StaticResource Icon}" FontSize="9"/>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding NewSceneName, UpdateSourceTrigger=PropertyChanged}" Tag="Сохранить как сцену…"/>
+                        <Button Grid.Column="1" Command="{Binding SaveSceneCommand}" Margin="8,0,0,0" Padding="12,0"
+                                ToolTip="Запомнить цвет, яркость и включение всех лент">
+                            <TextBlock Text="&#xE74E;" Style="{StaticResource Icon}" FontSize="14"/>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+
+                <DockPanel Grid.Row="7">
                     <TextBlock DockPanel.Dock="Right" Text="{Binding Devices.Count}" Style="{StaticResource SectionLabel}" Margin="0,20,4,8"/>
                     <TextBlock Text="УСТРОЙСТВА" Style="{StaticResource SectionLabel}"/>
                 </DockPanel>
 
-                <Grid Grid.Row="6">
+                <Grid Grid.Row="8">
                     <ListBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
@@ -182,7 +231,7 @@
                     </TextBlock>
                 </Grid>
 
-                <TextBlock Grid.Row="7" Style="{StaticResource Hint}" Margin="4,12,0,0"
+                <TextBlock Grid.Row="9" Style="{StaticResource Hint}" Margin="4,12,0,0"
                            Text="Галочками отмечаются ленты для новой группы или для добавления в выбранную."/>
             </Grid>
         </Border>
@@ -219,6 +268,11 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding Target.Title}" FontSize="26" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding Target.Subtitle}" Style="{StaticResource Hint}" FontSize="13" Margin="0,4,0,0"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
+                                    Visibility="{Binding HasSleepTimer, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="&#xE916;" Style="{StaticResource Icon}" FontSize="12" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,6,0"/>
+                            <TextBlock Text="{Binding SleepTimerText}" Foreground="{StaticResource AccentHoverBrush}" FontSize="12"/>
+                        </StackPanel>
                     </StackPanel>
                     <Border Grid.Column="1" Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                             CornerRadius="12" Padding="4" VerticalAlignment="Center">
@@ -232,6 +286,51 @@
                             <Button Command="{Binding TurnOffCommand}" Style="{StaticResource GhostButton}" Padding="18,9" Margin="4,0,0,0">
                                 <TextBlock Text="Выключить"/>
                             </Button>
+
+                            <!-- Таймер сна: меню с вариантами выпадает под кнопкой -->
+                            <ToggleButton x:Name="SleepTimerButton" IsChecked="{Binding IsSleepTimerMenuOpen}" Margin="4,0,0,0"
+                                          Cursor="Hand" ToolTip="Выключить по таймеру" FocusVisualStyle="{x:Null}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Root" CornerRadius="8" Padding="12,9" Background="Transparent">
+                                            <TextBlock Text="&#xE916;" Style="{StaticResource Icon}" FontSize="14" Foreground="{StaticResource MutedBrush}"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlHoverBrush}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Popup IsOpen="{Binding IsSleepTimerMenuOpen}" PlacementTarget="{Binding ElementName=SleepTimerButton}"
+                                   Placement="Bottom" HorizontalOffset="-150" VerticalOffset="8" StaysOpen="False" AllowsTransparency="True">
+                                <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                        CornerRadius="12" Padding="14" Width="200">
+                                    <StackPanel>
+                                        <TextBlock Text="Выключить через" Style="{StaticResource Hint}" Margin="0,0,0,8"/>
+                                        <ItemsControl ItemsSource="{Binding SleepTimerOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Columns="2"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="{Binding}" ContentStringFormat="{}{0} мин" Margin="0,0,6,6"
+                                                            Command="{Binding DataContext.StartSleepTimerCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button Content="Отменить таймер" Command="{Binding CancelSleepTimerCommand}" Style="{StaticResource GhostButton}"
+                                                Margin="0,2,6,0" Visibility="{Binding HasSleepTimer, Converter={StaticResource BoolToVisibility}}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -313,6 +412,24 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+
+                            <StackPanel Visibility="{Binding HasRecentColors, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Недавние" Style="{StaticResource Hint}" Margin="0,6,0,10"/>
+                                <ItemsControl ItemsSource="{Binding RecentColors}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Style="{StaticResource SwatchButton}" Width="26" Height="26" Background="{Binding}" ToolTip="{Binding}"
+                                                    Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
 
                             <TextBlock Text="Точная настройка RGB" Style="{StaticResource Hint}" Margin="0,12,0,4"/>
                             <Grid>
@@ -443,9 +560,19 @@
                     </StackPanel>
                 </Border>
 
+                </StackPanel>
+                </TabItem>
+
+                <TabItem Visibility="{Binding HasMicrophone, Converter={StaticResource BoolToVisibility}}">
+                    <TabItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8D6;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Музыка"/>
+                        </StackPanel>
+                    </TabItem.Header>
+
                 <!-- Встроенный микрофон контроллера: лента сама реагирует на звук рядом с ней -->
-                <Border Style="{StaticResource Card}" Margin="0,16,0,0"
-                        Visibility="{Binding HasMicrophone, Converter={StaticResource BoolToVisibility}}">
+                <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,14">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -485,7 +612,6 @@
                         <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding MicrophoneSensitivity}"/>
                     </StackPanel>
                 </Border>
-                </StackPanel>
                 </TabItem>
 
                 <TabItem Visibility="{Binding IsAddressableSelected, Converter={StaticResource BoolToVisibility}}">
@@ -617,7 +743,8 @@
                                 <DockPanel>
                                     <TextBlock Text="&#xE946;" Style="{StaticResource Icon}" FontSize="13" Foreground="{StaticResource WarningBrush}"
                                                VerticalAlignment="Top" Margin="0,1,10,0"/>
-                                    <TextBlock Text="{Binding HexSendHint}" Style="{StaticResource Hint}"/>
+                                    <TextBlock Style="{StaticResource Hint}"
+                                               Text="Рисунок сразу отправляется на ленту: светодиоды идут по порядку номеров шестигранников, внутри — центр и затем по часовой стрелке от верхнего."/>
                                 </DockPanel>
                             </Border>
                         </StackPanel>

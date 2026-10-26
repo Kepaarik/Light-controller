@@ -24,6 +24,34 @@ public sealed class AppConfig
     /// Раскладки из шестигранников по идентификатору устройства.
     /// </summary>
     public Dictionary<string, HexLayoutConfig> HexLayouts { get; set; } = new();
+
+    public List<SceneConfig> Scenes { get; set; } = new();
+
+    /// <summary>
+    /// Недавно выбранные цвета в формате #RRGGBB, самый свежий первым.
+    /// </summary>
+    public List<string> RecentColors { get; set; } = new();
+}
+
+/// <summary>
+/// Сохранённое состояние лент, которое включается одним кликом.
+/// </summary>
+public sealed class SceneConfig
+{
+    public string Name { get; set; } = "";
+
+    public List<SceneDeviceState> Devices { get; set; } = new();
+}
+
+public sealed class SceneDeviceState
+{
+    public string DeviceId { get; set; } = "";
+
+    public bool IsOn { get; set; }
+
+    public RgbColor Color { get; set; }
+
+    public int Brightness { get; set; } = 100;
 }
 
 /// <summary>

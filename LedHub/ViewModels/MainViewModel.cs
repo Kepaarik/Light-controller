@@ -16,10 +16,14 @@ public sealed partial class MainViewModel : ObservableObject
     };
 
     private const int ColorTab = 0;
-    private const int LedsTab = 2;
-    private const int ShapeTab = 3;
+    private const int MusicTab = 2;
+    private const int LedsTab = 3;
+    private const int ShapeTab = 4;
+
+    private const int MaxRecentColors = 10;
 
     private static readonly int[] BrightnessPresetValues = { 10, 25, 50, 75, 100 };
+    private static readonly int[] SleepTimerMinuteValues = { 15, 30, 60, 120 };
 
     private readonly EffectOption[] _effectOptions =
     {
@@ -40,6 +44,13 @@ public sealed partial class MainViewModel : ObservableObject
 
     // Снимки формы до каждой правки — для отмены
     private readonly Stack<List<HexCellConfig>> _hexUndo = new();
+
+    // Когда выключить ленту или группу по таймеру сна
+    private readonly Dictionary<ILightTarget, DateTime> _sleepTimers = new();
+
+    // Цвет попадает в недавние, только когда его перестали менять, а не на каждом шаге ползунка
+    private CancellationTokenSource? _recentColorDelay;
+
     private readonly AppConfig _config = ConfigStore.Load();
 
     // Пока панель загружает значения выбранной цели, изменения слайдеров не отправляются на ленты
@@ -95,7 +106,7 @@ public sealed partial class MainViewModel : ObservableObject
     private int _hardwareEffectSpeed = 50;
 
     /// <summary>
-    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — светодиоды, 3 — форма, 4 — настройки.
+    /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — музыка, 3 — светодиоды, 4 — форма, 5 — настройки.
     /// </summary>
     [ObservableProperty]
     private int _selectedTabIndex;
@@ -127,6 +138,19 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _microphoneSensitivity = 50;
 
+    [ObservableProperty]
+    private string _newSceneName = "";
+
+    [ObservableProperty]
+    private bool _isSleepTimerMenuOpen;
+
+    /// <summary>
+    /// Обратный отсчёт таймера сна выбранной ленты или группы; null, если таймер не запущен.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSleepTimer))]
+    private string? _sleepTimerText;
+
     /// <summary>
     /// Увеличивается при правках формы из приложения, чтобы холст перерисовался.
     /// </summary>
@@ -137,7 +161,25 @@ public sealed partial class MainViewModel : ObservableObject
     {
         foreach (var group in _config.Groups)
             Groups.Add(new GroupItemViewModel(group, FindDevice));
+
+        foreach (var scene in _config.Scenes)
+            Scenes.Add(scene);
+
+        foreach (var color in _config.RecentColors.Take(MaxRecentColors))
+            RecentColors.Add(color);
+
+        _ = RunSleepTimersAsync();
     }
+
+    public ObservableCollection<SceneConfig> Scenes { get; } = new();
+
+    public ObservableCollection<string> RecentColors { get; } = new();
+
+    public bool HasRecentColors => RecentColors.Count > 0;
+
+    public IReadOnlyList<int> SleepTimerOptions => SleepTimerMinuteValues;
+
+    public bool HasSleepTimer => SleepTimerText != null;
 
     public ObservableCollection<DeviceItemViewModel> Devices { get; } = new();
 
@@ -203,10 +245,6 @@ public sealed partial class MainViewModel : ObservableObject
     public string HexSummary => HexLayout == null
         ? ""
         : $"Шестигранников: {HexLayout.Cells.Count} · светодиодов: {HexLayout.Cells.Count * HexCellConfig.LedCount}";
-
-    public string HexSendHint => (Target as DeviceItemViewModel)?.Strip != null
-        ? "Рисунок сразу отправляется на ленту: светодиоды идут по порядку номеров шестигранников, внутри — центр и затем по часовой стрелке от верхнего."
-        : "Команда, которой этот контроллер красит отдельные светодиоды, пока неизвестна, поэтому рисунок — макет: он сохраняется, но на стену не уходит.";
 
     public string HexModeHint => HexEditMode switch
     {
@@ -289,6 +327,10 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedGroup = null;
         Shutdown();
         Devices.Clear();
+
+        // После поиска ленты станут новыми объектами — их таймеры сна ссылались бы на старые
+        foreach (var device in _sleepTimers.Keys.OfType<DeviceItemViewModel>().ToList())
+            _sleepTimers.Remove(device);
 
         StatusText = "Идёт поиск: Bluetooth, Wi-Fi (Magic Home, Govee, Tuya), USB…";
 
@@ -461,6 +503,103 @@ public sealed partial class MainViewModel : ObservableObject
 
         ConfigStore.Save(_config);
         StatusText = "Название сохранено";
+    }
+
+    /// <summary>
+    /// Запоминает текущее состояние всех найденных лент как сцену.
+    /// </summary>
+    [RelayCommand]
+    private void SaveScene()
+    {
+        if (Devices.Count == 0)
+        {
+            StatusText = "Ленты не найдены — сохранять в сцену нечего";
+            return;
+        }
+
+        var name = NewSceneName.Trim();
+        if (name.Length == 0)
+            name = $"Сцена {Scenes.Count + 1}";
+
+        var scene = new SceneConfig
+        {
+            Name = name,
+            Devices = Devices
+                .Select(d => new SceneDeviceState { DeviceId = d.Id, IsOn = d.IsOn ?? true, Color = d.Color, Brightness = d.Brightness })
+                .ToList()
+        };
+
+        _config.Scenes.Add(scene);
+        Scenes.Add(scene);
+        ConfigStore.Save(_config);
+
+        NewSceneName = "";
+        StatusText = $"Сцена «{name}» сохранена: лент — {scene.Devices.Count}";
+    }
+
+    [RelayCommand]
+    private async Task ApplySceneAsync(SceneConfig scene)
+    {
+        StopEffect();
+
+        var sends = new List<Task<bool>>();
+
+        foreach (var state in scene.Devices)
+        {
+            var item = FindDevice(state.DeviceId);
+            if (item == null || !item.Device.IsReady)
+                continue;
+
+            item.Color = state.Color;
+            item.Brightness = state.Brightness;
+            item.IsOn = state.IsOn;
+            FillLedColors(item, state.Color);
+
+            sends.Add(ApplySceneStateAsync(item.Device, state));
+        }
+
+        var results = await Task.WhenAll(sends);
+
+        // Панель управления показывает выбранную ленту такой, какой её сделала сцена
+        if (Target != null)
+            LoadTargetValues(Target);
+
+        StatusText = $"Сцена «{scene.Name}»: применена к {results.Count(r => r)} из {scene.Devices.Count} лент";
+    }
+
+    [RelayCommand]
+    private void DeleteScene(SceneConfig scene)
+    {
+        _config.Scenes.Remove(scene);
+        Scenes.Remove(scene);
+        ConfigStore.Save(_config);
+
+        StatusText = $"Сцена «{scene.Name}» удалена";
+    }
+
+    [RelayCommand]
+    private void StartSleepTimer(int minutes)
+    {
+        if (Target == null)
+            return;
+
+        _sleepTimers[Target] = DateTime.Now.AddMinutes(minutes);
+        IsSleepTimerMenuOpen = false;
+        UpdateSleepTimerText();
+
+        StatusText = $"{Target.Title}: выключится через {minutes} мин";
+    }
+
+    [RelayCommand]
+    private void CancelSleepTimer()
+    {
+        IsSleepTimerMenuOpen = false;
+
+        if (Target == null || !_sleepTimers.Remove(Target))
+            return;
+
+        UpdateSleepTimerText();
+        StatusText = $"{Target.Title}: таймер отменён";
     }
 
     /// <summary>
@@ -693,12 +832,13 @@ public sealed partial class MainViewModel : ObservableObject
         // Готовую форму открываем сразу для рисования, пустую — для сборки
         HexEditMode = HexLayout?.Cells.Count > 0 ? HexEditMode.PaintLed : HexEditMode.Shape;
 
-        // Вкладки светодиодов и формы есть не у всех лент и не у групп
-        if (SelectedTabIndex == LedsTab && !IsAddressableSelected || SelectedTabIndex == ShapeTab && HexLayout == null)
+        // Вкладки музыки, светодиодов и формы есть не у всех лент и не у групп
+        if (SelectedTabIndex == MusicTab && !HasMicrophone
+            || SelectedTabIndex == LedsTab && !IsAddressableSelected
+            || SelectedTabIndex == ShapeTab && HexLayout == null)
             SelectedTabIndex = ColorTab;
 
         OnPropertyChanged(nameof(SupportsHexLayout));
-        OnPropertyChanged(nameof(HexSendHint));
 
         SelectedHardwareEffect = HardwareEffects.FirstOrDefault();
 
@@ -708,6 +848,7 @@ public sealed partial class MainViewModel : ObservableObject
         _isLoadingTarget = false;
         OnPropertyChanged(nameof(MicrophoneModes));
         OnPropertyChanged(nameof(HasMicrophone));
+
         RenameText = value switch
         {
             DeviceItemViewModel device => device.Name,
@@ -719,14 +860,24 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HardwareEffects));
         OnPropertyChanged(nameof(HasHardwareEffects));
 
+        UpdateSleepTimerText();
+
         if (value == null)
             return;
 
+        LoadTargetValues(value);
+    }
+
+    /// <summary>
+    /// Выставляет ползунки и круг по запомненному состоянию цели, не отправляя ничего на ленты.
+    /// </summary>
+    private void LoadTargetValues(ILightTarget target)
+    {
         _isLoadingTarget = true;
-        Red = value.Color.R;
-        Green = value.Color.G;
-        Blue = value.Color.B;
-        Brightness = value.Brightness;
+        Red = target.Color.R;
+        Green = target.Color.G;
+        Blue = target.Color.B;
+        Brightness = target.Brightness;
         _isLoadingTarget = false;
 
         OnPropertyChanged(nameof(PreviewHex));
@@ -772,6 +923,9 @@ public sealed partial class MainViewModel : ObservableObject
 
         Target.Color = CurrentColor;
         Target.Brightness = Brightness;
+
+        if (!isBrightnessOnly)
+            _ = RememberRecentColorAsync(CurrentColor);
 
         // Во время эффекта цвет и яркость читаются эффектом на каждом кадре
         if (IsEffectRunning)
@@ -885,6 +1039,104 @@ public sealed partial class MainViewModel : ObservableObject
         {
             StatusText = $"{item.Title}: {e.Message}";
         }
+    }
+
+    /// <summary>
+    /// Переводит одну ленту в состояние из сцены; false, если лента не ответила.
+    /// </summary>
+    private static async Task<bool> ApplySceneStateAsync(LedDevice device, SceneDeviceState state)
+    {
+        try
+        {
+            if (!state.IsOn)
+            {
+                await device.SetPowerAsync(false);
+                return true;
+            }
+
+            await device.SetPowerAsync(true);
+            await device.SetColorAsync(state.Color, state.Brightness);
+            return true;
+        }
+        catch (Exception)
+        {
+            // Недоступная лента не должна мешать применить сцену к остальным
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Раз в секунду обновляет обратный отсчёт и выключает ленты, у которых истёк таймер сна.
+    /// </summary>
+    private async Task RunSleepTimersAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+
+        while (await timer.WaitForNextTickAsync())
+        {
+            foreach (var (target, _) in _sleepTimers.Where(p => p.Value <= DateTime.Now).ToList())
+            {
+                _sleepTimers.Remove(target);
+
+                if (target == Target)
+                    StopEffect();
+
+                await SendToAsync(target, d => d.SetPowerAsync(false));
+                SetPowerState(target, false);
+                StatusText = $"{target.Title}: выключено по таймеру";
+            }
+
+            UpdateSleepTimerText();
+        }
+    }
+
+    private void UpdateSleepTimerText()
+    {
+        if (Target == null || !_sleepTimers.TryGetValue(Target, out var at))
+        {
+            SleepTimerText = null;
+            return;
+        }
+
+        var left = at - DateTime.Now;
+        if (left < TimeSpan.Zero)
+            left = TimeSpan.Zero;
+
+        SleepTimerText = left.TotalHours >= 1
+            ? $"Выключится через {(int)left.TotalHours}:{left.Minutes:00}:{left.Seconds:00}"
+            : $"Выключится через {left.Minutes}:{left.Seconds:00}";
+    }
+
+    /// <summary>
+    /// Добавляет цвет в недавние, если его не поменяли за полторы секунды.
+    /// </summary>
+    private async Task RememberRecentColorAsync(RgbColor color)
+    {
+        _recentColorDelay?.Cancel();
+        _recentColorDelay?.Dispose();
+
+        var cts = new CancellationTokenSource();
+        _recentColorDelay = cts;
+
+        try
+        {
+            await Task.Delay(1500, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        var hex = color.ToHex();
+        RecentColors.Remove(hex);
+        RecentColors.Insert(0, hex);
+
+        while (RecentColors.Count > MaxRecentColors)
+            RecentColors.RemoveAt(RecentColors.Count - 1);
+
+        _config.RecentColors = RecentColors.ToList();
+        ConfigStore.Save(_config);
+        OnPropertyChanged(nameof(HasRecentColors));
     }
 
     /// <summary>
