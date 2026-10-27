@@ -1,10 +1,13 @@
+using LedHub.Core;
+
 namespace LedHub.Services.Scene;
 
 public enum SceneItemKind
 {
     Monitor,
     Strip,
-    Panel
+    Panel,
+    Keyboard
 }
 
 /// <summary>
@@ -29,7 +32,7 @@ public sealed class SceneItemConfig
     public double Y { get; set; }
 
     /// <summary>
-    /// Длина ленты или ширина монитора.
+    /// Длина ленты, ширина монитора или клавиатуры.
     /// </summary>
     public double Size { get; set; } = 50;
 
@@ -72,9 +75,15 @@ public sealed class SceneHexCell
 public readonly record struct ScenePoint(double X, double Y);
 
 /// <summary>
-/// Устройство для расчёта формы: сколько у него светодиодов (0 — обычная лента одного цвета) и его форма из шестигранников.
+/// Клавиша на сцене: номер её светодиода и углы по порядку обхода.
 /// </summary>
-public sealed record SceneDeviceInfo(string Id, int LedCount, HexLayoutConfig? HexLayout);
+public sealed record SceneKey(int Led, IReadOnlyList<ScenePoint> Corners);
+
+/// <summary>
+/// Устройство для расчёта формы: сколько у него светодиодов (0 — обычная лента одного цвета), его форма из шестигранников
+/// и клавиши, если это клавиатура.
+/// </summary>
+public sealed record SceneDeviceInfo(string Id, int LedCount, HexLayoutConfig? HexLayout, IReadOnlyList<KeyboardKey>? Keys = null);
 
 /// <summary>
 /// Монитор для расчёта формы: пропорции, лента подсветки и её раскладка вокруг экрана.
@@ -121,6 +130,16 @@ public sealed class SceneShape
     public double HexRotation { get; init; }
 
     /// <summary>
+    /// Корпус клавиатуры: углы по порядку обхода; null у остальных элементов.
+    /// </summary>
+    public IReadOnlyList<ScenePoint>? Body { get; init; }
+
+    /// <summary>
+    /// Клавиши клавиатуры с подсветкой; пусто, если клавиатура не найдена.
+    /// </summary>
+    public IReadOnlyList<SceneKey> Keys { get; init; } = Array.Empty<SceneKey>();
+
+    /// <summary>
     /// Места светодиодов адресной ленты по порядку; null — светодиод никуда не попал. Пусто у обычной ленты.
     /// </summary>
     public IReadOnlyList<ScenePoint?> Leds { get; init; } = Array.Empty<ScenePoint?>();
@@ -142,6 +161,14 @@ public static class SceneGeometry
     private const double BacklightGap = 2.5;
 
     private const double LedRingRatio = 0.55;
+
+    // Зазор между клавишами и поля корпуса вокруг них — в размерах стандартной клавиши
+    private const double KeyGap = 0.06;
+    private const double KeyboardMargin = 0.35;
+
+    // Пропорции клавиатуры, клавиши которой неизвестны, — как у полноразмерной
+    private const double DefaultKeyboardColumns = 20;
+    private const double DefaultKeyboardRows = 6.25;
 
     private static readonly double Sqrt3 = Math.Sqrt(3);
     private static readonly (int Q, int R)[] HexDirections = { (1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1) };
@@ -264,6 +291,54 @@ public static class SceneGeometry
             Center = new ScenePoint(config.X, config.Y),
             Bounds = (new ScenePoint(hexes.Min(h => h.X) - size, hexes.Min(h => h.Y) - size),
                 new ScenePoint(hexes.Max(h => h.X) + size, hexes.Max(h => h.Y) + size))
+        };
+    }
+
+    public static SceneShape BuildKeyboard(SceneItemConfig config, SceneDeviceInfo device)
+    {
+        var angle = config.Rotation * Math.PI / 180;
+        var keys = device.Keys ?? Array.Empty<KeyboardKey>();
+
+        // Размер раскладки в клавишах; Size — ширина клавиатуры на сцене
+        var columns = keys.Count > 0 ? keys.Max(k => k.X + k.Width) : DefaultKeyboardColumns;
+        var rows = keys.Count > 0 ? keys.Max(k => k.Y + k.Height) : DefaultKeyboardRows;
+        var unit = config.Size / columns;
+
+        ScenePoint Point(double x, double y) => Place(config, (x - columns / 2) * unit, (y - rows / 2) * unit, angle);
+
+        var leds = new ScenePoint?[device.LedCount];
+        var sceneKeys = new List<SceneKey>();
+
+        foreach (var key in keys)
+        {
+            var left = key.X + KeyGap;
+            var top = key.Y + KeyGap;
+            var right = key.X + key.Width - KeyGap;
+            var bottom = key.Y + key.Height - KeyGap;
+
+            sceneKeys.Add(new SceneKey(key.Led, new[] { Point(left, top), Point(right, top), Point(right, bottom), Point(left, bottom) }));
+
+            if (key.Led < leds.Length)
+                leds[key.Led] = Point(key.X + key.Width / 2, key.Y + key.Height / 2);
+        }
+
+        var body = new[]
+        {
+            Point(-KeyboardMargin, -KeyboardMargin),
+            Point(columns + KeyboardMargin, -KeyboardMargin),
+            Point(columns + KeyboardMargin, rows + KeyboardMargin),
+            Point(-KeyboardMargin, rows + KeyboardMargin)
+        };
+
+        return new SceneShape(config)
+        {
+            DeviceId = device.Id,
+            Body = body,
+            Keys = sceneKeys,
+            Leds = keys.Count > 0 ? leds : Array.Empty<ScenePoint?>(),
+            Center = new ScenePoint(config.X, config.Y),
+            Bounds = (new ScenePoint(body.Min(p => p.X), body.Min(p => p.Y)),
+                new ScenePoint(body.Max(p => p.X), body.Max(p => p.Y)))
         };
     }
 

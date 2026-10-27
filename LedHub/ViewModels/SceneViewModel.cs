@@ -29,6 +29,7 @@ public sealed partial class SceneViewModel : ObservableObject
 
     private const double DefaultMonitorWidth = 60;
     private const double DefaultStripLength = 50;
+    private const double DefaultKeyboardWidth = 38;
 
     private readonly AppConfig _config;
     private readonly ObservableCollection<DeviceItemViewModel> _devices;
@@ -277,9 +278,11 @@ public sealed partial class SceneViewModel : ObservableObject
             var offset = Items.Count(i => !i.IsMonitor) * 14;
             var hasHexShape = device?.Strip != null && _config.HexLayouts.GetValueOrDefault(candidate.Key)?.Cells.Count > 0;
 
-            // Ленту с собранной формой из шестигранников сразу ставим панелью
-            config.Kind = hasHexShape ? SceneItemKind.Panel : SceneItemKind.Strip;
-            config.Size = DefaultStripLength;
+            // Ленту с собранной формой из шестигранников сразу ставим панелью, клавиатуру — клавиатурой
+            config.Kind = device?.Device is IKeyboardDevice ? SceneItemKind.Keyboard
+                : hasHexShape ? SceneItemKind.Panel
+                : SceneItemKind.Strip;
+            config.Size = config.Kind == SceneItemKind.Keyboard ? DefaultKeyboardWidth : DefaultStripLength;
             config.X = 70 + offset;
             config.Y = 60 + offset;
         }
@@ -478,9 +481,12 @@ public sealed partial class SceneViewModel : ObservableObject
 
         var device = DeviceInfo(item.Config.Key);
 
-        return item.Config.Kind == SceneItemKind.Panel
-            ? SceneGeometry.BuildPanel(item.Config, device)
-            : SceneGeometry.BuildStrip(item.Config, device);
+        return item.Config.Kind switch
+        {
+            SceneItemKind.Panel => SceneGeometry.BuildPanel(item.Config, device),
+            SceneItemKind.Keyboard => SceneGeometry.BuildKeyboard(item.Config, device),
+            _ => SceneGeometry.BuildStrip(item.Config, device)
+        };
     }
 
     /// <summary>
@@ -490,7 +496,8 @@ public sealed partial class SceneViewModel : ObservableObject
     {
         var device = FindDevice(id);
 
-        return new SceneDeviceInfo(id, device?.Strip?.LedCount ?? 0, _config.HexLayouts.GetValueOrDefault(id));
+        return new SceneDeviceInfo(id, device?.Strip?.LedCount ?? 0, _config.HexLayouts.GetValueOrDefault(id),
+            (device?.Device as IKeyboardDevice)?.Keys);
     }
 
     /// <summary>

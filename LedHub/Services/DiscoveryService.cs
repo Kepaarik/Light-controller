@@ -3,6 +3,7 @@ using LedHub.Protocols.Ble;
 using LedHub.Protocols.Govee;
 using LedHub.Protocols.MagicHome;
 using LedHub.Protocols.Robobloq;
+using LedHub.Protocols.RoyalKludge;
 using LedHub.Protocols.Serial;
 using LedHub.Protocols.Tuya;
 
@@ -25,7 +26,8 @@ public sealed class DiscoveryService
         new GoveeDiscoverer(),
         new TuyaDiscoverer(),
         new SerialDiscoverer(),
-        new RobobloqDiscoverer()
+        new RobobloqDiscoverer(),
+        new RkKeyboardDiscoverer()
     };
 
     public async Task<DiscoveryResult> DiscoverAllAsync(CancellationToken ct)

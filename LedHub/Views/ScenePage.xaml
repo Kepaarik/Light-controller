@@ -87,7 +87,7 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <UniformGrid Columns="2" Margin="0,16,0,4" Visibility="{Binding IsDevice, Converter={StaticResource BoolToVisibility}}">
+                                <UniformGrid Columns="2" Margin="0,16,0,4" Visibility="{Binding ShowsKindChoice, Converter={StaticResource BoolToVisibility}}">
                                     <RadioButton Style="{StaticResource SegmentRadio}" Margin="0,0,4,0" IsChecked="{Binding IsLineKind}">
                                         <TextBlock Text="Лента"/>
                                     </RadioButton>

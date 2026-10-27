@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using LedHub.Core;
 using LedHub.Protocols.Ble;
 using LedHub.Protocols.Robobloq;
+using LedHub.Protocols.RoyalKludge;
 using LedHub.Protocols.Serial;
 
 namespace LedHub.ViewModels;
@@ -70,6 +71,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     /// </summary>
     public string Icon => Device switch
     {
+        RkKeyboardDevice => "",
         BleLedDevice => "",
         SerialLedDevice or RobobloqDevice => "",
         _ => ""

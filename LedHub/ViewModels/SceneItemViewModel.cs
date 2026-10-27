@@ -44,6 +44,13 @@ public sealed partial class SceneItemViewModel : ObservableObject
 
     public bool IsDevice => !IsMonitor;
 
+    public bool IsKeyboard => Config.Kind == SceneItemKind.Keyboard;
+
+    /// <summary>
+    /// Ленту можно поставить линией или панелью шестигранников; у клавиатуры форма одна.
+    /// </summary>
+    public bool ShowsKindChoice => IsDevice && !IsKeyboard;
+
     public bool IsLineKind
     {
         get => Config.Kind == SceneItemKind.Strip;
@@ -68,6 +75,7 @@ public sealed partial class SceneItemViewModel : ObservableObject
     {
         SceneItemKind.Monitor => "Монитор",
         SceneItemKind.Panel => Device == null ? "Панель · не найдена" : "Панель из шестигранников",
+        SceneItemKind.Keyboard => Device == null ? "Клавиатура · не найдена" : "Клавиатура",
         _ => Device == null ? "Лента · не найдена" : "Лента"
     };
 
@@ -75,12 +83,13 @@ public sealed partial class SceneItemViewModel : ObservableObject
     {
         SceneItemKind.Monitor => "",
         SceneItemKind.Panel => "",
+        SceneItemKind.Keyboard => "",
         _ => ""
     };
 
     public bool ShowsSize => !IsPanel;
 
-    public string SizeTitle => IsMonitor ? "Ширина монитора" : "Длина ленты";
+    public string SizeTitle => IsMonitor ? "Ширина монитора" : IsKeyboard ? "Ширина клавиатуры" : "Длина ленты";
 
     public bool ShowsRotation => !IsMonitor;
 

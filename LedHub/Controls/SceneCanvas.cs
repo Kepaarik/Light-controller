@@ -98,6 +98,8 @@ public sealed class SceneCanvas : FrameworkElement
                 DrawMonitor(dc, item, shape);
             else if (shape.Line != null)
                 DrawStrip(dc, item, shape);
+            else if (shape.Body != null)
+                DrawKeyboard(dc, item, shape);
             else
                 DrawPanel(dc, item, shape);
         }
@@ -310,6 +312,30 @@ public sealed class SceneCanvas : FrameworkElement
         DrawLabel(dc, item, shape);
     }
 
+    private void DrawKeyboard(DrawingContext dc, SceneItemViewModel item, SceneShape shape)
+    {
+        Brush body = HexFill;
+
+        // Клавиатура не найдена — клавиш не знаем, корпус светится цветом устройства целиком
+        if (shape.Keys.Count == 0 && shape.DeviceId != null)
+        {
+            var color = ToMedia(Scene!.SolidColor(shape));
+            body = new SolidColorBrush(Color.FromArgb(0xD0, color.R, color.G, color.B));
+        }
+
+        dc.DrawGeometry(body, HexPen, PolygonGeometry(shape.Body!));
+
+        foreach (var key in shape.Keys)
+        {
+            var color = Scene!.LedColor(shape, key.Led);
+            var fill = color == new RgbColor(0, 0, 0) ? OffLed : new SolidColorBrush(ToMedia(color));
+
+            dc.DrawGeometry(fill, null, PolygonGeometry(key.Corners));
+        }
+
+        DrawLabel(dc, item, shape);
+    }
+
     private void DrawLeds(DrawingContext dc, SceneShape shape)
     {
         if (shape.Leds.Count == 0)
@@ -390,6 +416,14 @@ public sealed class SceneCanvas : FrameworkElement
                 continue;
             }
 
+            if (shape.Body is { } body)
+            {
+                if (IsInsidePolygon(world, body))
+                    return item;
+
+                continue;
+            }
+
             if (shape.Hexes.Any(h => Math.Sqrt((h.X - world.X) * (h.X - world.X) + (h.Y - world.Y) * (h.Y - world.Y)) <= shape.HexRadius))
                 return item;
         }
@@ -439,6 +473,48 @@ public sealed class SceneCanvas : FrameworkElement
         var closestY = start.Y + dy * t;
 
         return Math.Sqrt((point.X - closestX) * (point.X - closestX) + (point.Y - closestY) * (point.Y - closestY));
+    }
+
+    /// <summary>
+    /// Лежит ли точка внутри выпуклого многоугольника, углы которого перечислены по порядку обхода.
+    /// </summary>
+    private static bool IsInsidePolygon(Point point, IReadOnlyList<ScenePoint> corners)
+    {
+        var sign = 0;
+
+        for (var i = 0; i < corners.Count; i++)
+        {
+            var a = corners[i];
+            var b = corners[(i + 1) % corners.Count];
+            var cross = (b.X - a.X) * (point.Y - a.Y) - (b.Y - a.Y) * (point.X - a.X);
+
+            if (cross == 0)
+                continue;
+
+            var side = Math.Sign(cross);
+            if (sign != 0 && side != sign)
+                return false;
+
+            sign = side;
+        }
+
+        return true;
+    }
+
+    private Geometry PolygonGeometry(IReadOnlyList<ScenePoint> corners)
+    {
+        var geometry = new StreamGeometry();
+
+        using (var context = geometry.Open())
+        {
+            context.BeginFigure(ToView(corners[0]), true, true);
+
+            for (var i = 1; i < corners.Count; i++)
+                context.LineTo(ToView(corners[i]), true, true);
+        }
+
+        geometry.Freeze();
+        return geometry;
     }
 
     private static Geometry HexGeometry(Point center, double radius, double rotation)
