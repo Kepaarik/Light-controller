@@ -11,7 +11,7 @@ namespace LedHub.Controls;
 /// </summary>
 public sealed class EffectPreview : FrameworkElement
 {
-    public static readonly DependencyProperty EffectProperty = DependencyProperty.Register(
+    public static new readonly DependencyProperty EffectProperty = DependencyProperty.Register(
         nameof(Effect), typeof(EffectDefinition), typeof(EffectPreview),
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
@@ -28,7 +28,7 @@ public sealed class EffectPreview : FrameworkElement
     // Превью одинаковы для всех плиток одного эффекта — считаем каждое один раз
     private static readonly Dictionary<string, BitmapSource> Cache = new();
 
-    public EffectDefinition? Effect
+    public new EffectDefinition? Effect
     {
         get => (EffectDefinition?)GetValue(EffectProperty);
         set => SetValue(EffectProperty, value);
