@@ -97,10 +97,35 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _hardwareEffectSpeed = 50;
 
+    [ObservableProperty]
+    private HardwareEffect? _selectedKeyboardEffect;
+
+    [ObservableProperty]
+    private int _keyboardEffectBrightness = 100;
+
+    [ObservableProperty]
+    private int _keyboardEffectSpeed = 50;
+
+    /// <summary>
+    /// Эффект клавиатуры переливается всеми цветами; иначе идёт цветом кисти.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isKeyboardEffectMulticolor = true;
+
+    /// <summary>
+    /// Список устройств убран, чтобы клавиатура на своей вкладке заняла всю ширину.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsKeyboardExpanded))]
+    [NotifyPropertyChangedFor(nameof(ShowDeviceList))]
+    private bool _isDeviceListCollapsed;
+
     /// <summary>
     /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — музыка, 3 — светодиоды, 4 — форма, 5 — настройки.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsKeyboardExpanded))]
+    [NotifyPropertyChangedFor(nameof(ShowDeviceList))]
     private int _selectedTabIndex;
 
     [ObservableProperty]
@@ -314,9 +339,14 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Список устройств виден всегда, кроме узкого окна с открытой лентой.
+    /// Список устройств виден всегда, кроме узкого окна с открытой лентой и клавиатуры, развёрнутой на всю ширину.
     /// </summary>
-    public bool ShowDeviceList => !IsNarrow || !HasTarget;
+    public bool ShowDeviceList => (!IsNarrow || !HasTarget) && !IsKeyboardExpanded;
+
+    /// <summary>
+    /// Клавиатура на своей вкладке развёрнута на всю ширину вместо списка устройств.
+    /// </summary>
+    public bool IsKeyboardExpanded => IsDeviceListCollapsed && IsKeyboardSelected && SelectedTabIndex == LedsTab;
 
     /// <summary>
     /// Управление лентой видно всегда, кроме узкого окна, где ещё ничего не выбрано.
@@ -441,6 +471,14 @@ public sealed partial class MainViewModel : ObservableObject
         (Target as DeviceItemViewModel)?.Microphone?.MicrophoneModes ?? Array.Empty<HardwareEffect>();
 
     public bool HasMicrophone => MicrophoneModes.Count > 0;
+
+    /// <summary>
+    /// Эффекты прошивки выбранной клавиатуры; пусто, если выбрана не клавиатура.
+    /// </summary>
+    public IReadOnlyList<HardwareEffect> KeyboardEffects =>
+        (Target as DeviceItemViewModel)?.KeyboardEffects?.KeyboardEffects ?? Array.Empty<HardwareEffect>();
+
+    public bool HasKeyboardEffects => KeyboardEffects.Count > 0;
 
     public bool SupportsHexLayout => Target is DeviceItemViewModel { SupportsHexLayout: true };
 
@@ -747,6 +785,34 @@ public sealed partial class MainViewModel : ObservableObject
         {
             StatusText = $"{item.Title}: {e.Message}";
         }
+    }
+
+    [RelayCommand]
+    private async Task StartKeyboardEffectAsync()
+    {
+        if (Target is not DeviceItemViewModel { KeyboardEffects: { } keyboard } item || SelectedKeyboardEffect == null)
+            return;
+
+        // Кадры программного эффекта сбросили бы клавиатуру обратно в режим своих цветов
+        StopEffect();
+
+        try
+        {
+            var color = IsKeyboardEffectMulticolor ? (RgbColor?)null : CurrentColor;
+
+            await keyboard.StartKeyboardEffectAsync(SelectedKeyboardEffect.Id, KeyboardEffectBrightness, KeyboardEffectSpeed, color);
+            StatusText = $"{item.Title}: эффект клавиатуры «{SelectedKeyboardEffect.Title}»";
+        }
+        catch (Exception e)
+        {
+            StatusText = $"{item.Title}: {e.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleDeviceList()
+    {
+        IsDeviceListCollapsed = !IsDeviceListCollapsed;
     }
 
     [RelayCommand]
@@ -1146,6 +1212,7 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(SupportsHexLayout));
 
         SelectedHardwareEffect = HardwareEffects.FirstOrDefault();
+        SelectedKeyboardEffect = KeyboardEffects.FirstOrDefault();
 
         // Сброс выбранного режима не должен уходить на ленту командой
         _isLoadingTarget = true;
@@ -1167,6 +1234,9 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowDeviceDetail));
         OnPropertyChanged(nameof(HardwareEffects));
         OnPropertyChanged(nameof(HasHardwareEffects));
+        OnPropertyChanged(nameof(KeyboardEffects));
+        OnPropertyChanged(nameof(HasKeyboardEffects));
+        OnPropertyChanged(nameof(IsKeyboardExpanded));
 
         UpdateSleepTimerText();
 

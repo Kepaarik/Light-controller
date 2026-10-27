@@ -599,14 +599,24 @@
 
                     <TabItem Visibility="{Binding IsAddressableSelected, Converter={StaticResource BoolToVisibility}}">
                         <TabItem.Header>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE80A;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
-                                <TextBlock Text="Светодиоды"/>
-                            </StackPanel>
+                            <Grid>
+                                <StackPanel Orientation="Horizontal"
+                                            Visibility="{Binding IsKeyboardSelected, Converter={StaticResource InverseBoolToVisibility}}">
+                                    <TextBlock Text="&#xE80A;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Светодиоды"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal"
+                                            Visibility="{Binding IsKeyboardSelected, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="&#xE765;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Клавиатура"/>
+                                </StackPanel>
+                            </Grid>
                         </TabItem.Header>
+                    <Grid>
 
                     <!-- Цвет каждого светодиода — только для адресных лент -->
-                    <Border Style="{StaticResource Card}">
+                    <Border Style="{StaticResource Card}"
+                            Visibility="{Binding IsKeyboardSelected, Converter={StaticResource InverseBoolToVisibility}}">
                         <StackPanel>
                             <controls:ResponsivePanel BreakWidth="620" Spacing="12" Margin="0,0,0,14">
                                 <StackPanel controls:ResponsivePanel.Fill="True">
@@ -631,8 +641,7 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <ItemsControl controls:ResponsivePanel.Fill="True" ItemsSource="{Binding LedCells}" VerticalAlignment="Top"
-                                              Visibility="{Binding IsKeyboardSelected, Converter={StaticResource InverseBoolToVisibility}}">
+                                <ItemsControl controls:ResponsivePanel.Fill="True" ItemsSource="{Binding LedCells}" VerticalAlignment="Top">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <WrapPanel/>
@@ -647,11 +656,51 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                            </controls:ResponsivePanel>
+                        </StackPanel>
+                    </Border>
 
-                                <!-- Клавиатура: клавиши на её раскладке вместо ряда светодиодов -->
-                                <Viewbox controls:ResponsivePanel.Fill="True" Stretch="Uniform" StretchDirection="DownOnly"
-                                         VerticalAlignment="Top" HorizontalAlignment="Left"
-                                         Visibility="{Binding IsKeyboardSelected, Converter={StaticResource BoolToVisibility}}">
+                    <!-- Клавиатура: клавиши на её раскладке во всю ширину и эффекты её прошивки -->
+                    <StackPanel Visibility="{Binding IsKeyboardSelected, Converter={StaticResource BoolToVisibility}}">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <controls:ResponsivePanel BreakWidth="620" Spacing="12" Margin="0,0,0,14">
+                                    <StackPanel controls:ResponsivePanel.Fill="True">
+                                        <TextBlock Text="Клавиши" Style="{StaticResource CardTitle}" Margin="0"/>
+                                        <TextBlock Text="Нажмите или проведите мышью по клавишам, чтобы закрасить их текущим цветом"
+                                                   Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Content="Залить всю клавиатуру" Command="{Binding FillLedsCommand}" Padding="12,7"/>
+                                        <Button Content="Погасить все" Command="{Binding ClearLedsCommand}" Style="{StaticResource GhostButton}" Padding="12,7" Margin="6,0,0,0"/>
+                                        <Button Command="{Binding ToggleDeviceListCommand}" Style="{StaticResource GhostButton}" Padding="12,7" Margin="6,0,0,0">
+                                            <Grid>
+                                                <StackPanel Orientation="Horizontal"
+                                                            Visibility="{Binding IsDeviceListCollapsed, Converter={StaticResource InverseBoolToVisibility}}">
+                                                    <TextBlock Text="&#xE740;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="На всю ширину"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal"
+                                                            Visibility="{Binding IsDeviceListCollapsed, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="&#xE73F;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="Показать список"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </StackPanel>
+                                </controls:ResponsivePanel>
+
+                                <!-- Кисть: на этой вкладке круг выбирает цвет для закрашивания, а не заливает клавиатуру -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <controls:ColorWheel Width="150" Height="150" SelectedColor="{Binding SelectedColor}"/>
+                                    <StackPanel VerticalAlignment="Center" Margin="16,0,0,0">
+                                        <Border Width="28" Height="28" CornerRadius="14" Background="{Binding PreviewHex}" HorizontalAlignment="Left"/>
+                                        <TextBlock Text="{Binding PreviewHex}" FontFamily="Cascadia Mono, Consolas" Margin="0,8,0,0"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Клавиатура растягивается на всю ширину карточки -->
+                                <Viewbox Stretch="Uniform" StretchDirection="Both" HorizontalAlignment="Stretch">
                                     <ItemsControl ItemsSource="{Binding KeyCells}" Width="{Binding KeyboardWidth}" Height="{Binding KeyboardHeight}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
@@ -683,9 +732,56 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </Viewbox>
-                            </controls:ResponsivePanel>
-                        </StackPanel>
-                    </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Эффекты, зашитые в прошивку клавиатуры: идут плавно, без мерцания, и работают даже при закрытом приложении -->
+                        <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                                Visibility="{Binding HasKeyboardEffects, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,14">
+                                    <Button DockPanel.Dock="Right" Command="{Binding StartKeyboardEffectCommand}" Style="{StaticResource AccentButton}"
+                                            Padding="14,7" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Запустить"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <StackPanel>
+                                        <TextBlock Text="Эффекты клавиатуры" Style="{StaticResource CardTitle}" Margin="0"/>
+                                        <TextBlock Text="Встроены в саму клавиатуру: идут плавно и продолжают работать, даже когда LedHub закрыт"
+                                                   Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+
+                                <ListBox ItemsSource="{Binding KeyboardEffects}" SelectedItem="{Binding SelectedKeyboardEffect}" DisplayMemberPath="Title">
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                </ListBox>
+
+                                <CheckBox Content="Все цвета (радуга)" IsChecked="{Binding IsKeyboardEffectMulticolor}" Margin="0,12,0,0"/>
+                                <TextBlock Text="Без галочки эффект идёт цветом, выбранным на круге выше"
+                                           Style="{StaticResource Hint}" Margin="0,4,0,0"/>
+
+                                <DockPanel Margin="0,12,0,6">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding KeyboardEffectBrightness, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Яркость" Style="{StaticResource Hint}"/>
+                                </DockPanel>
+                                <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding KeyboardEffectBrightness}"/>
+
+                                <DockPanel Margin="0,12,0,6">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding KeyboardEffectSpeed, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Скорость" Style="{StaticResource Hint}"/>
+                                </DockPanel>
+                                <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding KeyboardEffectSpeed}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    </Grid>
                     </TabItem>
 
                     <TabItem Visibility="{Binding SupportsHexLayout, Converter={StaticResource BoolToVisibility}}">

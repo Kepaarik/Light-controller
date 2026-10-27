@@ -67,6 +67,11 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     public IMicrophoneDevice? Microphone => Device is IMicrophoneDevice { MicrophoneModes.Count: > 0 } microphone ? microphone : null;
 
     /// <summary>
+    /// Эффекты прошивки клавиатуры, если это клавиатура с такими эффектами.
+    /// </summary>
+    public IKeyboardEffectsDevice? KeyboardEffects => Device is IKeyboardEffectsDevice { KeyboardEffects.Count: > 0 } effects ? effects : null;
+
+    /// <summary>
     /// Значок способа подключения из шрифта Segoe Fluent Icons / MDL2 Assets.
     /// </summary>
     public string Icon => Device switch
