@@ -20,6 +20,9 @@ public sealed partial class MainViewModel : ObservableObject
     private const int LedsTab = 3;
     private const int ShapeTab = 4;
 
+    // Размер стандартной клавиши на схеме клавиатуры, в пикселях
+    private const double KeyUnit = 40;
+
     private const int MaxRecentColors = 10;
 
     private static readonly int[] BrightnessPresetValues = { 10, 25, 50, 75, 100 };
@@ -503,6 +506,20 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<LedCellViewModel> LedCells { get; } = new();
 
     public bool IsAddressableSelected => LedCells.Count > 0;
+
+    /// <summary>
+    /// Клавиши выбранной клавиатуры так, как они расположены на ней; пусто, если выбрана не клавиатура.
+    /// </summary>
+    public ObservableCollection<KeyCellViewModel> KeyCells { get; } = new();
+
+    public bool IsKeyboardSelected => KeyCells.Count > 0;
+
+    /// <summary>
+    /// Размер схемы клавиатуры в пикселях.
+    /// </summary>
+    public double KeyboardWidth => KeyCells.Count > 0 ? KeyCells.Max(k => k.Left + k.Width) : 0;
+
+    public double KeyboardHeight => KeyCells.Count > 0 ? KeyCells.Max(k => k.Top + k.Height) : 0;
 
     private RgbColor CurrentColor => new((byte)Red, (byte)Green, (byte)Blue);
 
@@ -1660,6 +1677,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void LoadLedCells()
     {
         LedCells.Clear();
+        KeyCells.Clear();
 
         if (Target is DeviceItemViewModel { Strip: { } strip } item)
         {
@@ -1667,9 +1685,19 @@ public sealed partial class MainViewModel : ObservableObject
 
             for (var i = 0; i < item.LedColors.Length; i++)
                 LedCells.Add(new LedCellViewModel(i, item.LedColors[i]));
+
+            // У клавиатуры светодиоды показываем клавишами на её раскладке
+            if (item.Device is IKeyboardDevice keyboard)
+            {
+                foreach (var key in keyboard.Keys.Where(k => k.Led < LedCells.Count))
+                    KeyCells.Add(new KeyCellViewModel(LedCells[key.Led], key, KeyUnit));
+            }
         }
 
         OnPropertyChanged(nameof(IsAddressableSelected));
+        OnPropertyChanged(nameof(IsKeyboardSelected));
+        OnPropertyChanged(nameof(KeyboardWidth));
+        OnPropertyChanged(nameof(KeyboardHeight));
     }
 
     /// <summary>

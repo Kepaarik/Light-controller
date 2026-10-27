@@ -631,7 +631,8 @@
                                     </StackPanel>
                                 </StackPanel>
 
-                                <ItemsControl controls:ResponsivePanel.Fill="True" ItemsSource="{Binding LedCells}" VerticalAlignment="Top">
+                                <ItemsControl controls:ResponsivePanel.Fill="True" ItemsSource="{Binding LedCells}" VerticalAlignment="Top"
+                                              Visibility="{Binding IsKeyboardSelected, Converter={StaticResource InverseBoolToVisibility}}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <WrapPanel/>
@@ -646,6 +647,42 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+
+                                <!-- Клавиатура: клавиши на её раскладке вместо ряда светодиодов -->
+                                <Viewbox controls:ResponsivePanel.Fill="True" Stretch="Uniform" StretchDirection="DownOnly"
+                                         VerticalAlignment="Top" HorizontalAlignment="Left"
+                                         Visibility="{Binding IsKeyboardSelected, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl ItemsSource="{Binding KeyCells}" Width="{Binding KeyboardWidth}" Height="{Binding KeyboardHeight}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <Canvas/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemContainerStyle>
+                                            <Style TargetType="ContentPresenter">
+                                                <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                                                <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                                            </Style>
+                                        </ItemsControl.ItemContainerStyle>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Width="{Binding Width}" Height="{Binding Height}" Padding="2" Background="Transparent" Cursor="Hand"
+                                                        ToolTip="{Binding Cell.Title}"
+                                                        MouseLeftButtonDown="LedCell_MouseLeftButtonDown" MouseEnter="LedCell_MouseEnter">
+                                                    <Border CornerRadius="6" Background="{Binding Cell.Hex}"
+                                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                        <TextBlock Text="{Binding Label}" FontSize="10" Foreground="White"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <TextBlock.Effect>
+                                                                <DropShadowEffect ShadowDepth="0" BlurRadius="3" Opacity="0.9"/>
+                                                            </TextBlock.Effect>
+                                                        </TextBlock>
+                                                    </Border>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Viewbox>
                             </controls:ResponsivePanel>
                         </StackPanel>
                     </Border>

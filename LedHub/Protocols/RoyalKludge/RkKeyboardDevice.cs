@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using HidSharp;
 using LedHub.Core;
 
@@ -56,6 +55,7 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice
 
     private string? _firmware;
     private byte[]? _profile;
+    private string? _readError;
     private bool _isCustomMode;
     private byte[]? _lastFrame;
 
@@ -83,7 +83,7 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice
 
     public override string? StatusText => IsReady
         ? null
-        : "Не удалось прочитать настройки клавиатуры. Закройте программу RK и повторите поиск";
+        : $"Не удалось прочитать настройки клавиатуры ({_readError}). Закройте программу RK и повторите поиск";
 
     public int LedCount => KeyLedCount;
 
@@ -229,18 +229,15 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice
             var firmware = Exchange(BuildPacket(CommandGetFirmware, 1, FirmwareLength));
             _firmware = $"{firmware[16]:x2}{firmware[17]:x2}";
 
+            // Настройщик RK длину данных в ответе не проверяет и берёт профиль как есть — делаем так же
             var reply = Exchange(BuildPacket(CommandGetProfile, 0, ProfileLength));
-
-            // В ответе тот же заголовок; другая длина данных — значит, клавиатура ответила не на наш запрос
-            if ((reply[6] | reply[7] << 8) != ProfileLength)
-                return false;
-
             _profile = reply.AsSpan(DataOffset, ProfileLength).ToArray();
 
             return true;
         }
-        catch (Exception e) when (e is IOException or TimeoutException)
+        catch (Exception e)
         {
+            _readError = $"{e.GetType().Name}: {e.Message}";
             return false;
         }
     }

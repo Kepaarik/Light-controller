@@ -87,8 +87,9 @@ public sealed partial class DeviceItemViewModel : ObservableObject, ILightTarget
     /// <summary>
     /// Можно ли собрать для ленты форму из шестигранников: только адресные ленты, которым рисунок можно отправить.
     /// MELK сюда не входит — его контроллер не принимает цвета отдельных светодиодов (проверено на стене).
+    /// Клавиатура тоже: её форма — раскладка клавиш.
     /// </summary>
-    public bool SupportsHexLayout => Strip != null;
+    public bool SupportsHexLayout => Strip != null && Device is not IKeyboardDevice;
 
     /// <summary>
     /// Последние цвета светодиодов из редактора; null, пока лентой не управляли по светодиодам.

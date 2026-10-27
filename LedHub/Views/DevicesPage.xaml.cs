@@ -28,7 +28,14 @@ public partial class DevicesPage : UserControl
 
     private void PaintLed(object sender)
     {
-        if (sender is FrameworkElement { DataContext: LedCellViewModel cell } && DataContext is MainViewModel viewModel)
+        var cell = (sender as FrameworkElement)?.DataContext switch
+        {
+            LedCellViewModel led => led,
+            KeyCellViewModel key => key.Cell,
+            _ => null
+        };
+
+        if (cell != null && DataContext is MainViewModel viewModel)
             viewModel.PaintLedCommand.Execute(cell);
     }
 }
