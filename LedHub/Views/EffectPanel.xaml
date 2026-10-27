@@ -1,0 +1,172 @@
+<UserControl x:Class="LedHub.Views.EffectPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LedHub.ViewModels"
+             xmlns:controls="clr-namespace:LedHub.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:EffectPickerViewModel}">
+
+    <UserControl.Resources>
+        <!-- Число: подпись, значение и ползунок -->
+        <DataTemplate DataType="{x:Type vm:NumberParameterViewModel}">
+            <StackPanel Margin="0,0,0,12">
+                <DockPanel Margin="0,0,0,4">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding ValueText}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource Hint}"/>
+                </DockPanel>
+                <Slider Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" TickFrequency="{Binding Step}"
+                        IsSnapToTickEnabled="True" Value="{Binding Value}"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Цвет: образец, по клику — круг и быстрые цвета -->
+        <DataTemplate DataType="{x:Type vm:ColorParameterViewModel}">
+            <DockPanel Margin="0,0,0,12">
+                <ToggleButton x:Name="Swatch" DockPanel.Dock="Right" IsChecked="{Binding IsPickerOpen}" Cursor="Hand"
+                              FocusVisualStyle="{x:Null}" ToolTip="Выбрать цвет">
+                    <ToggleButton.Template>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border CornerRadius="10" Padding="3" Background="{StaticResource ControlBrush}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="26" Height="22" CornerRadius="7" Background="{Binding Hex}"/>
+                                    <TextBlock Text="{Binding Hex}" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                                               VerticalAlignment="Center" Margin="8,0,6,0"/>
+                                </StackPanel>
+                            </Border>
+                        </ControlTemplate>
+                    </ToggleButton.Template>
+                </ToggleButton>
+                <TextBlock Text="{Binding Title}" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+
+                <Popup IsOpen="{Binding IsPickerOpen}" PlacementTarget="{Binding ElementName=Swatch}" Placement="Bottom"
+                       StaysOpen="False" AllowsTransparency="True" VerticalOffset="6">
+                    <Border Background="{StaticResource PopupBrush}" BorderBrush="{StaticResource GlassEdgeBrush}" BorderThickness="1"
+                            CornerRadius="14" Padding="14" Width="220">
+                        <StackPanel>
+                            <controls:ColorWheel Width="180" Height="180" SelectedColor="{Binding Color}"/>
+                            <ItemsControl ItemsSource="{Binding Presets}" Margin="0,12,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource SwatchButton}" Width="24" Height="24" Margin="0,0,10,8"
+                                                Background="{Binding}" ToolTip="{Binding}"
+                                                Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- Выбор из вариантов: чипы в строку -->
+        <DataTemplate DataType="{x:Type vm:ChoiceParameterViewModel}">
+            <StackPanel Margin="0,0,0,12">
+                <TextBlock Text="{Binding Title}" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                <ListBox ItemsSource="{Binding Choices}" SelectedItem="{Binding SelectedChoice}" DisplayMemberPath="Title">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                            <Setter Property="Margin" Value="0,0,4,4"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Переключатель -->
+        <DataTemplate DataType="{x:Type vm:ToggleParameterViewModel}">
+            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding IsOn}" Margin="0,2,0,14">
+                <TextBlock Text="{Binding Title}" Style="{StaticResource Hint}" Foreground="{StaticResource TextBrush}"/>
+            </CheckBox>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <controls:ResponsivePanel BreakWidth="780" Spacing="18">
+
+        <!-- Галерея: клик по плитке выбирает эффект и сразу запускает его -->
+        <ItemsControl controls:ResponsivePanel.Fill="True" ItemsSource="{Binding Groups}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="0,0,0,10">
+                        <TextBlock Text="{Binding Title}" Style="{StaticResource SectionLabel}" Margin="2,4,0,10"/>
+                        <ItemsControl ItemsSource="{Binding Effects}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource EffectTile}" Width="132" ToolTip="{Binding Description}"
+                                            Command="{Binding DataContext.StartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel>
+                                            <Grid>
+                                                <controls:EffectPreview Effect="{Binding Definition}" Height="50" CornerRadius="9"/>
+                                                <Border Width="20" Height="20" CornerRadius="10" Background="#80000000" Margin="5"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                        Visibility="{Binding UsesAudio, Converter={StaticResource BoolToVisibility}}">
+                                                    <TextBlock Text="&#xE8D6;" Style="{StaticResource Icon}" FontSize="10" Foreground="White"
+                                                               HorizontalAlignment="Center"/>
+                                                </Border>
+                                            </Grid>
+                                            <TextBlock Text="{Binding Title}" Foreground="{StaticResource TextBrush}" Margin="4,8,4,2"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Настройки выбранного эффекта: меняются прямо во время работы -->
+        <Border Style="{StaticResource Card}" Width="300" VerticalAlignment="Top" HorizontalAlignment="Left" Padding="20"
+                Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Command="{Binding StopCommand}" Style="{StaticResource DangerButton}" Padding="10,6"
+                            VerticalAlignment="Top" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE71A;" Style="{StaticResource Icon}" FontSize="11" Margin="0,0,6,0"/>
+                            <TextBlock Text="Стоп"/>
+                        </StackPanel>
+                    </Button>
+                    <StackPanel>
+                        <TextBlock Text="{Binding SelectedEffect.Title}" FontSize="16" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding StatusText}" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+                <TextBlock Text="{Binding SelectedEffect.Description}" Style="{StaticResource Hint}" Margin="0,10,0,16"/>
+
+                <ItemsControl ItemsSource="{Binding Parameters}"/>
+
+                <DockPanel Margin="0,4,0,0">
+                    <Button DockPanel.Dock="Right" Content="Сбросить" Command="{Binding ResetParametersCommand}" Style="{StaticResource GhostButton}"/>
+                    <Button Command="{Binding StartCommand}" CommandParameter="{Binding SelectedEffect}" Style="{StaticResource AccentButton}"
+                            HorizontalAlignment="Left" Padding="16,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                            <TextBlock Text="Запустить"/>
+                        </StackPanel>
+                    </Button>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+    </controls:ResponsivePanel>
+</UserControl>

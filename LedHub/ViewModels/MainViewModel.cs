@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using LedHub.Core;
 using LedHub.Protocols.Tuya;
 using LedHub.Services;
+using LedHub.Services.Effects;
 
 namespace LedHub.ViewModels;
 
@@ -23,20 +24,6 @@ public sealed partial class MainViewModel : ObservableObject
 
     private static readonly int[] BrightnessPresetValues = { 10, 25, 50, 75, 100 };
     private static readonly int[] SleepTimerMinuteValues = { 15, 30, 60, 120 };
-
-    private readonly EffectOption[] _effectOptions =
-    {
-        new(EffectKind.Rainbow, "Радуга", "#FF3B5C", "#3B7BFF"),
-        new(EffectKind.ColorCycle, "Смена цветов", "#FFD23B", "#B23BFF"),
-        new(EffectKind.Breathing, "Дыхание", "#5B7BFF", "#101634"),
-        new(EffectKind.Wave, "Волна", "#3BE8FF", "#0F2F4F"),
-        new(EffectKind.Comet, "Комета", "#FFF3B0", "#2A1E66"),
-        new(EffectKind.Twinkle, "Звёзды", "#FFFFFF", "#1B1D3A"),
-        new(EffectKind.Fire, "Огонь", "#FFC03B", "#E02400"),
-        new(EffectKind.Police, "Полиция", "#FF2A2A", "#2A5BFF"),
-        new(EffectKind.Strobe, "Стробоскоп", "#FFFFFF", "#3A3A44"),
-        new(EffectKind.Candle, "Свеча", "#FFC46B", "#7A3A00")
-    };
 
     private readonly DiscoveryService _discovery = new();
     private readonly EffectRunner _effects = new();
@@ -102,9 +89,6 @@ public sealed partial class MainViewModel : ObservableObject
     private string? _activeEffect;
 
     [ObservableProperty]
-    private double _effectSpeed = 1;
-
-    [ObservableProperty]
     private HardwareEffect? _selectedHardwareEffect;
 
     [ObservableProperty]
@@ -147,11 +131,29 @@ public sealed partial class MainViewModel : ObservableObject
     private string _newSceneName = "";
 
     /// <summary>
-    /// Открыта страница подсветки мониторов вместо управления лентой или группой.
+    /// Раздел, открытый в левом меню.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDevicesPage))]
+    [NotifyPropertyChangedFor(nameof(IsScenePage))]
+    [NotifyPropertyChangedFor(nameof(IsMonitorsPage))]
+    [NotifyPropertyChangedFor(nameof(IsSettingsPage))]
+    private AppPage _selectedPage;
+
+    /// <summary>
+    /// Окно уже не вмещает меню с подписями — остаются только значки.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isNavCompact;
+
+    /// <summary>
+    /// Узкое окно: список устройств и управление выбранным показываются по очереди, а не рядом.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowDeviceList))]
+    [NotifyPropertyChangedFor(nameof(ShowDeviceDetail))]
     [NotifyPropertyChangedFor(nameof(IsEmptyStateVisible))]
-    private bool _isMonitorPageOpen;
+    private bool _isNarrow;
 
     [ObservableProperty]
     private bool _isMonitorSyncRunning;
@@ -198,7 +200,103 @@ public sealed partial class MainViewModel : ObservableObject
         foreach (var color in _config.RecentColors.Take(MaxRecentColors))
             RecentColors.Add(color);
 
+        EffectPicker = new EffectPickerViewModel(_config, StartTargetEffect, StopEffect, () => ConfigStore.Save(_config));
+        Scene = new SceneViewModel(_config, Devices, () => ConfigStore.Save(_config), StopConflicts);
+
         _ = RunSleepTimersAsync();
+    }
+
+    /// <summary>
+    /// Эффекты для выбранной ленты или группы.
+    /// </summary>
+    public EffectPickerViewModel EffectPicker { get; }
+
+    /// <summary>
+    /// Расстановка мониторов и устройств и эффекты на всю сцену.
+    /// </summary>
+    public SceneViewModel Scene { get; }
+
+    public bool IsDevicesPage
+    {
+        get => SelectedPage == AppPage.Devices;
+        set
+        {
+            if (value)
+                SelectedPage = AppPage.Devices;
+        }
+    }
+
+    public bool IsScenePage
+    {
+        get => SelectedPage == AppPage.Scene;
+        set
+        {
+            if (value)
+                SelectedPage = AppPage.Scene;
+        }
+    }
+
+    public bool IsMonitorsPage
+    {
+        get => SelectedPage == AppPage.Monitors;
+        set
+        {
+            if (value)
+                SelectedPage = AppPage.Monitors;
+        }
+    }
+
+    public bool IsSettingsPage
+    {
+        get => SelectedPage == AppPage.Settings;
+        set
+        {
+            if (value)
+                SelectedPage = AppPage.Settings;
+        }
+    }
+
+    /// <summary>
+    /// Список устройств виден всегда, кроме узкого окна с открытой лентой.
+    /// </summary>
+    public bool ShowDeviceList => !IsNarrow || !HasTarget;
+
+    /// <summary>
+    /// Управление лентой видно всегда, кроме узкого окна, где ещё ничего не выбрано.
+    /// </summary>
+    public bool ShowDeviceDetail => !IsNarrow || HasTarget;
+
+    /// <summary>
+    /// Прозрачное стекло Acrylic есть в Windows 11 22H2 и новее; в старых системах окно просто тёмное.
+    /// </summary>
+    public bool IsAcrylicSupported { get; } = Environment.OSVersion.Version.Build >= 22621;
+
+    public bool UseAcrylic
+    {
+        get => _config.UseAcrylic;
+        set
+        {
+            if (_config.UseAcrylic == value)
+                return;
+
+            _config.UseAcrylic = value;
+            ConfigStore.Save(_config);
+            OnPropertyChanged();
+        }
+    }
+
+    public bool ScanOnStartup
+    {
+        get => _config.ScanOnStartup;
+        set
+        {
+            if (_config.ScanOnStartup == value)
+                return;
+
+            _config.ScanOnStartup = value;
+            ConfigStore.Save(_config);
+            OnPropertyChanged();
+        }
     }
 
     public ObservableCollection<SceneConfig> Scenes { get; } = new();
@@ -220,7 +318,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public ObservableCollection<MonitorItemViewModel> Monitors { get; } = new();
 
-    public bool IsEmptyStateVisible => !HasTarget && !IsMonitorPageOpen;
+    public bool IsEmptyStateVisible => !HasTarget && !IsNarrow;
 
     public ObservableCollection<string> RecentColors { get; } = new();
 
@@ -268,8 +366,6 @@ public sealed partial class MainViewModel : ObservableObject
     public TuyaDevice? SelectedTuya => SelectedDevice?.Device as TuyaDevice;
 
     public bool IsTuyaSelected => SelectedTuya != null;
-
-    public IReadOnlyList<EffectOption> Effects => _effectOptions;
 
     public IReadOnlyList<int> BrightnessPresets => BrightnessPresetValues;
 
@@ -363,6 +459,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         _effects.Stop();
         _monitorSync.Stop();
+        Scene.Shutdown();
 
         foreach (var item in Devices)
             item.Device.Dispose();
@@ -411,9 +508,11 @@ public sealed partial class MainViewModel : ObservableObject
         foreach (var group in Groups)
             group.Refresh();
 
-        // Карточки мониторов ссылаются на ленты — после поиска связываем их с новыми
-        if (IsMonitorPageOpen)
+        // Карточки мониторов и сцена ссылаются на ленты — после поиска связываем их с новыми
+        if (IsMonitorsPage)
             RefreshMonitors();
+
+        Scene.Refresh();
 
         StatusText = result.Errors.Count == 0
             ? $"Найдено устройств: {Devices.Count}"
@@ -455,28 +554,15 @@ public sealed partial class MainViewModel : ObservableObject
         SetPowerState(Target, false);
     }
 
-    [RelayCommand]
-    private void StartEffect(EffectOption effect)
-    {
-        if (!StartLightSource(new EffectSource(effect.Kind), effect.Title))
-            return;
-
-        foreach (var option in _effectOptions)
-            option.IsActive = option == effect;
-    }
-
     /// <summary>
-    /// Открывает страницу подсветки мониторов; выбранная лента или группа при этом сбрасывается.
+    /// Возвращает из управления лентой к списку устройств — на узком окне они не помещаются рядом.
     /// </summary>
     [RelayCommand]
-    private void OpenMonitorPage()
+    private void BackToList()
     {
         Target = null;
         SelectedDevice = null;
         SelectedGroup = null;
-
-        RefreshMonitors();
-        IsMonitorPageOpen = true;
     }
 
     [RelayCommand]
@@ -502,6 +588,9 @@ public sealed partial class MainViewModel : ObservableObject
             MonitorSyncStatus = "Выберите ленту хотя бы для одного монитора";
             return;
         }
+
+        // На ленте может играть только что-то одно — эффект ленты или сцены на этих лентах останавливаем
+        StopConflicts(bindings.Keys);
 
         try
         {
@@ -542,7 +631,7 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        if (!StartLightSource(source, $"Музыка: {option.Title}"))
+        if (!StartLightSource(source, $"Музыка: {option.Title}", () => 1))
         {
             source.Dispose();
             return;
@@ -560,8 +649,7 @@ public sealed partial class MainViewModel : ObservableObject
         _effects.Stop();
         _musicSource = null;
 
-        foreach (var option in _effectOptions)
-            option.IsActive = false;
+        EffectPicker.MarkRunning(null);
 
         foreach (var mode in MusicModes)
             mode.IsActive = false;
@@ -955,15 +1043,20 @@ public sealed partial class MainViewModel : ObservableObject
         Target = value;
     }
 
+    partial void OnSelectedPageChanged(AppPage value)
+    {
+        // Мониторы могли подключить или отключить, пока раздел был закрыт
+        if (value == AppPage.Monitors)
+            RefreshMonitors();
+        else if (value == AppPage.Scene)
+            Scene.Refresh();
+    }
+
     partial void OnTargetChanged(ILightTarget? value)
     {
         // Эффект привязан к выбранной ленте или группе, поэтому смена выбора его останавливает
         StopEffect();
         LoadLedCells();
-
-        // Выбор ленты или группы закрывает страницу мониторов
-        if (value != null)
-            IsMonitorPageOpen = false;
 
         HexLayout = LoadHexLayout(value);
         _hexUndo.Clear();
@@ -996,6 +1089,8 @@ public sealed partial class MainViewModel : ObservableObject
 
         OnPropertyChanged(nameof(HasTarget));
         OnPropertyChanged(nameof(IsEmptyStateVisible));
+        OnPropertyChanged(nameof(ShowDeviceList));
+        OnPropertyChanged(nameof(ShowDeviceDetail));
         OnPropertyChanged(nameof(HardwareEffects));
         OnPropertyChanged(nameof(HasHardwareEffects));
 
@@ -1187,9 +1282,49 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Запускает источник кадров — эффект, экран или музыку — на выбранной ленте или группе.
+    /// Запускает эффект из галереи на выбранной ленте или группе: каждая лента играет его от начала до конца.
     /// </summary>
-    private bool StartLightSource(ILightSource source, string title)
+    private bool StartTargetEffect(EffectOption option)
+    {
+        var effect = option.Definition;
+        PatternSource source;
+
+        try
+        {
+            source = new PatternSource(effect, EffectPicker.ValuesFor(effect), new StripPointMap());
+        }
+        catch (Exception e)
+        {
+            // Например, в системе нет устройства вывода звука для музыкального эффекта
+            StatusText = $"Не удалось запустить «{option.Title}»: {e.Message}";
+            return false;
+        }
+
+        if (StartLightSource(source, option.Title, () => EffectPicker.SpeedOf(effect)))
+            return true;
+
+        source.Dispose();
+        return false;
+    }
+
+    /// <summary>
+    /// Останавливает то, что уже играет на этих лентах: у ленты может быть только один источник кадров.
+    /// </summary>
+    private void StopConflicts(IReadOnlyCollection<LedDevice> devices)
+    {
+        if (_effects.Devices.Any(d => devices.Contains(d)))
+            StopEffect();
+
+        if (_monitorSync.Devices.Any(d => devices.Contains(d)))
+            StopMonitorSync();
+
+        Scene.StopIfUsing(devices);
+    }
+
+    /// <summary>
+    /// Запускает источник кадров — эффект или музыку — на выбранной ленте или группе.
+    /// </summary>
+    private bool StartLightSource(ILightSource source, string title, Func<double> speed)
     {
         if (Target == null)
             return false;
@@ -1202,7 +1337,8 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         StopEffect();
-        _effects.Start(source, devices, () => new EffectSettings(CurrentColor, Brightness, EffectSpeed));
+        StopConflicts(devices);
+        _effects.Start(source, devices, () => new EffectSettings(CurrentColor, Brightness, speed()));
 
         ActiveEffect = title;
         StatusText = $"{Target.Title}: {title}";

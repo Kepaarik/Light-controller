@@ -1,29 +1,34 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using LedHub.Services;
+using LedHub.Services.Effects;
 
 namespace LedHub.ViewModels;
 
 /// <summary>
-/// Плитка программного эффекта; цвета превью задают градиент на плитке.
+/// Плитка эффекта в галерее: выбранный эффект показывает свои настройки, запущенный — подсвечен.
 /// </summary>
 public sealed partial class EffectOption : ObservableObject
 {
     [ObservableProperty]
     private bool _isActive;
 
-    public EffectOption(EffectKind kind, string title, string previewFrom, string previewTo)
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public EffectOption(EffectDefinition definition)
     {
-        Kind = kind;
-        Title = title;
-        PreviewFrom = previewFrom;
-        PreviewTo = previewTo;
+        Definition = definition;
     }
 
-    public EffectKind Kind { get; }
+    public EffectDefinition Definition { get; }
 
-    public string Title { get; }
+    public string Title => Definition.Title;
 
-    public string PreviewFrom { get; }
+    public string Description => Definition.Description;
 
-    public string PreviewTo { get; }
+    public bool UsesAudio => Definition.UsesAudio;
 }
+
+/// <summary>
+/// Раздел галереи эффектов: «Цвета», «Движение», «Природа», «Музыка».
+/// </summary>
+public sealed record EffectGroup(string Title, IReadOnlyList<EffectOption> Effects);

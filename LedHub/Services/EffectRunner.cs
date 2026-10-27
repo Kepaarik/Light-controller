@@ -3,20 +3,6 @@ using LedHub.Core;
 
 namespace LedHub.Services;
 
-public enum EffectKind
-{
-    Rainbow,
-    ColorCycle,
-    Breathing,
-    Wave,
-    Comet,
-    Twinkle,
-    Fire,
-    Police,
-    Strobe,
-    Candle
-}
-
 /// <summary>
 /// Текущие параметры эффекта; читаются на каждом кадре, поэтому их можно менять на лету.
 /// </summary>
@@ -33,11 +19,19 @@ public sealed class EffectRunner
     private CancellationTokenSource? _cts;
     private ILightSource? _source;
 
+    /// <summary>
+    /// Ленты, на которых сейчас что-то играет; пусто, если ничего не запущено.
+    /// </summary>
+    public IReadOnlyList<LedDevice> Devices { get; private set; } = Array.Empty<LedDevice>();
+
+    public bool IsRunning => _cts != null;
+
     public void Start(ILightSource source, IReadOnlyList<LedDevice> devices, Func<EffectSettings> getSettings)
     {
         Stop();
 
         _source = source;
+        Devices = devices;
         _cts = new CancellationTokenSource();
         _ = RunAsync(source, devices, getSettings, _cts.Token);
     }
@@ -47,6 +41,7 @@ public sealed class EffectRunner
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
+        Devices = Array.Empty<LedDevice>();
 
         // Захват экрана и звука держит системные ресурсы — освобождаем их вместе с остановкой
         (_source as IDisposable)?.Dispose();

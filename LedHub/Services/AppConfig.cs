@@ -1,5 +1,7 @@
 using LedHub.Core;
 using LedHub.Protocols.Tuya;
+using LedHub.Services.Effects;
+using LedHub.Services.Scene;
 
 namespace LedHub.Services;
 
@@ -41,6 +43,26 @@ public sealed class AppConfig
     /// Недавно выбранные цвета в формате #RRGGBB, самый свежий первым.
     /// </summary>
     public List<string> RecentColors { get; set; } = new();
+
+    /// <summary>
+    /// Настройки эффектов по идентификатору эффекта.
+    /// </summary>
+    public Dictionary<string, EffectValues> Effects { get; set; } = new();
+
+    /// <summary>
+    /// Расстановка мониторов и устройств на сцене.
+    /// </summary>
+    public List<SceneItemConfig> SceneItems { get; set; } = new();
+
+    /// <summary>
+    /// Окно из прозрачного стекла (Acrylic); иначе — матовое (Mica).
+    /// </summary>
+    public bool UseAcrylic { get; set; } = true;
+
+    /// <summary>
+    /// Искать ленты сразу при запуске.
+    /// </summary>
+    public bool ScanOnStartup { get; set; } = true;
 }
 
 /// <summary>
