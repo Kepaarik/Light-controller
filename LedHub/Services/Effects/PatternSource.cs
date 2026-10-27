@@ -21,6 +21,11 @@ public interface IEffectPointMap
     double Height { get; }
 
     /// <summary>
+    /// Где на сцене стоит экран главного монитора; null — вдоль ленты или монитора на сцене нет.
+    /// </summary>
+    ScreenRect? Screen { get; }
+
+    /// <summary>
     /// Места светодиодов адресной ленты по порядку; null — светодиод никуда не попал и гаснет.
     /// </summary>
     IReadOnlyList<EffectPixel?> GetPoints(LedDevice device, int ledCount);
@@ -47,6 +52,8 @@ public sealed class StripPointMap : IEffectPointMap
     public double Width => 1;
 
     public double Height => 1;
+
+    public ScreenRect? Screen => null;
 
     public IReadOnlyList<EffectPixel?> GetPoints(LedDevice device, int ledCount)
     {
@@ -79,10 +86,14 @@ public sealed class PatternSource : ILightSource, IDisposable
     // Немузыкальным эффектам звук не нужен — им достаётся вечная тишина
     private static readonly AudioFrame Silence = new();
 
+    // А эффектам не «по экрану» — пустой чёрный экран
+    private static readonly ScreenFrame NoScreen = new(1, 1);
+
     private readonly EffectDefinition _effect;
     private readonly EffectValues _values;
     private readonly IEffectPointMap _map;
     private readonly AudioTracker? _audio;
+    private readonly ScreenTracker? _screen;
     private EffectFrame _frame;
 
     /// <summary>
@@ -95,6 +106,7 @@ public sealed class PatternSource : ILightSource, IDisposable
         _values = values;
         _map = map;
         _audio = effect.UsesAudio ? new AudioTracker() : null;
+        _screen = effect.UsesScreen ? new ScreenTracker() : null;
         _frame = CreateFrame();
     }
 
@@ -105,6 +117,7 @@ public sealed class PatternSource : ILightSource, IDisposable
         _frame.Time = phase;
 
         _audio?.Update(phase, _frame.Number("gain"));
+        _screen?.Update(_frame.Number("gain"));
     }
 
     public RgbColor RenderSolid(LedDevice device)
@@ -137,11 +150,18 @@ public sealed class PatternSource : ILightSource, IDisposable
     public void Dispose()
     {
         _audio?.Dispose();
+        _screen?.Dispose();
     }
 
     private EffectFrame CreateFrame()
     {
+        if (_screen != null)
+            _screen.Frame.Screen = _map.Screen;
+
         return new EffectFrame(_effect, _values, _map.IsLinear, _map.OriginX, _map.OriginY, _map.Width, _map.Height,
-            _audio?.Frame ?? Silence);
+            _audio?.Frame ?? Silence)
+        {
+            Screen = _screen?.Frame ?? NoScreen
+        };
     }
 }

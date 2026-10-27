@@ -477,7 +477,66 @@ public static class EffectLibrary
         new EffectDefinition("music-beat", "Радуга по битам", EffectCategory.Music,
             "Цвет перескакивает по радуге на каждом ударе, яркость — по громкости",
             new[] { Gain(), Scale(), Direction() },
-            (f, p) => RgbColor.FromHsv(f.Audio.Hue + f.Along(p) * 90 / f.Number("scale"), 1, 0.1 + 0.9 * f.Audio.Level)) { UsesAudio = true }
+            (f, p) => RgbColor.FromHsv(f.Audio.Hue + f.Along(p) * 90 / f.Number("scale"), 1, 0.1 + 0.9 * f.Audio.Level)) { UsesAudio = true },
+
+        // Экран
+        new EffectDefinition("screen-ambient", "Экран на всю сцену", EffectCategory.Screen,
+            "Каждое устройство берёт цвет ближайшего к нему края главного монитора; лента — цвета краёв по кругу",
+            new[] { EffectParameter.Number("reach", "Дальность", 0.1, 1.5, 0.6, "{0:0.0}"), Vivid() },
+            (f, p) =>
+            {
+                var screen = f.Screen;
+
+                if (f.IsLinear)
+                    return Boost(screen.Edge(p.X), f.Number("vivid"));
+
+                // Без монитора на сцене вся сцена — это растянутый экран
+                if (screen.Screen is not { } rect)
+                    return Boost(screen.Sample(p.X / f.Width, p.Y / f.Height), f.Number("vivid"));
+
+                var u = Math.Clamp((p.X - rect.X) / rect.Width, 0, 1);
+                var v = Math.Clamp((p.Y - rect.Y) / rect.Height, 0, 1);
+                var dx = p.X - (rect.X + u * rect.Width);
+                var dy = p.Y - (rect.Y + v * rect.Height);
+                var falloff = Math.Exp(-Math.Sqrt(dx * dx + dy * dy) / Math.Max(f.Number("reach"), 0.05) * 1.5);
+
+                // Цвет берётся чуть внутрь от края экрана, там картинка содержательнее
+                var color = screen.Sample(0.5 + (u - 0.5) * 0.85, 0.5 + (v - 0.5) * 0.85);
+
+                return Dim(Boost(color, f.Number("vivid")), falloff);
+            }) { UsesScreen = true },
+
+        new EffectDefinition("screen-dominant", "Главный цвет экрана", EffectCategory.Screen,
+            "Все ленты светятся самым заметным цветом картинки, плавно следуя за ней",
+            new[] { Vivid() },
+            (f, _) => Boost(f.Screen.Dominant, f.Number("vivid"))) { UsesScreen = true },
+
+        new EffectDefinition("screen-flash", "Вспышки от экрана", EffectCategory.Screen,
+            "Взрывы, выстрелы и резкие смены сцены вспыхивают на лентах, между ними — тихий фон в цвет картинки",
+            new[]
+            {
+                Gain(), EffectParameter.Number("base", "Фон", 0, 60, 15, "{0:0} %"),
+                EffectParameter.Toggle("white", "Белые вспышки", false)
+            },
+            (f, _) =>
+            {
+                var screen = f.Screen;
+                var background = Dim(Boost(screen.Dominant, 40), f.Number("base") / 100);
+                var flash = f.Flag("white") ? RgbColor.White : Boost(screen.FlashColor, 30);
+
+                return Max(background, Dim(flash, screen.Flash));
+            }) { UsesScreen = true },
+
+        new EffectDefinition("screen-mood", "Настроение", EffectCategory.Screen,
+            "Главные цвета картинки медленно перетекают по лентам, не повторяя каждое движение на экране",
+            new[] { Speed(0.3), Scale(), Direction(), Vivid() },
+            (f, p) =>
+            {
+                var mood = f.Screen.Mood;
+                var color = LoopPalette(f.Along(p) / f.Number("scale") - f.Time * 0.05, mood);
+
+                return Boost(color, f.Number("vivid"));
+            }) { UsesScreen = true }
     };
 
     public static EffectDefinition? Find(string id)
@@ -490,6 +549,7 @@ public static class EffectLibrary
         EffectCategory.Colors => "Цвета",
         EffectCategory.Motion => "Движение",
         EffectCategory.Nature => "Природа",
+        EffectCategory.Screen => "По картинке монитора",
         _ => "Музыка с компьютера"
     };
 
@@ -504,6 +564,9 @@ public static class EffectLibrary
 
     private static EffectParameter Gain() =>
         EffectParameter.Number("gain", "Чувствительность", 0.5, 3, 1, "{0:0.0}×");
+
+    private static EffectParameter Vivid() =>
+        EffectParameter.Number("vivid", "Сочность", 0, 100, 40, "{0:0} %");
 
     private static EffectParameter ColorOf(string key, string title, string hex) =>
         EffectParameter.Color(key, title, hex);
@@ -533,6 +596,24 @@ public static class EffectLibrary
 
         var saturation = 1 - Smooth((heat - 0.75) * 3) * 0.7;
         return RgbColor.FromHsv(hue, saturation, Smooth(heat * 2.2));
+    }
+
+    /// <summary>
+    /// Делает цвет с экрана сочнее и ярче: на ленте блеклые цвета картинки выглядят серыми. amount — от 0 до 100.
+    /// </summary>
+    private static RgbColor Boost(RgbColor color, double amount)
+    {
+        var (hue, saturation, value) = color.ToHsv();
+        var k = amount / 100;
+
+        // Почти чёрное не раздуваем, иначе тёмная картинка превратится в шум
+        if (value < 0.04)
+            return color;
+
+        saturation = Math.Min(1, saturation * (1 + k * 1.5));
+        value = Math.Min(1, value * (1 + k * 0.8));
+
+        return RgbColor.FromHsv(hue, saturation, value);
     }
 
     private static RgbColor Pick(int index, RgbColor first, RgbColor second, RgbColor third)

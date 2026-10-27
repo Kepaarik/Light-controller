@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using LedHub.Core;
 using LedHub.Services.Effects;
 
 namespace LedHub.Controls;
@@ -63,7 +64,8 @@ public sealed class EffectPreview : FrameworkElement
 
         var frame = new EffectFrame(effect, new EffectValues(), false, 0.5, height / 2, 1, height, SampleAudio())
         {
-            Time = PreviewTime
+            Time = PreviewTime,
+            Screen = SampleScreen(height)
         };
 
         var pixels = new byte[Columns * Rows * 4];
@@ -103,5 +105,40 @@ public sealed class EffectPreview : FrameworkElement
         audio.Beats.Add(new AudioBeat(PreviewTime - 0.45, 260));
 
         return audio;
+    }
+
+    /// <summary>
+    /// Придуманная картинка монитора для превью эффектов «по экрану»: закат над морем, монитор в середине плитки.
+    /// </summary>
+    private static ScreenFrame SampleScreen(double height)
+    {
+        const int columns = 8;
+        const int rows = 5;
+
+        var screen = new ScreenFrame(columns, rows)
+        {
+            Dominant = new RgbColor(255, 120, 40),
+            Flash = 0.6,
+            FlashColor = new RgbColor(255, 220, 160),
+            Screen = new ScreenRect(0.36, height * 0.15, 0.28, height * 0.7)
+        };
+
+        for (var row = 0; row < rows; row++)
+        {
+            for (var column = 0; column < columns; column++)
+            {
+                // Сверху тёплое небо, снизу синее море
+                var sky = RgbColor.FromHsv(20 + column * 6, 0.9, 1 - row * 0.12);
+                var sea = RgbColor.FromHsv(215 - column * 4, 0.85, 0.75);
+                screen.Cells[row * columns + column] = row < 3 ? sky : sea;
+            }
+        }
+
+        screen.Mood[0] = new RgbColor(255, 110, 40);
+        screen.Mood[1] = new RgbColor(255, 60, 110);
+        screen.Mood[2] = new RgbColor(40, 110, 255);
+        screen.Mood[3] = new RgbColor(120, 60, 220);
+
+        return screen;
     }
 }

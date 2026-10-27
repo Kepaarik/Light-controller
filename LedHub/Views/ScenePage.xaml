@@ -138,6 +138,18 @@
                                     <Slider Minimum="1" Maximum="40" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding HexCount}"/>
                                 </StackPanel>
 
+                                <StackPanel Visibility="{Binding ShowsShapeEditor, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
+                                    <TextBlock Text="Форма панели" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                                    <Border CornerRadius="10" Background="#14FFFFFF" Padding="6">
+                                        <controls:HexShapeEditor Item="{Binding}" Height="200"/>
+                                    </Border>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                                               Text="Щелчок по пустой клетке добавляет шестигранник, по закрашенной — убирает. Соберите форму так, как панели висят на стене."/>
+                                    <Button Style="{StaticResource ChipButton}" Content="Сбросить в соты" HorizontalAlignment="Left" Margin="0,6,0,0"
+                                            Command="{Binding ResetShapeCommand}"
+                                            Visibility="{Binding IsCustomShape, Converter={StaticResource BoolToVisibility}}"/>
+                                </StackPanel>
+
                                 <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0"
                                            Visibility="{Binding IsMonitor, Converter={StaticResource BoolToVisibility}}"
                                            Text="Ленту подсветки монитора, её раскладку и поворот монитора настраивайте в разделе «Мониторы» — на схеме они появятся сами."/>

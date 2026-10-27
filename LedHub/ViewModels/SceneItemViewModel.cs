@@ -89,7 +89,22 @@ public sealed partial class SceneItemViewModel : ObservableObject
     /// <summary>
     /// Число шестигранников задаётся, только если форма панели не собрана в редакторе «Форма».
     /// </summary>
-    public bool ShowsHexCount => IsPanel && Shape?.Leds.Count is null or 0;
+    public bool ShowsHexCount => ShowsShapeEditor && !IsCustomShape;
+
+    /// <summary>
+    /// Форму панели можно собрать прямо на сцене, если она не задана редактором «Форма» адресной ленты.
+    /// </summary>
+    public bool ShowsShapeEditor => IsPanel && Shape?.Leds.Count is null or 0;
+
+    /// <summary>
+    /// Форма панели собрана вручную, а не взята сотами по числу шестигранников.
+    /// </summary>
+    public bool IsCustomShape => Config.Cells.Count > 0;
+
+    /// <summary>
+    /// Шестигранники панели так, как они нарисованы на сцене.
+    /// </summary>
+    public IReadOnlyList<(int Q, int R)> ShapeCells => SceneGeometry.PanelCells(Config).ToList();
 
     public double Size
     {
@@ -122,6 +137,29 @@ public sealed partial class SceneItemViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Добавляет или убирает шестигранник формы панели; последний шестигранник не убирается.
+    /// </summary>
+    public void ToggleCell(int q, int r)
+    {
+        var cells = ShapeCells.ToList();
+        var index = cells.IndexOf((q, r));
+
+        if (index >= 0 && cells.Count == 1)
+            return;
+
+        if (index >= 0)
+            cells.RemoveAt(index);
+        else
+            cells.Add((q, r));
+
+        Edit(() =>
+        {
+            Config.Cells = cells.Select(c => new SceneHexCell { Q = c.Q, R = c.R }).ToList();
+            Config.HexCount = cells.Count;
+        });
+    }
+
+    /// <summary>
     /// Сообщает интерфейсу, что поля элемента поменялись снаружи, например мышью на схеме.
     /// </summary>
     public void RefreshFields()
@@ -145,6 +183,15 @@ public sealed partial class SceneItemViewModel : ObservableObject
     private void RotateBy(string degrees)
     {
         Rotation = Config.Rotation + double.Parse(degrees, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Возвращает панели простую форму сот из прежнего числа шестигранников.
+    /// </summary>
+    [RelayCommand]
+    private void ResetShape()
+    {
+        Edit(() => Config.Cells.Clear());
     }
 
     private void SetKind(SceneItemKind kind)

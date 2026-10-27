@@ -27,6 +27,77 @@
                 </StackPanel>
             </Border>
 
+            <!-- Тонированное стекло: пресет как отправная точка, дальше — ползунки -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Стекло" Style="{StaticResource CardTitle}"/>
+                    <TextBlock Text="Готовые варианты" Style="{StaticResource Hint}" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding Glass.Presets}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource ChipButton}" Margin="0,0,6,6"
+                                        Command="{Binding DataContext.Glass.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="14" Height="14" CornerRadius="7" Background="{Binding Swatch}"
+                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"/>
+                                        <TextBlock Text="{Binding Title}" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <DockPanel Margin="0,14,0,6">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Glass.Transparency, StringFormat='{}{0:0} %'}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Прозрачность" Style="{StaticResource Hint}"/>
+                    </DockPanel>
+                    <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Glass.Transparency}"/>
+
+                    <DockPanel Margin="0,14,0,6">
+                        <Border DockPanel.Dock="Right" Width="16" Height="16" CornerRadius="8" Background="{Binding Glass.TintSwatch}"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"/>
+                        <TextBlock Text="Оттенок тонировки" Style="{StaticResource Hint}"/>
+                    </DockPanel>
+                    <Slider Minimum="0" Maximum="359" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Glass.TintHue}"/>
+
+                    <DockPanel Margin="0,14,0,6">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Glass.TintStrength, StringFormat='{}{0:0} %'}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Сила тонировки" Style="{StaticResource Hint}"/>
+                    </DockPanel>
+                    <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Glass.TintStrength}"/>
+
+                    <DockPanel Margin="0,14,0,6">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Glass.Frost, StringFormat='{}{0:0} %'}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Плотность карточек" Style="{StaticResource Hint}"/>
+                    </DockPanel>
+                    <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Glass.Frost}"/>
+
+                    <DockPanel Margin="0,14,0,6">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Glass.Shine, StringFormat='{}{0:0} %'}" FontWeight="SemiBold"/>
+                        <TextBlock Text="Блик по краю" Style="{StaticResource Hint}"/>
+                    </DockPanel>
+                    <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Glass.Shine}"/>
+
+                    <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,10,0,0"
+                               Text="Тонировка ложится поверх системного стекла: при выключенном «Прозрачном стекле» окно матовое, но цвет и блик всё равно меняются."/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Главный монитор" Style="{StaticResource CardTitle}"/>
+                    <ComboBox ItemsSource="{Binding MainMonitorOptions}" SelectedItem="{Binding SelectedMainMonitor}" DisplayMemberPath="Title"/>
+                    <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Text="С него берут картинку эффекты «По картинке монитора», на нём ищется запущенная игра."/>
+                </StackPanel>
+            </Border>
+
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
                     <TextBlock Text="Запуск" Style="{StaticResource CardTitle}"/>

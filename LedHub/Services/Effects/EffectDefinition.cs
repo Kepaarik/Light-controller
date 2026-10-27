@@ -7,7 +7,8 @@ public enum EffectCategory
     Colors,
     Motion,
     Nature,
-    Music
+    Music,
+    Screen
 }
 
 /// <summary>
@@ -53,6 +54,11 @@ public sealed class EffectDefinition
     /// Эффект слушает звук компьютера.
     /// </summary>
     public bool UsesAudio { get; init; }
+
+    /// <summary>
+    /// Эффект берёт цвета с картинки главного монитора.
+    /// </summary>
+    public bool UsesScreen { get; init; }
 
     public EffectParameter? Find(string key)
     {
@@ -109,6 +115,8 @@ public sealed class AudioFrame
 /// </summary>
 public sealed class EffectFrame
 {
+    private static readonly ScreenFrame NoScreen = new(1, 1);
+
     private readonly EffectDefinition _effect;
     private readonly EffectValues _values;
 
@@ -158,6 +166,11 @@ public sealed class EffectFrame
     public double Height { get; }
 
     public AudioFrame Audio { get; }
+
+    /// <summary>
+    /// Картинка главного монитора; у эффектов не «по экрану» — пустая и чёрная.
+    /// </summary>
+    public ScreenFrame Screen { get; init; } = NoScreen;
 
     /// <summary>
     /// Расстояние от центра до самого дальнего угла пространства.

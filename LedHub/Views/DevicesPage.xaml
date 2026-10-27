@@ -230,8 +230,8 @@
             <!-- Пустое состояние, пока ничего не выбрано -->
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                         Visibility="{Binding IsEmptyStateVisible, Converter={StaticResource BoolToVisibility}}">
-                <Border Width="96" Height="96" CornerRadius="48" Background="{StaticResource CardBrush}"
-                        BorderBrush="{StaticResource GlassEdgeBrush}" BorderThickness="1" HorizontalAlignment="Center">
+                <Border Width="96" Height="96" CornerRadius="48" Background="{DynamicResource CardBrush}"
+                        BorderBrush="{DynamicResource GlassEdgeBrush}" BorderThickness="1" HorizontalAlignment="Center">
                     <TextBlock Text="&#xEA80;" Style="{StaticResource Icon}" FontSize="38" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center"/>
                 </Border>
                 <TextBlock Text="Выберите ленту или группу" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,20,0,6"/>
@@ -260,7 +260,7 @@
                                 <TextBlock Text="{Binding SleepTimerText}" Foreground="{StaticResource AccentHoverBrush}" FontSize="12"/>
                             </StackPanel>
                         </StackPanel>
-                        <Border Background="{StaticResource CardBrush}" BorderBrush="{StaticResource GlassEdgeBrush}" BorderThickness="1"
+                        <Border Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource GlassEdgeBrush}" BorderThickness="1"
                                 CornerRadius="14" Padding="4" VerticalAlignment="Center" HorizontalAlignment="Left">
                             <StackPanel Orientation="Horizontal">
                                 <Button Command="{Binding TurnOnCommand}" Style="{StaticResource AccentButton}" Padding="18,9">
@@ -294,7 +294,7 @@
                                 </ToggleButton>
                                 <Popup IsOpen="{Binding IsSleepTimerMenuOpen}" PlacementTarget="{Binding ElementName=SleepTimerButton}"
                                        Placement="Bottom" HorizontalOffset="-150" VerticalOffset="8" StaysOpen="False" AllowsTransparency="True">
-                                    <Border Background="{StaticResource PopupBrush}" BorderBrush="{StaticResource GlassEdgeBrush}" BorderThickness="1"
+                                    <Border Background="{StaticResource PopupBrush}" BorderBrush="{DynamicResource GlassEdgeBrush}" BorderThickness="1"
                                             CornerRadius="14" Padding="14" Width="200">
                                         <StackPanel>
                                             <TextBlock Text="Выключить через" Style="{StaticResource Hint}" Margin="0,0,0,8"/>

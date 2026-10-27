@@ -52,6 +52,21 @@ public sealed class SceneItemConfig
     /// Сколько шестигранников рисовать у панели, форма которой не собрана в редакторе.
     /// </summary>
     public int HexCount { get; set; } = 7;
+
+    /// <summary>
+    /// Своя форма панели, собранная на сцене; пусто — соты из HexCount шестигранников.
+    /// </summary>
+    public List<SceneHexCell> Cells { get; set; } = new();
+}
+
+/// <summary>
+/// Шестигранник панели в осевых координатах сетки.
+/// </summary>
+public sealed class SceneHexCell
+{
+    public int Q { get; set; }
+
+    public int R { get; set; }
 }
 
 public readonly record struct ScenePoint(double X, double Y);
@@ -213,11 +228,11 @@ public static class SceneGeometry
         var size = config.HexSize;
         var angle = config.Rotation * Math.PI / 180;
 
-        // Собранная в редакторе форма адресной ленты повторяет и порядок светодиодов; иначе — соты нужного размера
+        // Собранная в редакторе форма адресной ленты повторяет и порядок светодиодов; иначе — форма со сцены или соты нужного размера
         var hasLayout = device.LedCount > 0 && device.HexLayout is { Cells.Count: > 0 };
         var cells = hasLayout
             ? device.HexLayout!.Cells.Select(c => (c.Q, c.R)).ToList()
-            : Spiral(Math.Max(1, config.HexCount)).ToList();
+            : PanelCells(config).ToList();
 
         var local = cells.Select(c => (X: size * Sqrt3 * (c.Item1 + c.Item2 / 2.0), Y: size * 1.5 * c.Item2)).ToList();
         var centerX = (local.Min(p => p.X) + local.Max(p => p.X)) / 2;
@@ -253,9 +268,19 @@ public static class SceneGeometry
     }
 
     /// <summary>
+    /// Шестигранники панели без формы от адресной ленты: собранные на сцене или соты из HexCount штук.
+    /// </summary>
+    public static IEnumerable<(int Q, int R)> PanelCells(SceneItemConfig config)
+    {
+        return config.Cells.Count > 0
+            ? config.Cells.Select(c => (c.Q, c.R))
+            : Spiral(Math.Max(1, config.HexCount));
+    }
+
+    /// <summary>
     /// Шестигранники по кругу от центра: сначала центральный, затем кольцо из шести, затем из двенадцати…
     /// </summary>
-    private static IEnumerable<(int Q, int R)> Spiral(int count)
+    public static IEnumerable<(int Q, int R)> Spiral(int count)
     {
         yield return (0, 0);
         var produced = 1;

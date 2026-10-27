@@ -137,6 +137,7 @@ public sealed partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsDevicesPage))]
     [NotifyPropertyChangedFor(nameof(IsScenePage))]
     [NotifyPropertyChangedFor(nameof(IsMonitorsPage))]
+    [NotifyPropertyChangedFor(nameof(IsGamesPage))]
     [NotifyPropertyChangedFor(nameof(IsSettingsPage))]
     private AppPage _selectedPage;
 
@@ -191,6 +192,9 @@ public sealed partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
+        // Сцена и режимы по экрану читают главный монитор с самого начала
+        MainMonitor.Key = _config.MainMonitor;
+
         foreach (var group in _config.Groups)
             Groups.Add(new GroupItemViewModel(group, FindDevice));
 
@@ -202,6 +206,10 @@ public sealed partial class MainViewModel : ObservableObject
 
         EffectPicker = new EffectPickerViewModel(_config, StartTargetEffect, StopEffect, () => ConfigStore.Save(_config));
         Scene = new SceneViewModel(_config, Devices, () => ConfigStore.Save(_config), StopConflicts);
+        Glass = new GlassViewModel(_config.Glass, () => ConfigStore.Save(_config));
+        Games = new GamesViewModel(_config.Games, () => ConfigStore.Save(_config), GameTargets, StopConflicts, EffectPicker);
+
+        RefreshMainMonitors();
 
         _ = RunSleepTimersAsync();
     }
@@ -215,6 +223,42 @@ public sealed partial class MainViewModel : ObservableObject
     /// Расстановка мониторов и устройств и эффекты на всю сцену.
     /// </summary>
     public SceneViewModel Scene { get; }
+
+    /// <summary>
+    /// Тонировка и прозрачность стекла окна.
+    /// </summary>
+    public GlassViewModel Glass { get; }
+
+    /// <summary>
+    /// Подсветка под запущенную игру.
+    /// </summary>
+    public GamesViewModel Games { get; }
+
+    /// <summary>
+    /// Мониторы, из которых можно выбрать главный.
+    /// </summary>
+    public ObservableCollection<MainMonitorOption> MainMonitorOptions { get; } = new();
+
+    /// <summary>
+    /// Главный монитор: с него берут картинку режимы по экрану, на нём ищется игра.
+    /// </summary>
+    public MainMonitorOption? SelectedMainMonitor
+    {
+        get => MainMonitorOptions.FirstOrDefault(o => o.Key == _config.MainMonitor);
+        set
+        {
+            if (value == null || _config.MainMonitor == value.Key)
+                return;
+
+            _config.MainMonitor = value.Key;
+            MainMonitor.Key = value.Key;
+            ConfigStore.Save(_config);
+            OnPropertyChanged();
+
+            // Экран на сцене, к которому привязаны режимы по картинке, сменился
+            Scene.Refresh();
+        }
+    }
 
     public bool IsDevicesPage
     {
@@ -243,6 +287,16 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (value)
                 SelectedPage = AppPage.Monitors;
+        }
+    }
+
+    public bool IsGamesPage
+    {
+        get => SelectedPage == AppPage.Games;
+        set
+        {
+            if (value)
+                SelectedPage = AppPage.Games;
         }
     }
 
@@ -460,6 +514,7 @@ public sealed partial class MainViewModel : ObservableObject
         _effects.Stop();
         _monitorSync.Stop();
         Scene.Shutdown();
+        Games.Shutdown();
 
         foreach (var item in Devices)
             item.Device.Dispose();
@@ -1050,6 +1105,8 @@ public sealed partial class MainViewModel : ObservableObject
             RefreshMonitors();
         else if (value == AppPage.Scene)
             Scene.Refresh();
+        else if (value is AppPage.Games or AppPage.Settings)
+            RefreshMainMonitors();
     }
 
     partial void OnTargetChanged(ILightTarget? value)
@@ -1319,6 +1376,7 @@ public sealed partial class MainViewModel : ObservableObject
             StopMonitorSync();
 
         Scene.StopIfUsing(devices);
+        Games.StopIfUsing(devices);
     }
 
     /// <summary>
@@ -1508,6 +1566,51 @@ public sealed partial class MainViewModel : ObservableObject
 
             Monitors.Add(new MonitorItemViewModel(info, config, RotationOptions, FindDevice, GetScreenLayout, () => ConfigStore.Save(_config)));
         }
+    }
+
+    /// <summary>
+    /// Пересобирает список для выбора главного монитора; выбранный, но отключённый монитор остаётся в списке.
+    /// </summary>
+    private void RefreshMainMonitors()
+    {
+        MainMonitorOptions.Clear();
+        MainMonitorOptions.Add(new MainMonitorOption(null, "Основной монитор Windows"));
+
+        foreach (var info in MonitorList.GetAll())
+        {
+            var title = $"Монитор {info.Number} · {info.Width}×{info.Height}{(info.IsPrimary ? " · основной" : "")}";
+            MainMonitorOptions.Add(new MainMonitorOption(info.Key, title));
+        }
+
+        if (_config.MainMonitor != null && MainMonitorOptions.All(o => o.Key != _config.MainMonitor))
+            MainMonitorOptions.Add(new MainMonitorOption(_config.MainMonitor, "Выбранный монитор не подключён"));
+
+        OnPropertyChanged(nameof(SelectedMainMonitor));
+    }
+
+    /// <summary>
+    /// Ленты для игровой подсветки: лента главного монитора со своей раскладкой, а если нужно — и все остальные готовые ленты.
+    /// </summary>
+    private IReadOnlyDictionary<LedDevice, MonitorBinding?> GameTargets(bool allDevices)
+    {
+        var targets = new Dictionary<LedDevice, MonitorBinding?>();
+
+        if (MainMonitor.Resolve() is { } monitor
+            && _config.Monitors.TryGetValue(monitor.Key, out var config)
+            && config.DeviceId != null
+            && FindDevice(config.DeviceId) is { Device.IsReady: true } item)
+        {
+            var layout = item.Strip != null ? GetScreenLayout(item.Id) : null;
+            targets[item.Device] = new MonitorBinding(monitor, config.Rotation, layout);
+        }
+
+        if (allDevices)
+        {
+            foreach (var device in Devices.Where(d => d.Device.IsReady))
+                targets.TryAdd(device.Device, null);
+        }
+
+        return targets;
     }
 
     /// <summary>

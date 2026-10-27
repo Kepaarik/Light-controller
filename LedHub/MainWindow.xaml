@@ -25,7 +25,8 @@
         <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoHexCommand}"/>
     </Window.InputBindings>
 
-    <Grid x:Name="Root">
+    <!-- Тонировка лежит прямо на системном стекле: её цвет и плотность задаются в «Настройках» -->
+    <Grid x:Name="Root" Background="{DynamicResource GlassTintBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
@@ -89,6 +90,13 @@
                                        Visibility="{Binding IsNavCompact, Converter={StaticResource InverseBoolToVisibility}}"/>
                         </StackPanel>
                     </RadioButton>
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavItem}" IsChecked="{Binding IsGamesPage}" ToolTip="Игры">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE7FC;" Style="{StaticResource Icon}" FontSize="16" Width="20"/>
+                            <TextBlock Text="Игры" Margin="14,0,0,0" VerticalAlignment="Center"
+                                       Visibility="{Binding IsNavCompact, Converter={StaticResource InverseBoolToVisibility}}"/>
+                        </StackPanel>
+                    </RadioButton>
                     <RadioButton GroupName="Nav" Style="{StaticResource NavItem}" IsChecked="{Binding IsSettingsPage}" ToolTip="Настройки">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE713;" Style="{StaticResource Icon}" FontSize="16" Width="20"/>
@@ -101,7 +109,7 @@
         </Border>
 
         <!-- Слой содержимого поверх стекла: страницы и строка статуса -->
-        <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource LayerBrush}" CornerRadius="12,0,0,0"
+        <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource LayerBrush}" CornerRadius="12,0,0,0"
                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,1,0,0">
             <Grid>
                 <Grid.RowDefinitions>
@@ -112,6 +120,7 @@
                 <views:DevicesPage Visibility="{Binding IsDevicesPage, Converter={StaticResource BoolToVisibility}}"/>
                 <views:ScenePage Visibility="{Binding IsScenePage, Converter={StaticResource BoolToVisibility}}"/>
                 <views:MonitorsPage Visibility="{Binding IsMonitorsPage, Converter={StaticResource BoolToVisibility}}"/>
+                <views:GamesPage Visibility="{Binding IsGamesPage, Converter={StaticResource BoolToVisibility}}"/>
                 <views:SettingsPage Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVisibility}}"/>
 
                 <!-- Строка статуса -->

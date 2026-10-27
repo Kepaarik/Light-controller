@@ -456,8 +456,9 @@ public sealed partial class SceneViewModel : ObservableObject
             item.Shape = BuildShape(item);
 
         var origin = monitors.FirstOrDefault(m => m.Monitor!.IsPrimary) ?? monitors.FirstOrDefault();
+        var main = monitors.FirstOrDefault(m => m.Monitor!.Key == MainMonitor.Key) ?? origin;
 
-        _map.Update(Items.Select(i => i.Shape).OfType<SceneShape>().ToList(), origin?.Shape?.Center);
+        _map.Update(Items.Select(i => i.Shape).OfType<SceneShape>().ToList(), origin?.Shape?.Center, main?.Shape);
         Version++;
     }
 

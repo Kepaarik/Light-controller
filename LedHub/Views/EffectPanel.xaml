@@ -42,7 +42,7 @@
 
                 <Popup IsOpen="{Binding IsPickerOpen}" PlacementTarget="{Binding ElementName=Swatch}" Placement="Bottom"
                        StaysOpen="False" AllowsTransparency="True" VerticalOffset="6">
-                    <Border Background="{StaticResource PopupBrush}" BorderBrush="{StaticResource GlassEdgeBrush}" BorderThickness="1"
+                    <Border Background="{StaticResource PopupBrush}" BorderBrush="{DynamicResource GlassEdgeBrush}" BorderThickness="1"
                             CornerRadius="14" Padding="14" Width="220">
                         <StackPanel>
                             <controls:ColorWheel Width="180" Height="180" SelectedColor="{Binding Color}"/>

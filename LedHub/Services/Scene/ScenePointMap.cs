@@ -22,10 +22,13 @@ public sealed class ScenePointMap : IEffectPointMap
 
     public double Height { get; private set; } = 1;
 
+    public ScreenRect? Screen { get; private set; }
+
     /// <summary>
-    /// Пересчитывает места по формам элементов; origin — точка, от которой расходятся круги (обычно основной монитор).
+    /// Пересчитывает места по формам элементов; origin — точка, от которой расходятся круги (обычно основной монитор),
+    /// screen — экран главного монитора, с которого берут цвета эффекты «по экрану».
     /// </summary>
-    public void Update(IReadOnlyList<SceneShape> shapes, ScenePoint? origin)
+    public void Update(IReadOnlyList<SceneShape> shapes, ScenePoint? origin, SceneShape? screen)
     {
         var leds = new Dictionary<string, EffectPixel?[]>();
         var centers = new Dictionary<string, EffectPixel>();
@@ -34,6 +37,7 @@ public sealed class ScenePointMap : IEffectPointMap
         {
             _leds = leds;
             _centers = centers;
+            Screen = null;
             return;
         }
 
@@ -66,6 +70,10 @@ public sealed class ScenePointMap : IEffectPointMap
         Height = (maxY - minY) / scale;
         OriginX = (center.X - minX) / scale;
         OriginY = (center.Y - minY) / scale;
+
+        Screen = screen?.Screen is { } rect
+            ? new ScreenRect((rect.TopLeft.X - minX) / scale, (rect.TopLeft.Y - minY) / scale, rect.Width / scale, rect.Height / scale)
+            : null;
 
         _leds = leds;
         _centers = centers;

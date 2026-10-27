@@ -42,6 +42,8 @@
         </LinearGradientBrush>
         <!-- Слой с содержимым раздела, как в приложениях Windows 11 -->
         <SolidColorBrush x:Key="LayerBrush" Color="#0EFFFFFF"/>
+        <!-- Тонировка стекла под всем окном; цвет и плотность задаются в настройках -->
+        <SolidColorBrush x:Key="GlassTintBrush" Color="#600E0F16"/>
 
         <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
@@ -88,8 +90,8 @@
         </Style>
 
         <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource GlassEdgeBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource GlassEdgeBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="18"/>
             <Setter Property="Padding" Value="22"/>
@@ -487,7 +489,7 @@
                         <DockPanel>
                             <!-- На узком окне вкладки переносятся на вторую строку, а не обрезаются -->
                             <Border DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="0,0,0,16" Padding="4" CornerRadius="14"
-                                    Background="{StaticResource CardBrush}" BorderBrush="{StaticResource GlassEdgeBrush}" BorderThickness="1">
+                                    Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource GlassEdgeBrush}" BorderThickness="1">
                                 <WrapPanel IsItemsHost="True"/>
                             </Border>
                             <ContentPresenter ContentSource="SelectedContent"/>

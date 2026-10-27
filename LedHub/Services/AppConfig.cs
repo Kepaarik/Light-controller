@@ -60,9 +60,76 @@ public sealed class AppConfig
     public bool UseAcrylic { get; set; } = true;
 
     /// <summary>
+    /// Тонировка и прозрачность стекла окна.
+    /// </summary>
+    public GlassConfig Glass { get; set; } = new();
+
+    /// <summary>
     /// Искать ленты сразу при запуске.
     /// </summary>
     public bool ScanOnStartup { get; set; } = true;
+
+    /// <summary>
+    /// Главный монитор для режимов по картинке экрана и игр; null — основной монитор Windows.
+    /// </summary>
+    public string? MainMonitor { get; set; }
+
+    /// <summary>
+    /// Игровые режимы: какие игры подсвечивать и чем.
+    /// </summary>
+    public GamesConfig Games { get; set; } = new();
+}
+
+/// <summary>
+/// Вид стекла окна; все силы — от 0 до 100.
+/// </summary>
+public sealed class GlassConfig
+{
+    /// <summary>
+    /// Цвет тонировки в формате #RRGGBB.
+    /// </summary>
+    public string Tint { get; set; } = "#7C6CFF";
+
+    /// <summary>
+    /// Насколько сквозь окно видно то, что под ним.
+    /// </summary>
+    public double Transparency { get; set; } = 55;
+
+    /// <summary>
+    /// Насколько сильно стекло окрашено в цвет тонировки.
+    /// </summary>
+    public double TintStrength { get; set; } = 30;
+
+    /// <summary>
+    /// Плотность карточек: чем больше, тем они матовее и заметнее на стекле.
+    /// </summary>
+    public double Frost { get; set; } = 30;
+
+    /// <summary>
+    /// Яркость блика по краю карточек.
+    /// </summary>
+    public double Shine { get; set; } = 50;
+}
+
+/// <summary>
+/// Настройки игровых режимов.
+/// </summary>
+public sealed class GamesConfig
+{
+    /// <summary>
+    /// Сам узнавать запущенную игру и переключать подсветку.
+    /// </summary>
+    public bool AutoMode { get; set; } = true;
+
+    /// <summary>
+    /// Кроме подсветки главного монитора, показывать игру на всех найденных лентах.
+    /// </summary>
+    public bool UseAllDevices { get; set; }
+
+    /// <summary>
+    /// Режим по картинке экрана для игр без своей интеграции — идентификатор эффекта.
+    /// </summary>
+    public string OtherGamesEffect { get; set; } = "screen-ambient";
 }
 
 /// <summary>

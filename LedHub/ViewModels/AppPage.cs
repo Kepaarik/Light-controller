@@ -8,5 +8,6 @@ public enum AppPage
     Devices,
     Scene,
     Monitors,
+    Games,
     Settings
 }
