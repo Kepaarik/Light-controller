@@ -28,6 +28,10 @@ public sealed partial class GamesViewModel : ObservableObject
     private DetectedGame? _game;
     private bool _isChecking;
 
+    // ВРЕМЕННО: диагностика поиска игры — сколько раз прошла проверка и сколько процессов dota2 она увидела
+    private int _checkCount;
+    private int _dotaProcessCount;
+
     // Подсветку этой игры остановили вручную или заняли её ленты другим — сами не включаем до следующей игры
     private bool _isSuspended;
 
@@ -155,15 +159,15 @@ public sealed partial class GamesViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Start()
+    private async Task StartAsync()
     {
         _isSuspended = false;
 
-        if (_game == null)
-        {
-            Status = "Игра не запущена — подсветка включится, как только она начнётся";
+        // Ищем игру сразу, не дожидаясь очередной проверки по таймеру
+        await CheckAsync();
+
+        if (_game == null || IsRunning)
             return;
-        }
 
         StartLighting(_game);
     }
@@ -222,6 +226,13 @@ public sealed partial class GamesViewModel : ObservableObject
             var current = _game;
             var game = await Task.Run(() =>
             {
+                // ВРЕМЕННО: диагностика поиска игры
+                var dotaProcesses = System.Diagnostics.Process.GetProcessesByName("dota2");
+                _dotaProcessCount = dotaProcesses.Length;
+
+                foreach (var process in dotaProcesses)
+                    process.Dispose();
+
                 var found = GameWatcher.Detect(MainMonitor.Resolve());
 
                 // Из полноэкранной игры ненадолго вышли на рабочий стол — подсветку не бросаем, пока игра запущена
@@ -239,10 +250,13 @@ public sealed partial class GamesViewModel : ObservableObject
             }
 
             GameTitle = _game?.Title;
+            _checkCount++;
 
             if (_game == null)
             {
-                Status = "Игра не запущена — подсветка включится, как только она начнётся";
+                // ВРЕМЕННО: диагностика поиска игры в конце строки
+                Status = $"Игра не запущена — подсветка включится, как только она начнётся "
+                         + $"[проверка №{_checkCount} в {DateTime.Now:HH:mm:ss}, процессов dota2: {_dotaProcessCount}]";
                 return;
             }
 
