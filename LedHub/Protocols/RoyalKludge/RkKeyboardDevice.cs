@@ -90,6 +90,23 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice
     public IReadOnlyList<KeyboardKey> Keys => RkS98Layout.Keys;
 
     /// <summary>
+    /// Принимает ли интерфейс команды настройщика: в его описании есть feature-отчёт 9 нужной длины.
+    /// </summary>
+    public static bool IsCommandInterface(HidDevice hidDevice)
+    {
+        try
+        {
+            return hidDevice.GetReportDescriptor().FeatureReports
+                .Any(report => report.ReportID == ReportId && report.Length >= PacketLength + 1);
+        }
+        catch (Exception)
+        {
+            // Описание некоторых интерфейсов Windows не отдаёт — такие интерфейсы нам не подходят
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Открывает клавиатуру и читает её настройки подсветки; null, если это не управляющий интерфейс или его не удалось открыть.
     /// </summary>
     public static RkKeyboardDevice? Connect(HidDevice hidDevice)
@@ -224,12 +241,15 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice
     /// </summary>
     private bool TryReadSettings()
     {
+        var step = "версия прошивки";
+
         try
         {
             var firmware = Exchange(BuildPacket(CommandGetFirmware, 1, FirmwareLength));
             _firmware = $"{firmware[16]:x2}{firmware[17]:x2}";
 
             // Настройщик RK длину данных в ответе не проверяет и берёт профиль как есть — делаем так же
+            step = "профиль";
             var reply = Exchange(BuildPacket(CommandGetProfile, 0, ProfileLength));
             _profile = reply.AsSpan(DataOffset, ProfileLength).ToArray();
 
@@ -237,7 +257,7 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice
         }
         catch (Exception e)
         {
-            _readError = $"{e.GetType().Name}: {e.Message}";
+            _readError = $"{step}, отчёт {_reportLength} байт: {e.GetType().Name}: {e.Message}";
             return false;
         }
     }
