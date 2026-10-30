@@ -113,19 +113,16 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _isKeyboardEffectMulticolor = true;
 
     /// <summary>
-    /// Список устройств убран, чтобы клавиатура на своей вкладке заняла всю ширину.
+    /// Список устройств свёрнут в узкую колонку значков, чтобы управлению досталась вся ширина.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsKeyboardExpanded))]
-    [NotifyPropertyChangedFor(nameof(ShowDeviceList))]
+    [NotifyPropertyChangedFor(nameof(IsDeviceRail))]
     private bool _isDeviceListCollapsed;
 
     /// <summary>
     /// Вкладка панели управления: 0 — цвет, 1 — эффекты, 2 — музыка, 3 — светодиоды, 4 — форма, 5 — настройки.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsKeyboardExpanded))]
-    [NotifyPropertyChangedFor(nameof(ShowDeviceList))]
     private int _selectedTabIndex;
 
     [ObservableProperty]
@@ -182,6 +179,7 @@ public sealed partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowDeviceList))]
     [NotifyPropertyChangedFor(nameof(ShowDeviceDetail))]
     [NotifyPropertyChangedFor(nameof(IsEmptyStateVisible))]
+    [NotifyPropertyChangedFor(nameof(IsDeviceRail))]
     private bool _isNarrow;
 
     [ObservableProperty]
@@ -222,6 +220,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         // Сцена и режимы по экрану читают главный монитор с самого начала
         MainMonitor.Key = _config.MainMonitor;
+        IsDeviceListCollapsed = _config.IsDeviceListCollapsed;
 
         foreach (var group in _config.Groups)
             Groups.Add(new GroupItemViewModel(group, FindDevice));
@@ -340,14 +339,14 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Список устройств виден всегда, кроме узкого окна с открытой лентой и клавиатуры, развёрнутой на всю ширину.
+    /// Список устройств виден всегда, кроме узкого окна с открытой лентой.
     /// </summary>
-    public bool ShowDeviceList => (!IsNarrow || !HasTarget) && !IsKeyboardExpanded;
+    public bool ShowDeviceList => !IsNarrow || !HasTarget;
 
     /// <summary>
-    /// Клавиатура на своей вкладке развёрнута на всю ширину вместо списка устройств.
+    /// Список показан узкой колонкой значков. В узком окне список и так занимает всё место, поэтому там он всегда полный.
     /// </summary>
-    public bool IsKeyboardExpanded => IsDeviceListCollapsed && IsKeyboardSelected && SelectedTabIndex == LedsTab;
+    public bool IsDeviceRail => IsDeviceListCollapsed && !IsNarrow;
 
     /// <summary>
     /// Управление лентой видно всегда, кроме узкого окна, где ещё ничего не выбрано.
@@ -814,6 +813,8 @@ public sealed partial class MainViewModel : ObservableObject
     private void ToggleDeviceList()
     {
         IsDeviceListCollapsed = !IsDeviceListCollapsed;
+        _config.IsDeviceListCollapsed = IsDeviceListCollapsed;
+        ConfigStore.Save(_config);
     }
 
     [RelayCommand]
@@ -1237,7 +1238,6 @@ public sealed partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasHardwareEffects));
         OnPropertyChanged(nameof(KeyboardEffects));
         OnPropertyChanged(nameof(HasKeyboardEffects));
-        OnPropertyChanged(nameof(IsKeyboardExpanded));
 
         UpdateSleepTimerText();
 

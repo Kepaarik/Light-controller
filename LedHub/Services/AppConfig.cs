@@ -71,6 +71,11 @@ public sealed class AppConfig
     public bool ScanOnStartup { get; set; } = true;
 
     /// <summary>
+    /// Список устройств свёрнут в колонку значков.
+    /// </summary>
+    public bool IsDeviceListCollapsed { get; set; }
+
+    /// <summary>
     /// Главный монитор для режимов по картинке экрана и игр; null — основной монитор Windows.
     /// </summary>
     public string? MainMonitor { get; set; }

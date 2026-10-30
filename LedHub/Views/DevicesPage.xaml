@@ -28,11 +28,57 @@
                             <Setter Property="Grid.ColumnSpan" Value="2"/>
                             <Setter Property="BorderThickness" Value="0"/>
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding IsDeviceRail}" Value="True">
+                            <Setter Property="Width" Value="76"/>
+                        </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Border.Style>
 
-            <Grid Margin="18,24,16,16">
+            <Grid>
+
+            <!-- Свёрнутый список: только значки групп и устройств, название — во всплывающей подсказке -->
+            <DockPanel Margin="8,24,8,16" Visibility="{Binding IsDeviceRail, Converter={StaticResource BoolToVisibility}}">
+                <Button DockPanel.Dock="Top" Command="{Binding ToggleDeviceListCommand}" Style="{StaticResource GhostButton}"
+                        HorizontalAlignment="Center" Padding="10,8" ToolTip="Развернуть список">
+                    <TextBlock Text="&#xE76C;" Style="{StaticResource Icon}" FontSize="14"/>
+                </Button>
+
+                <ScrollViewer VerticalScrollBarVisibility="Hidden" Margin="0,14,0,0">
+                    <StackPanel>
+                        <ListBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ToolTip="{Binding Name}" HorizontalAlignment="Center">
+                                        <Border Width="36" Height="36" CornerRadius="11" Background="{StaticResource AccentSoftBrush}">
+                                            <TextBlock Text="&#xE902;" Style="{StaticResource Icon}" FontSize="15"
+                                                       Foreground="{StaticResource AccentHoverBrush}" HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <Ellipse Width="12" Height="12" Fill="{Binding ColorHex}" Stroke="{StaticResource SidebarBrush}" StrokeThickness="2"
+                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <ListBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Margin="0,8,0,0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ToolTip="{Binding Name}" HorizontalAlignment="Center">
+                                        <Border Width="36" Height="36" CornerRadius="11" Background="{StaticResource ControlBrush}">
+                                            <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" FontSize="15" HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <Ellipse Width="12" Height="12" Fill="{Binding ColorHex}" Stroke="{StaticResource SidebarBrush}" StrokeThickness="2"
+                                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-3,-3"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <Grid Margin="18,24,16,16" Visibility="{Binding IsDeviceRail, Converter={StaticResource InverseBoolToVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -46,6 +92,10 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Margin="4,0,0,4">
+                    <Button DockPanel.Dock="Right" Command="{Binding ToggleDeviceListCommand}" Style="{StaticResource GhostButton}" ToolTip="Свернуть список"
+                            Visibility="{Binding IsNarrow, Converter={StaticResource InverseBoolToVisibility}}">
+                        <TextBlock Text="&#xE76B;" Style="{StaticResource Icon}" FontSize="14"/>
+                    </Button>
                     <Button DockPanel.Dock="Right" Command="{Binding ScanCommand}" Style="{StaticResource GhostButton}" ToolTip="Найти устройства заново">
                         <TextBlock Text="&#xE72C;" Style="{StaticResource Icon}" FontSize="14"/>
                     </Button>
@@ -222,6 +272,7 @@
                 <TextBlock Grid.Row="8" Style="{StaticResource Hint}" Margin="4,12,0,0"
                            Text="Галочками отмечаются ленты для новой группы или для добавления в выбранную."/>
             </Grid>
+            </Grid>
         </Border>
 
         <!-- Управление выбранной лентой или группой -->
@@ -238,9 +289,14 @@
                 <TextBlock Text="Слева — найденные устройства и ваши группы" Style="{StaticResource Hint}" HorizontalAlignment="Center"/>
             </StackPanel>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          Visibility="{Binding HasTarget, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel Margin="32,24,32,24">
+            <Grid Visibility="{Binding HasTarget, Converter={StaticResource BoolToVisibility}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Шапка не прокручивается и не зависит от вкладки, поэтому переключатель питания всегда на одном месте -->
+                <StackPanel Margin="32,24,32,0">
 
                     <Button Command="{Binding BackToListCommand}" Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Margin="-8,0,0,8"
                             Visibility="{Binding IsNarrow, Converter={StaticResource BoolToVisibility}}">
@@ -391,6 +447,10 @@
                             </StackPanel>
                         </Border>
                     </controls:ResponsivePanel>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="32,0,32,24">
 
                     <!-- Разделы управления разнесены по вкладкам, чтобы не листать длинную страницу -->
                     <TabControl SelectedIndex="{Binding SelectedTabIndex}" Margin="0,24,0,0">
@@ -1035,7 +1095,8 @@
                     </TabItem>
                     </TabControl>
                 </StackPanel>
-            </ScrollViewer>
+                </ScrollViewer>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>
