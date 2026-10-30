@@ -12,6 +12,10 @@ public sealed class ScenePointMap : IEffectPointMap
     private Dictionary<string, EffectPixel?[]> _leds = new();
     private Dictionary<string, EffectPixel> _centers = new();
 
+    // Те же места в координатах самой сцены — по ним слои эффектов узнают, что попало в их границы
+    private Dictionary<string, ScenePoint?[]> _sceneLeds = new();
+    private Dictionary<string, ScenePoint> _sceneCenters = new();
+
     public bool IsLinear => false;
 
     public double OriginX { get; private set; } = 0.5;
@@ -25,6 +29,11 @@ public sealed class ScenePointMap : IEffectPointMap
     public ScreenRect? Screen { get; private set; }
 
     /// <summary>
+    /// Экран главного монитора в координатах сцены; null — монитора на сцене нет.
+    /// </summary>
+    public ScreenRect? SceneScreen { get; private set; }
+
+    /// <summary>
     /// Пересчитывает места по формам элементов; origin — точка, от которой расходятся круги (обычно основной монитор),
     /// screen — экран главного монитора, с которого берут цвета эффекты «по экрану».
     /// </summary>
@@ -32,36 +41,51 @@ public sealed class ScenePointMap : IEffectPointMap
     {
         var leds = new Dictionary<string, EffectPixel?[]>();
         var centers = new Dictionary<string, EffectPixel>();
+        var sceneLeds = new Dictionary<string, ScenePoint?[]>();
+        var sceneCenters = new Dictionary<string, ScenePoint>();
 
         if (shapes.Count == 0)
         {
             _leds = leds;
             _centers = centers;
+            _sceneLeds = sceneLeds;
+            _sceneCenters = sceneCenters;
             Screen = null;
+            SceneScreen = null;
             return;
         }
 
-        var minX = shapes.Min(s => s.Bounds.Min.X);
-        var minY = shapes.Min(s => s.Bounds.Min.Y);
-        var maxX = shapes.Max(s => s.Bounds.Max.X);
-        var maxY = shapes.Max(s => s.Bounds.Max.Y);
+        // Поле эффекта задают элементы «в связке»; если таких нет, то все
+        var together = shapes.Where(s => s.Config.Projection == SceneProjection.Together).ToList();
+        var field = together.Count > 0 ? together : shapes;
+
+        var minX = field.Min(s => s.Bounds.Min.X);
+        var minY = field.Min(s => s.Bounds.Min.Y);
+        var maxX = field.Max(s => s.Bounds.Max.X);
+        var maxY = field.Max(s => s.Bounds.Max.Y);
         var scale = Math.Max(1, Math.Max(maxX - minX, maxY - minY));
 
         EffectPixel ToPixel(ScenePoint point, int seed) => new((point.X - minX) / scale, (point.Y - minY) / scale, seed);
 
-        foreach (var shape in shapes.Where(s => s.DeviceId != null))
+        foreach (var shape in shapes.Where(s => s.DeviceId != null && s.Config.Projection != SceneProjection.Off))
         {
             var id = shape.DeviceId!;
             var points = new EffectPixel?[shape.Leds.Count];
+            Func<ScenePoint, ScenePoint> place = shape.Config.Projection == SceneProjection.Separate
+                ? FitInto(shape, minX, minY, maxX, maxY)
+                : point => point;
 
             for (var i = 0; i < points.Length; i++)
             {
                 if (shape.Leds[i] is { } point)
-                    points[i] = ToPixel(point, HashCode.Combine(id, i));
+                    points[i] = ToPixel(place(point), HashCode.Combine(id, i));
             }
 
             leds[id] = points;
-            centers[id] = ToPixel(shape.Center, id.GetHashCode());
+            centers[id] = ToPixel(place(shape.Center), id.GetHashCode());
+
+            sceneLeds[id] = shape.Leds.ToArray();
+            sceneCenters[id] = shape.Center;
         }
 
         var center = origin ?? new ScenePoint((minX + maxX) / 2, (minY + maxY) / 2);
@@ -75,8 +99,14 @@ public sealed class ScenePointMap : IEffectPointMap
             ? new ScreenRect((rect.TopLeft.X - minX) / scale, (rect.TopLeft.Y - minY) / scale, rect.Width / scale, rect.Height / scale)
             : null;
 
+        SceneScreen = screen?.Screen is { } sceneRect
+            ? new ScreenRect(sceneRect.TopLeft.X, sceneRect.TopLeft.Y, sceneRect.Width, sceneRect.Height)
+            : null;
+
         _leds = leds;
         _centers = centers;
+        _sceneLeds = sceneLeds;
+        _sceneCenters = sceneCenters;
     }
 
     public IReadOnlyList<EffectPixel?> GetPoints(LedDevice device, int ledCount)
@@ -107,5 +137,43 @@ public sealed class ScenePointMap : IEffectPointMap
     public EffectPixel? CenterOf(string deviceId)
     {
         return _centers.TryGetValue(deviceId, out var center) ? center : null;
+    }
+
+    /// <summary>
+    /// Места светодиодов устройства в координатах сцены; null — устройство не играет эффекты сцены.
+    /// </summary>
+    public IReadOnlyList<ScenePoint?>? SceneLedsOf(string deviceId)
+    {
+        return _sceneLeds.TryGetValue(deviceId, out var points) ? points : null;
+    }
+
+    public ScenePoint? SceneCenterOf(string deviceId)
+    {
+        return _sceneCenters.TryGetValue(deviceId, out var center) ? center : null;
+    }
+
+    /// <summary>
+    /// Растягивает элемент с сохранением пропорций на всё поле эффекта, чтобы на нём шёл весь эффект целиком.
+    /// </summary>
+    private static Func<ScenePoint, ScenePoint> FitInto(SceneShape shape, double minX, double minY, double maxX, double maxY)
+    {
+        var (min, max) = shape.Bounds;
+        var width = max.X - min.X;
+        var height = max.Y - min.Y;
+
+        // Прямая лента не имеет толщины — её вписываем только по длине
+        var scaleX = width > 0 ? (maxX - minX) / width : double.PositiveInfinity;
+        var scaleY = height > 0 ? (maxY - minY) / height : double.PositiveInfinity;
+        var scale = Math.Min(scaleX, scaleY);
+
+        if (double.IsInfinity(scale))
+            scale = 1;
+
+        var fromX = (min.X + max.X) / 2;
+        var fromY = (min.Y + max.Y) / 2;
+        var toX = (minX + maxX) / 2;
+        var toY = (minY + maxY) / 2;
+
+        return point => new ScenePoint(toX + (point.X - fromX) * scale, toY + (point.Y - fromY) * scale);
     }
 }

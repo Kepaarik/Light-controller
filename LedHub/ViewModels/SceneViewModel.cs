@@ -41,7 +41,7 @@ public sealed partial class SceneViewModel : ObservableObject
     private readonly Stopwatch _previewClock = new();
 
     // Эффект, который сейчас показывается на схеме: либо запущенный на лентах, либо только предпросмотр
-    private PatternSource? _liveSource;
+    private SceneLayerSource? _liveSource;
     private bool _isLiveSourceOwned;
     private double _previewPhase;
     private double _previewLastTick;
@@ -49,6 +49,10 @@ public sealed partial class SceneViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     private SceneItemViewModel? _selectedItem;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedLayer))]
+    private SceneLayerViewModel? _selectedLayer;
 
     /// <summary>
     /// Увеличивается при каждом изменении, которое нужно перерисовать: правке расстановки или новом кадре эффекта.
@@ -88,6 +92,12 @@ public sealed partial class SceneViewModel : ObservableObject
 
         _frameTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(33) };
         _frameTimer.Tick += (_, _) => OnFrame();
+
+        // В слой можно поставить любой эффект, кроме эффектов от нажатий: им нужна раскладка клавиатуры
+        LayerOptions = Effects.Options.Where(o => !o.Definition.UsesKeys).ToList();
+
+        foreach (var layer in _config.SceneLayers)
+            Layers.Add(new SceneLayerViewModel(layer, LayerOptions, OnLayerEdited));
     }
 
     public EffectPickerViewModel Effects { get; }
@@ -96,7 +106,18 @@ public sealed partial class SceneViewModel : ObservableObject
 
     public ObservableCollection<SceneCandidate> Candidates { get; } = new();
 
+    /// <summary>
+    /// Слои эффектов поверх эффекта всей сцены, снизу вверх.
+    /// </summary>
+    public ObservableCollection<SceneLayerViewModel> Layers { get; } = new();
+
+    public IReadOnlyList<EffectOption> LayerOptions { get; }
+
     public bool HasSelection => SelectedItem != null;
+
+    public bool HasLayers => Layers.Count > 0;
+
+    public bool HasSelectedLayer => SelectedLayer != null;
 
     public bool HasItems => Items.Count > 0;
 
@@ -162,10 +183,7 @@ public sealed partial class SceneViewModel : ObservableObject
             return EffectMath.Black;
 
         if (_liveSource != null)
-        {
-            var pixel = _map.LedOf(shape.DeviceId, index) ?? _map.CenterOf(shape.DeviceId);
-            return pixel is { } point ? _liveSource.Render(point) : EffectMath.Black;
-        }
+            return _liveSource.RenderLed(shape.DeviceId, index);
 
         var device = FindDevice(shape.DeviceId);
         if (device == null || device.IsOn == false)
@@ -183,7 +201,7 @@ public sealed partial class SceneViewModel : ObservableObject
             return EffectMath.Black;
 
         if (_liveSource != null)
-            return _map.CenterOf(shape.DeviceId) is { } point ? _liveSource.Render(point) : EffectMath.Black;
+            return _liveSource.RenderCenter(shape.DeviceId);
 
         var device = FindDevice(shape.DeviceId);
         return device == null || device.IsOn == false ? EffectMath.Black : device.Color;
@@ -242,7 +260,30 @@ public sealed partial class SceneViewModel : ObservableObject
     public void CommitEdit()
     {
         SelectedItem?.RefreshFields();
+        SelectedLayer?.RefreshFields();
         _save();
+    }
+
+    /// <summary>
+    /// Переносит слой мышью за его левый верхний угол; сохраняется по окончании перетаскивания.
+    /// </summary>
+    public void MoveLayer(SceneLayerViewModel layer, double x, double y)
+    {
+        layer.Config.X = Math.Clamp(Math.Round(x), 0, WorldWidth - layer.Config.Width);
+        layer.Config.Y = Math.Clamp(Math.Round(y), 0, WorldHeight - layer.Config.Height);
+
+        Version++;
+    }
+
+    /// <summary>
+    /// Тянет правый нижний угол слоя: левый верхний стоит на месте, меняются ширина и высота.
+    /// </summary>
+    public void ResizeLayer(SceneLayerViewModel layer, double right, double bottom)
+    {
+        layer.Config.Width = Math.Clamp(Math.Round(right - layer.Config.X), 10, WorldWidth - layer.Config.X);
+        layer.Config.Height = Math.Clamp(Math.Round(bottom - layer.Config.Y), 10, WorldHeight - layer.Config.Y);
+
+        Version++;
     }
 
     public void StopIfUsing(IReadOnlyCollection<LedDevice> devices)
@@ -274,14 +315,9 @@ public sealed partial class SceneViewModel : ObservableObject
         }
         else
         {
-            var device = FindDevice(candidate.Key);
             var offset = Items.Count(i => !i.IsMonitor) * 14;
-            var hasHexShape = device?.Strip != null && _config.HexLayouts.GetValueOrDefault(candidate.Key)?.Cells.Count > 0;
 
-            // Ленту с собранной формой из шестигранников сразу ставим панелью, клавиатуру — клавиатурой
-            config.Kind = device?.Device is IKeyboardDevice ? SceneItemKind.Keyboard
-                : hasHexShape ? SceneItemKind.Panel
-                : SceneItemKind.Strip;
+            config.Kind = DeviceKind(candidate.Key);
             config.Size = config.Kind == SceneItemKind.Keyboard ? DefaultKeyboardWidth : DefaultStripLength;
             config.X = 70 + offset;
             config.Y = 60 + offset;
@@ -295,6 +331,107 @@ public sealed partial class SceneViewModel : ObservableObject
         SelectedItem = Items.FirstOrDefault(i => i.Config == config);
     }
 
+    /// <summary>
+    /// Расставляет сцену сама: ставит на неё всё, чего там ещё нет, мониторы — в ряд по центру в том же порядке,
+    /// что в Windows, клавиатуры — под основным монитором, ленты и панели — по бокам от мониторов.
+    /// </summary>
+    [RelayCommand]
+    private void AutoLayout()
+    {
+        foreach (var candidate in Candidates.ToList())
+        {
+            var kind = candidate.IsMonitor ? SceneItemKind.Monitor : DeviceKind(candidate.Key);
+
+            _config.SceneItems.Add(new SceneItemConfig
+            {
+                Key = candidate.Key,
+                Kind = kind,
+                Size = kind switch
+                {
+                    SceneItemKind.Monitor => DefaultMonitorWidth,
+                    SceneItemKind.Keyboard => DefaultKeyboardWidth,
+                    _ => DefaultStripLength
+                }
+            });
+        }
+
+        Refresh();
+
+        if (Items.Count == 0)
+        {
+            StatusText = "Ставить на сцену нечего: мониторы и ленты не найдены";
+            return;
+        }
+
+        const double gap = 8;
+        const double sideGap = 16;
+        var rowY = WorldHeight * 0.4;
+
+        // Мониторы — в ряд по центру, слева направо так же, как они стоят в Windows
+        var monitors = Items.Where(i => i.Monitor != null).OrderBy(i => i.Monitor!.Left).ToList();
+        var x = WorldWidth / 2 - (monitors.Sum(m => m.Config.Size) + gap * Math.Max(0, monitors.Count - 1)) / 2;
+
+        foreach (var monitor in monitors)
+        {
+            monitor.Config.X = x + monitor.Config.Size / 2;
+            monitor.Config.Y = rowY;
+            x += monitor.Config.Size + gap;
+        }
+
+        Rebuild();
+
+        var left = monitors.Count > 0 ? monitors.Min(m => m.Shape!.Bounds.Min.X) : WorldWidth / 2;
+        var right = monitors.Count > 0 ? monitors.Max(m => m.Shape!.Bounds.Max.X) : WorldWidth / 2;
+        var bottom = monitors.Count > 0 ? monitors.Max(m => m.Shape!.Bounds.Max.Y) : rowY;
+        var main = monitors.FirstOrDefault(m => m.Monitor!.IsPrimary) ?? monitors.FirstOrDefault();
+
+        // Клавиатуры — под основным монитором, одна под другой
+        var y = bottom + 20;
+
+        foreach (var keyboard in Items.Where(i => i.IsKeyboard))
+        {
+            keyboard.Config.Rotation = 0;
+            var (_, height) = SizeOf(keyboard);
+
+            keyboard.Config.X = main?.Config.X ?? WorldWidth / 2;
+            keyboard.Config.Y = y + height / 2;
+            y += height + gap;
+        }
+
+        // Ленты и панели — по очереди слева и справа от мониторов; ленты стоят вертикально
+        var isLeft = true;
+        var leftEdge = left - sideGap;
+        var rightEdge = right + sideGap;
+
+        foreach (var item in Items.Where(i => i.IsDevice && !i.IsKeyboard))
+        {
+            item.Config.Rotation = item.Config.Kind == SceneItemKind.Strip ? 90 : 0;
+            var (width, _) = SizeOf(item);
+
+            item.Config.X = isLeft ? leftEdge - width / 2 : rightEdge + width / 2;
+            item.Config.Y = rowY;
+
+            if (isLeft)
+                leftEdge -= width + sideGap;
+            else
+                rightEdge += width + sideGap;
+
+            isLeft = !isLeft;
+        }
+
+        foreach (var item in Items)
+        {
+            item.Config.X = Math.Clamp(Math.Round(item.Config.X), 0, WorldWidth);
+            item.Config.Y = Math.Clamp(Math.Round(item.Config.Y), 0, WorldHeight);
+        }
+
+        _save();
+        Rebuild();
+        SelectedItem?.RefreshFields();
+
+        StatusText = $"Сцена расставлена автоматически: элементов — {Items.Count}. Поправьте мышью то, что стоит не так";
+    }
+
     [RelayCommand]
     private void RemoveSelected()
     {
@@ -306,6 +443,63 @@ public sealed partial class SceneViewModel : ObservableObject
 
         SelectedItem = null;
         Refresh();
+    }
+
+    /// <summary>
+    /// Добавляет слой поверх остальных с эффектом, выбранным в галерее; новый слой встаёт чуть ниже и правее прежнего.
+    /// </summary>
+    [RelayCommand]
+    private void AddLayer()
+    {
+        var effect = Effects.SelectedEffect is { Definition.UsesKeys: false } selected ? selected : LayerOptions[0];
+        var offset = Layers.Count % 8 * 12;
+
+        var config = new SceneLayerConfig
+        {
+            EffectId = effect.Definition.Id,
+            X = Math.Min(WorldWidth / 2 - 60 + offset, WorldWidth - 120),
+            Y = Math.Min(WorldHeight / 2 - 40 + offset, WorldHeight - 80)
+        };
+
+        _config.SceneLayers.Add(config);
+        _save();
+
+        var layer = new SceneLayerViewModel(config, LayerOptions, OnLayerEdited);
+        Layers.Add(layer);
+        SelectedLayer = layer;
+
+        OnPropertyChanged(nameof(HasLayers));
+        RestartLive();
+    }
+
+    [RelayCommand]
+    private void RemoveLayer(SceneLayerViewModel layer)
+    {
+        _config.SceneLayers.Remove(layer.Config);
+        _save();
+
+        Layers.Remove(layer);
+
+        if (SelectedLayer == layer)
+            SelectedLayer = null;
+
+        OnPropertyChanged(nameof(HasLayers));
+        RestartLive();
+    }
+
+    partial void OnSelectedItemChanged(SceneItemViewModel? value)
+    {
+        // Справа показываются настройки либо элемента, либо слоя
+        if (value != null)
+            SelectedLayer = null;
+    }
+
+    partial void OnSelectedLayerChanged(SceneLayerViewModel? value)
+    {
+        if (value != null)
+            SelectedItem = null;
+
+        Version++;
     }
 
     [RelayCommand]
@@ -324,18 +518,12 @@ public sealed partial class SceneViewModel : ObservableObject
     {
         Rebuild();
 
-        var devices = Items
-            .Select(i => i.Shape?.DeviceId)
-            .OfType<string>()
-            .Select(FindDevice)
-            .Where(d => d is { Device.IsReady: true })
-            .Select(d => d!.Device)
-            .Distinct()
-            .ToList();
+        var devices = EffectDevices();
 
         if (devices.Count == 0)
         {
-            StatusText = "На сцене нет доступных лент. Добавьте их или включите предпросмотр, чтобы посмотреть эффект на схеме";
+            StatusText = "На сцене нет доступных лент для эффекта. Добавьте их, верните им режим «В связке» или «Отдельно» "
+                         + "или включите предпросмотр, чтобы посмотреть эффект на схеме";
             return false;
         }
 
@@ -343,11 +531,11 @@ public sealed partial class SceneViewModel : ObservableObject
         StopEffect();
         _stopConflicts(devices);
 
-        PatternSource source;
+        SceneLayerSource source;
 
         try
         {
-            source = new PatternSource(option.Definition, Effects.ValuesFor(option.Definition), _map);
+            source = CreateSource(option);
         }
         catch (Exception e)
         {
@@ -356,15 +544,17 @@ public sealed partial class SceneViewModel : ObservableObject
             return false;
         }
 
-        var effect = option.Definition;
-        _runner.Start(source, devices, () => new EffectSettings(RgbColor.White, Brightness, Effects.SpeedOf(effect)));
+        // Время идёт с обычной скоростью: скорость каждого эффекта и слоя источник учитывает сам
+        _runner.Start(source, devices, () => new EffectSettings(RgbColor.White, Brightness, 1));
 
         _liveSource = source;
         _isLiveSourceOwned = false;
         IsRunning = true;
         _frameTimer.Start();
 
-        StatusText = $"«{option.Title}» играет на всей сцене: устройств — {devices.Count}";
+        StatusText = Layers.Count > 0
+            ? $"«{option.Title}» играет на всей сцене, слоёв поверх — {Layers.Count}: устройств — {devices.Count}"
+            : $"«{option.Title}» играет на всей сцене: устройств — {devices.Count}";
         return true;
     }
 
@@ -396,7 +586,7 @@ public sealed partial class SceneViewModel : ObservableObject
 
         try
         {
-            _liveSource = new PatternSource(option.Definition, Effects.ValuesFor(option.Definition), _map);
+            _liveSource = CreateSource(option);
         }
         catch (Exception e)
         {
@@ -430,10 +620,10 @@ public sealed partial class SceneViewModel : ObservableObject
     private void OnFrame()
     {
         // Предпросмотр сам двигает время эффекта; запущенный на лентах эффект двигает EffectRunner
-        if (IsPreviewing && _liveSource != null && Effects.SelectedEffect is { } option)
+        if (IsPreviewing && _liveSource != null)
         {
             var now = _previewClock.Elapsed.TotalSeconds;
-            _previewPhase += (now - _previewLastTick) * Effects.SpeedOf(option.Definition);
+            _previewPhase += now - _previewLastTick;
             _previewLastTick = now;
 
             _liveSource.BeginFrame(_previewPhase, new EffectSettings(RgbColor.White, Brightness, 1));
@@ -446,6 +636,98 @@ public sealed partial class SceneViewModel : ObservableObject
     {
         Rebuild();
         _save();
+
+        // Устройство включили в эффект сцены или убрали из него — перезапускаем эффект на новом наборе устройств
+        if (!IsRunning || EffectDevices().ToHashSet().SetEquals(_runner.Devices))
+            return;
+
+        RestartLive();
+    }
+
+    private void OnLayerEdited(SceneLayerViewModel layer, bool isEffectChanged)
+    {
+        _save();
+
+        // Границы играющий эффект подхватывает сам, а новый эффект слоя нужно собрать заново
+        if (isEffectChanged)
+            RestartLive();
+        else
+            Version++;
+    }
+
+    /// <summary>
+    /// Собирает играющий эффект сцены заново — после смены устройств или слоёв.
+    /// </summary>
+    private void RestartLive()
+    {
+        if (IsPreviewing)
+        {
+            StartPreview();
+            return;
+        }
+
+        if (!IsRunning || Effects.RunningEffect is not { } running)
+            return;
+
+        // Перезапуск сбрасывает отметку о запущенном эффекте в галерее — ставим её обратно.
+        // Не запустился — значит, играть больше не на чем: из эффекта убрали последнее устройство
+        if (StartEffect(running))
+            Effects.MarkRunning(running);
+        else
+            StopEffect();
+    }
+
+    /// <summary>
+    /// Эффект всей сцены вместе со слоями поверх него.
+    /// </summary>
+    private SceneLayerSource CreateSource(EffectOption option)
+    {
+        var layers = Layers
+            .Where(l => l.Effect != null)
+            .Select(l => (l.Effect!.Definition, l.Config))
+            .ToList();
+
+        return new SceneLayerSource(option.Definition, _map, layers, Effects.ValuesFor, Effects.SpeedOf);
+    }
+
+    /// <summary>
+    /// Доступные устройства сцены, на которых играет её эффект, — все, кроме выключенных из него.
+    /// </summary>
+    private List<LedDevice> EffectDevices()
+    {
+        return Items
+            .Where(i => i.Config.Projection != SceneProjection.Off)
+            .Select(i => i.Shape?.DeviceId)
+            .OfType<string>()
+            .Select(FindDevice)
+            .Where(d => d is { Device.IsReady: true })
+            .Select(d => d!.Device)
+            .Distinct()
+            .ToList();
+    }
+
+    /// <summary>
+    /// Ширина и высота элемента на сцене с его текущим поворотом.
+    /// </summary>
+    private (double Width, double Height) SizeOf(SceneItemViewModel item)
+    {
+        item.Shape = BuildShape(item);
+        var (min, max) = item.Shape.Bounds;
+
+        return (max.X - min.X, max.Y - min.Y);
+    }
+
+    /// <summary>
+    /// Чем ставить устройство на сцену: клавиатуру — клавиатурой, ленту с собранной формой из шестигранников — панелью, остальное — лентой.
+    /// </summary>
+    private SceneItemKind DeviceKind(string key)
+    {
+        var device = FindDevice(key);
+        var hasHexShape = device?.Strip != null && _config.HexLayouts.GetValueOrDefault(key)?.Cells.Count > 0;
+
+        return device?.Device is IKeyboardDevice ? SceneItemKind.Keyboard
+            : hasHexShape ? SceneItemKind.Panel
+            : SceneItemKind.Strip;
     }
 
     /// <summary>

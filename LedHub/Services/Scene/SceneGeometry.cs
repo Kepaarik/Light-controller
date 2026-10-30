@@ -11,6 +11,21 @@ public enum SceneItemKind
 }
 
 /// <summary>
+/// Как устройство показывает эффект сцены.
+/// </summary>
+public enum SceneProjection
+{
+    /// <summary>Вместе с остальными: эффект идёт по месту устройства на сцене и переходит на соседние.</summary>
+    Together,
+
+    /// <summary>Само по себе: весь эффект целиком ложится на одно это устройство.</summary>
+    Separate,
+
+    /// <summary>Эффекты сцены на устройство не идут.</summary>
+    Off
+}
+
+/// <summary>
 /// Элемент на сцене — монитор или устройство — и его место на стене. Единицы сцены — примерно сантиметры.
 /// </summary>
 public sealed class SceneItemConfig
@@ -60,6 +75,11 @@ public sealed class SceneItemConfig
     /// Своя форма панели, собранная на сцене; пусто — соты из HexCount шестигранников.
     /// </summary>
     public List<SceneHexCell> Cells { get; set; } = new();
+
+    /// <summary>
+    /// Как устройство показывает эффект сцены; у монитора — его лента подсветки.
+    /// </summary>
+    public SceneProjection Projection { get; set; } = SceneProjection.Together;
 }
 
 /// <summary>

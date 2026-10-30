@@ -42,6 +42,9 @@ public sealed class SceneCanvas : FrameworkElement
     private static readonly Brush AccentBrush = Freeze(new SolidColorBrush(Color.FromRgb(0x8B, 0x7C, 0xFF)));
     private static readonly Pen SelectionPen = Freeze(new Pen(AccentBrush, 1.5) { DashStyle = DashStyles.Dash });
     private static readonly Pen HandlePen = Freeze(new Pen(AccentBrush, 2.5));
+    private static readonly Brush LayerFill = Freeze(new SolidColorBrush(Color.FromArgb(0x10, 0x8B, 0x7C, 0xFF)));
+    private static readonly Pen LayerPen = Freeze(new Pen(Freeze(new SolidColorBrush(Color.FromArgb(0x70, 0x8B, 0x7C, 0xFF))), 1) { DashStyle = DashStyles.Dash });
+    private static readonly Pen SelectedLayerPen = Freeze(new Pen(AccentBrush, 2));
 
     // Перевод координат сцены в точки на экране, рассчитанный при последней отрисовке
     private double _scale = 1;
@@ -51,6 +54,10 @@ public sealed class SceneCanvas : FrameworkElement
     private Vector _dragOffset;
     private bool? _dragFirstEnd;
     private bool _isDragging;
+
+    // Слой, который двигают мышью или тянут за правый нижний угол
+    private SceneLayerViewModel? _dragLayer;
+    private bool _isResizingLayer;
 
     public SceneCanvas()
     {
@@ -89,6 +96,9 @@ public sealed class SceneCanvas : FrameworkElement
         if (Scene == null)
             return;
 
+        foreach (var layer in Scene.Layers)
+            DrawLayer(dc, layer);
+
         foreach (var item in Scene.Items)
         {
             if (item.Shape is not { } shape)
@@ -106,6 +116,9 @@ public sealed class SceneCanvas : FrameworkElement
 
         if (Scene.SelectedItem?.Shape is { } selected)
             DrawSelection(dc, Scene.SelectedItem, selected);
+
+        if (Scene.SelectedLayer is { } selectedLayer)
+            DrawLayerSelection(dc, selectedLayer);
     }
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -133,13 +146,30 @@ public sealed class SceneCanvas : FrameworkElement
             }
         }
 
+        // Затем — угол выбранного слоя: потяните, чтобы изменить его границы
+        if (Scene.SelectedLayer is { } selectedLayer &&
+            (position - ToView(selectedLayer.Config.X + selectedLayer.Config.Width, selectedLayer.Config.Y + selectedLayer.Config.Height)).Length <= HandleRadius + 3)
+        {
+            BeginLayerDrag(selectedLayer, true, default);
+            return;
+        }
+
         var hit = HitTest(position);
+        var world = ToWorld(position);
         Scene.SelectedItem = hit;
 
         if (hit != null)
         {
-            var world = ToWorld(position);
             BeginDrag(hit, null, new Vector(hit.Config.X - world.X, hit.Config.Y - world.Y));
+        }
+        else
+        {
+            // Мимо элементов — выбираем верхний слой под мышью и двигаем его
+            var layer = Scene.Layers.LastOrDefault(l => l.Config.Contains(new ScenePoint(world.X, world.Y)));
+            Scene.SelectedLayer = layer;
+
+            if (layer != null)
+                BeginLayerDrag(layer, false, new Vector(layer.Config.X - world.X, layer.Config.Y - world.Y));
         }
 
         InvalidateVisual();
@@ -149,7 +179,7 @@ public sealed class SceneCanvas : FrameworkElement
     {
         var position = e.GetPosition(this);
 
-        if (!_isDragging || _dragItem == null || Scene == null)
+        if (!_isDragging || (_dragItem == null && _dragLayer == null) || Scene == null)
         {
             Cursor = HitTest(position) != null ? Cursors.Hand : Cursors.Arrow;
             return;
@@ -157,6 +187,19 @@ public sealed class SceneCanvas : FrameworkElement
 
         var world = ToWorld(position);
         var snap = !Keyboard.IsKeyDown(Key.LeftAlt) && !Keyboard.IsKeyDown(Key.RightAlt);
+
+        if (_dragLayer != null)
+        {
+            if (_isResizingLayer)
+                Scene.ResizeLayer(_dragLayer, Snap(world.X, snap), Snap(world.Y, snap));
+            else
+                Scene.MoveLayer(_dragLayer, Snap(world.X + _dragOffset.X, snap), Snap(world.Y + _dragOffset.Y, snap));
+
+            return;
+        }
+
+        if (_dragItem == null)
+            return;
 
         if (_dragFirstEnd is { } isFirstEnd)
         {
@@ -198,6 +241,13 @@ public sealed class SceneCanvas : FrameworkElement
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
+        if (e.Key == Key.Delete && Scene?.SelectedLayer is { } layer)
+        {
+            Scene.RemoveLayerCommand.Execute(layer);
+            e.Handled = true;
+            return;
+        }
+
         if (Scene?.SelectedItem is not { } item)
             return;
 
@@ -237,11 +287,24 @@ public sealed class SceneCanvas : FrameworkElement
         CaptureMouse();
     }
 
+    private void BeginLayerDrag(SceneLayerViewModel layer, bool isResizing, Vector offset)
+    {
+        _dragLayer = layer;
+        _isResizingLayer = isResizing;
+        _dragOffset = offset;
+        _isDragging = true;
+
+        Cursor = isResizing ? Cursors.SizeNWSE : Cursors.SizeAll;
+        CaptureMouse();
+    }
+
     private void EndDrag()
     {
         _isDragging = false;
         _dragItem = null;
         _dragFirstEnd = null;
+        _dragLayer = null;
+        _isResizingLayer = false;
 
         if (IsMouseCaptured)
             ReleaseMouseCapture();
@@ -383,6 +446,29 @@ public sealed class SceneCanvas : FrameworkElement
             dc.DrawEllipse(Brushes.White, HandlePen, ToView(end), HandleRadius, HandleRadius);
 
         DrawText(dc, "1", ToView(line.Start) + new Vector(0, -16), 11, Brushes.White, 40);
+    }
+
+    private void DrawLayer(DrawingContext dc, SceneLayerViewModel layer)
+    {
+        var bounds = LayerRect(layer);
+
+        dc.DrawRoundedRectangle(LayerFill, LayerPen, bounds, 6, 6);
+        DrawText(dc, layer.Title, new Point(bounds.X + bounds.Width / 2, bounds.Y + 10), 10, MutedText, bounds.Width - 8);
+    }
+
+    private void DrawLayerSelection(DrawingContext dc, SceneLayerViewModel layer)
+    {
+        var bounds = LayerRect(layer);
+
+        // Ручка в правом нижнем углу: потяните, чтобы изменить границы слоя
+        dc.DrawRoundedRectangle(null, SelectedLayerPen, bounds, 6, 6);
+        dc.DrawEllipse(Brushes.White, HandlePen, bounds.BottomRight, HandleRadius, HandleRadius);
+    }
+
+    private Rect LayerRect(SceneLayerViewModel layer)
+    {
+        var config = layer.Config;
+        return new Rect(ToView(config.X, config.Y), ToView(config.X + config.Width, config.Y + config.Height));
     }
 
     private SceneItemViewModel? HitTest(Point position)

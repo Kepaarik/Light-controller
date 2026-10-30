@@ -56,6 +56,11 @@ public sealed class AppConfig
     public List<SceneItemConfig> SceneItems { get; set; } = new();
 
     /// <summary>
+    /// Слои эффектов поверх эффекта всей сцены, снизу вверх.
+    /// </summary>
+    public List<SceneLayerConfig> SceneLayers { get; set; } = new();
+
+    /// <summary>
     /// Окно из прозрачного стекла (Acrylic); иначе — матовое (Mica).
     /// </summary>
     public bool UseAcrylic { get; set; } = true;

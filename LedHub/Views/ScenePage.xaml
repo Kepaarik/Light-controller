@@ -18,6 +18,15 @@
                     <TextBlock Text="{Binding StatusText}" Style="{StaticResource Hint}" FontSize="13" Margin="0,4,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Command="{Binding AutoLayoutCommand}" Style="{StaticResource GhostButton}" Foreground="{StaticResource TextBrush}"
+                            Padding="14,9" Margin="0,0,6,0"
+                            ToolTip="Поставить на сцену всё найденное и расставить: мониторы в ряд, клавиатуры под основным монитором, ленты и панели по бокам">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8A1;" Style="{StaticResource Icon}" FontSize="13" Margin="0,0,8,0"/>
+                            <TextBlock Text="Расставить автоматически"/>
+                        </StackPanel>
+                    </Button>
+
                     <!-- Предпросмотр: выбранный эффект играет только на схеме, ленты не трогаются -->
                     <Button Command="{Binding TogglePreviewCommand}" Padding="16,9"
                             ToolTip="Показать выбранный эффект только на схеме, не трогая ленты">
@@ -85,6 +94,23 @@
                                         <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" MaxWidth="200"/>
                                         <TextBlock Text="{Binding Subtitle}" Style="{StaticResource Hint}"/>
                                     </StackPanel>
+                                </StackPanel>
+
+                                <!-- Как устройство показывает эффект сцены: вместе со всеми, само по себе или никак -->
+                                <StackPanel Visibility="{Binding ShowsProjection, Converter={StaticResource BoolToVisibility}}" Margin="0,16,0,0">
+                                    <TextBlock Text="Эффект сцены" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                                    <UniformGrid Columns="3">
+                                        <RadioButton Style="{StaticResource SegmentRadio}" Margin="0,0,3,0" IsChecked="{Binding IsTogether}">
+                                            <TextBlock Text="В связке" HorizontalAlignment="Center"/>
+                                        </RadioButton>
+                                        <RadioButton Style="{StaticResource SegmentRadio}" Margin="3,0,3,0" IsChecked="{Binding IsSeparate}">
+                                            <TextBlock Text="Отдельно" HorizontalAlignment="Center"/>
+                                        </RadioButton>
+                                        <RadioButton Style="{StaticResource SegmentRadio}" Margin="3,0,0,0" IsChecked="{Binding IsExcluded}">
+                                            <TextBlock Text="Не играет" HorizontalAlignment="Center"/>
+                                        </RadioButton>
+                                    </UniformGrid>
+                                    <TextBlock Text="{Binding ProjectionHint}" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
                                 </StackPanel>
 
                                 <UniformGrid Columns="2" Margin="0,16,0,4" Visibility="{Binding ShowsKindChoice, Converter={StaticResource BoolToVisibility}}">
@@ -193,6 +219,76 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Слои: свои эффекты в своих областях поверх эффекта всей сцены -->
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,2">
+                                <Button DockPanel.Dock="Right" Command="{Binding AddLayerCommand}" Style="{StaticResource GhostButton}"
+                                        Padding="8,6" Margin="0,0,-8,0" ToolTip="Добавить слой с эффектом, выбранным в галерее">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE710;" Style="{StaticResource Icon}" FontSize="12" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Слой"/>
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Text="Слои эффектов" Style="{StaticResource CardTitle}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
+                                       Text="Свой эффект в своей области поверх эффекта сцены. Слои играют вместе с ним — запустите эффект сцены или предпросмотр. Слой ниже в списке перекрывает те, что выше."/>
+
+                            <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" HorizontalContentAlignment="Stretch"
+                                     Margin="-8,0,-8,0" Visibility="{Binding HasLayers, Converter={StaticResource BoolToVisibility}}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Padding="6,4" ToolTip="Убрать слой"
+                                                    Command="{Binding DataContext.RemoveLayerCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="&#xE74D;" Style="{StaticResource Icon}" FontSize="12"/>
+                                            </Button>
+                                            <TextBlock Text="&#xE81E;" Style="{StaticResource Icon}" FontSize="13" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="10,0,8,0"/>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <!-- Настройки выбранного слоя -->
+                            <StackPanel Visibility="{Binding HasSelectedLayer, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
+                                <StackPanel DataContext="{Binding SelectedLayer}">
+                                    <TextBlock Text="Эффект слоя" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                                    <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Effect}" DisplayMemberPath="Title"/>
+
+                                    <DockPanel Margin="0,12,0,6">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding X, StringFormat='{}{0:0} см'}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Слева" Style="{StaticResource Hint}"/>
+                                    </DockPanel>
+                                    <Slider Minimum="0" Maximum="400" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding X}"/>
+
+                                    <DockPanel Margin="0,12,0,6">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Y, StringFormat='{}{0:0} см'}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Сверху" Style="{StaticResource Hint}"/>
+                                    </DockPanel>
+                                    <Slider Minimum="0" Maximum="240" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Y}"/>
+
+                                    <DockPanel Margin="0,12,0,6">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Width, StringFormat='{}{0:0} см'}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Ширина" Style="{StaticResource Hint}"/>
+                                    </DockPanel>
+                                    <Slider Minimum="10" Maximum="400" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Width}"/>
+
+                                    <DockPanel Margin="0,12,0,6">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Height, StringFormat='{}{0:0} см'}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="Высота" Style="{StaticResource Hint}"/>
+                                    </DockPanel>
+                                    <Slider Minimum="10" Maximum="240" IsSnapToTickEnabled="True" TickFrequency="1" Value="{Binding Height}"/>
+
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                               Text="Область слоя можно двигать мышью на схеме, а за белую точку в углу — растягивать. Настройки эффекта — в галерее ниже, они общие для слоя и сцены."/>
+                                </StackPanel>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
                 </StackPanel>

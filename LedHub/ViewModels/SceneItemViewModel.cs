@@ -87,6 +87,48 @@ public sealed partial class SceneItemViewModel : ObservableObject
         _ => ""
     };
 
+    /// <summary>
+    /// Режим эффекта сцены есть у всего, что светится: у устройств и у мониторов с лентой подсветки.
+    /// </summary>
+    public bool ShowsProjection => Shape?.DeviceId != null;
+
+    public bool IsTogether
+    {
+        get => Config.Projection == SceneProjection.Together;
+        set
+        {
+            if (value)
+                SetProjection(SceneProjection.Together);
+        }
+    }
+
+    public bool IsSeparate
+    {
+        get => Config.Projection == SceneProjection.Separate;
+        set
+        {
+            if (value)
+                SetProjection(SceneProjection.Separate);
+        }
+    }
+
+    public bool IsExcluded
+    {
+        get => Config.Projection == SceneProjection.Off;
+        set
+        {
+            if (value)
+                SetProjection(SceneProjection.Off);
+        }
+    }
+
+    public string ProjectionHint => Config.Projection switch
+    {
+        SceneProjection.Separate => "Весь эффект целиком идёт на одно это устройство, как будто оно на сцене одно.",
+        SceneProjection.Off => "Эффекты сцены это устройство не трогают — им можно управлять отдельно.",
+        _ => "Эффект идёт по месту устройства на сцене и переходит на соседние."
+    };
+
     public bool ShowsSize => !IsPanel;
 
     public string SizeTitle => IsMonitor ? "Ширина монитора" : IsKeyboard ? "Ширина клавиатуры" : "Длина ленты";
@@ -201,6 +243,14 @@ public sealed partial class SceneItemViewModel : ObservableObject
     private void ResetShape()
     {
         Edit(() => Config.Cells.Clear());
+    }
+
+    private void SetProjection(SceneProjection projection)
+    {
+        if (Config.Projection == projection)
+            return;
+
+        Edit(() => Config.Projection = projection);
     }
 
     private void SetKind(SceneItemKind kind)
