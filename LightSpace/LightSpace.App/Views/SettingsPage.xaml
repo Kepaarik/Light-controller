@@ -1,0 +1,88 @@
+<UserControl x:Class="LightSpace.App.Views.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Stretch">
+            <TextBlock Text="Настройки" Style="{StaticResource PageTitle}"/>
+
+            <!-- Подсветка -->
+            <TextBlock Text="Подсветка" Style="{StaticResource SectionLabel}"/>
+
+            <Border Style="{StaticResource SettingRow}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding LightingEnabled}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Подсветка включена" Style="{StaticResource Body}"/>
+                        <TextBlock Text="Выключает свет на всех устройствах сразу; то же есть в меню значка в трее" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Style="{StaticResource SettingRow}">
+                <DockPanel>
+                    <ListBox DockPanel.Dock="Right" Style="{StaticResource Segments}" VerticalAlignment="Center"
+                             ItemsSource="{Binding FrameRates}" SelectedItem="{Binding FrameRate}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat='{}{0} к/с'}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <StackPanel VerticalAlignment="Center" Margin="{StaticResource GapRight12}">
+                        <TextBlock Text="Частота кадров" Style="{StaticResource Body}"/>
+                        <TextBlock Text="Сколько раз в секунду обновляются цвета на устройствах" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Style="{StaticResource SettingRow}">
+                <StackPanel>
+                    <controls:ValueSlider Label="Плавный переход между сценариями" Unit="мс"
+                                          Minimum="0" Maximum="2000" Step="50"
+                                          Value="{Binding TransitionMilliseconds}"/>
+                    <TextBlock Text="0 — сценарий сменяется мгновенно" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource SettingRow}">
+                <StackPanel>
+                    <controls:ValueSlider Label="Задержка снятия фокусного сценария" Unit="с" Decimals="1"
+                                          Minimum="0" Maximum="10" Step="0.5"
+                                          Value="{Binding FocusReleaseDelaySeconds}"/>
+                    <TextBlock Text="Сколько ждать после переключения на другое окно, прежде чем вернуть предыдущий сценарий; включение — сразу"
+                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Приложение -->
+            <TextBlock Text="Приложение" Style="{StaticResource SectionLabel}"/>
+
+            <Border Style="{StaticResource SettingRow}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding StartWithWindows}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Запускать вместе с Windows" Style="{StaticResource Body}"/>
+                        <TextBlock Text="Light Space стартует сразу в трей, без окна" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Style="{StaticResource SettingRow}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding MinimizeToTrayOnClose}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Сворачивать в трей при закрытии" Style="{StaticResource Body}"/>
+                        <TextBlock Text="Подсветка продолжает работать; выйти можно из меню значка в трее" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

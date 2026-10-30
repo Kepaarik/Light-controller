@@ -1,0 +1,13 @@
+<UserControl x:Class="LightSpace.App.Views.DevicesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:MainViewModel}">
+
+    <!-- Пустое состояние; поиск и список устройств появятся вместе с драйверами -->
+    <controls:EmptyState Icon="&#xE772;" Title="Устройства не найдены" Hint="Включите ленты и клавиатуры и запустите поиск. Здесь будут статус связи, возможности и диагностика каждого устройства." ActionText="Найти устройства" ActionIcon="&#xE721;" Command="{Binding FindDevicesCommand}"/>
+</UserControl>

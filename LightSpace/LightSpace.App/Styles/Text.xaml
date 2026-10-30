@@ -1,0 +1,143 @@
+<!-- Текстовые стили и поверхности: заголовки, подписи, значки, карточки, разделители -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Значок из Segoe Fluent Icons -->
+    <Style x:Key="Icon" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontIcon}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeIcon}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="PageTitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontDisplay}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizePageTitle}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        <Setter Property="Margin" Value="{StaticResource GapBottom16}"/>
+    </Style>
+
+    <Style x:Key="Title" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontDisplay}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="Subtitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSubtitle}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="Body" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="BodyStrong" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- Заголовок карточки -->
+    <Style x:Key="CardTitle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrong}">
+        <Setter Property="Margin" Value="{StaticResource GapBottom8}"/>
+    </Style>
+
+    <!-- Подпись над группой элементов на странице -->
+    <Style x:Key="SectionLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+        <Setter Property="Margin" Value="{StaticResource SectionLabelMargin}"/>
+    </Style>
+
+    <Style x:Key="Caption" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- Пояснение под настройкой или в пустом состоянии -->
+    <Style x:Key="Hint" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="Warning" TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+        <Style.Triggers>
+            <Trigger Property="Text" Value="">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </Trigger>
+            <Trigger Property="Text" Value="{x:Null}">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Карточка на поверхности страницы -->
+    <Style x:Key="Card" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
+        <Setter Property="Padding" Value="{StaticResource PaddingCard}"/>
+    </Style>
+
+    <!-- Строка настройки: карточка с подписью слева и элементом справа, строки идут вплотную -->
+    <Style x:Key="SettingRow" TargetType="Border" BasedOn="{StaticResource Card}">
+        <Setter Property="Margin" Value="{StaticResource GapBottom4}"/>
+        <Setter Property="MinHeight" Value="{StaticResource FieldHeight}"/>
+    </Style>
+
+    <!-- Всплывающая карточка: меню, подсказки, выпадающие панели, меню трея -->
+    <Style x:Key="FlyoutCard" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource FlyoutBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}"/>
+        <Setter Property="Padding" Value="{StaticResource PaddingFlyout}"/>
+        <Setter Property="Margin" Value="{StaticResource ShadowRoom}"/>
+        <Setter Property="Effect" Value="{DynamicResource ShadowFlyout}"/>
+    </Style>
+
+    <!-- Модальная карточка поверх окна -->
+    <Style x:Key="DialogCard" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource FlyoutBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusOverlay}"/>
+        <Setter Property="Padding" Value="{StaticResource PaddingOverlay}"/>
+        <Setter Property="Effect" Value="{DynamicResource ShadowDialog}"/>
+    </Style>
+
+    <!-- Тонкая горизонтальная линия между блоками -->
+    <Style x:Key="Divider" TargetType="Border">
+        <Setter Property="Height" Value="{StaticResource StrokeWidth}"/>
+        <Setter Property="Background" Value="{DynamicResource DividerBrush}"/>
+        <Setter Property="Margin" Value="{StaticResource Space4}"/>
+    </Style>
+
+    <!-- Рамка кругового фокуса с клавиатуры -->
+    <Style x:Key="FocusRing">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border BorderBrush="{DynamicResource TextBrush}" BorderThickness="{StaticResource StrokeThick}"
+                            CornerRadius="{StaticResource RadiusControl}" Margin="-3" SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

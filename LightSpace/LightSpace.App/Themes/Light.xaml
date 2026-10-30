@@ -1,0 +1,63 @@
+<!-- Цвета, тени и обводки светлой темы. Ключи совпадают с Dark.xaml: при смене темы словарь подменяется целиком.
+     Акцентные кисти здесь — запасные: при запуске их заменяет системный акцентный цвет -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    mc:Ignorable="po">
+
+    <!-- Фон -->
+    <SolidColorBrush x:Key="WindowBrush" Color="#F3F3F3"/>
+    <SolidColorBrush x:Key="LayerBrush" Color="#80FFFFFF"/>
+
+    <!-- Поверхности -->
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#B3FFFFFF"/>
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#D9FFFFFF"/>
+    <SolidColorBrush x:Key="FlyoutBrush" Color="#F9F9F9"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#4D000000"/>
+
+    <!-- Элементы управления -->
+    <SolidColorBrush x:Key="ControlBrush" Color="#B3FFFFFF"/>
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="#80F9F9F9"/>
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="#4DF9F9F9"/>
+    <SolidColorBrush x:Key="ControlStrongBrush" Color="#72000000"/>
+    <SolidColorBrush x:Key="TrackBrush" Color="#29000000"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#72000000"/>
+    <SolidColorBrush x:Key="KnobBrush" Color="#FFFFFF"/>
+
+    <!-- Обводки -->
+    <SolidColorBrush x:Key="StrokeBrush" Color="#0F000000"/>
+    <SolidColorBrush x:Key="StrokeStrongBrush" Color="#72000000"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#14000000"/>
+
+    <!-- Текст -->
+    <SolidColorBrush x:Key="TextBrush" Color="#E4000000"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#9E000000"/>
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#72000000"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="#5C000000"/>
+
+    <!-- Акцент (запасной) -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#005FB8"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#E6005FB8"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#CC005FB8"/>
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#33005FB8"/>
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#003E92"/>
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF"/>
+
+    <!-- Состояния -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#0F7B0F"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#9D5D00"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="#005FB7"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#C42B1C"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#E6C42B1C"/>
+    <SolidColorBrush x:Key="DangerPressedBrush" Color="#CCC42B1C"/>
+    <SolidColorBrush x:Key="OnDangerBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="CloseHoverBrush" Color="#C42B1C"/>
+    <SolidColorBrush x:Key="OnCloseHoverBrush" Color="#FFFFFF"/>
+
+    <!-- Тени -->
+    <DropShadowEffect x:Key="ShadowFlyout" po:Freeze="True" BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.14" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowDialog" po:Freeze="True" BlurRadius="32" ShadowDepth="8" Direction="270" Opacity="0.22" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowKnob" po:Freeze="True" BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.25" Color="#000000"/>
+
+</ResourceDictionary>

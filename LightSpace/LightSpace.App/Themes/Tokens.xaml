@@ -1,0 +1,131 @@
+<!-- Токены дизайн-системы, не зависящие от темы: радиусы, отступы, шрифты, размеры, движение.
+     Цвета, тени и обводки лежат в Light.xaml и Dark.xaml и берутся только через DynamicResource -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- Радиусы скругления -->
+    <CornerRadius x:Key="RadiusNone">0</CornerRadius>
+    <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
+    <CornerRadius x:Key="RadiusControl">8</CornerRadius>
+    <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+    <CornerRadius x:Key="RadiusOverlay">16</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+    <CornerRadius x:Key="RadiusTopLeftCard">12,0,0,0</CornerRadius>
+
+    <!-- Отступы по сетке 4/8 px -->
+    <Thickness x:Key="SpaceNone">0</Thickness>
+    <Thickness x:Key="Space4">4</Thickness>
+    <Thickness x:Key="Space8">8</Thickness>
+    <Thickness x:Key="Space12">12</Thickness>
+    <Thickness x:Key="Space16">16</Thickness>
+    <Thickness x:Key="Space24">24</Thickness>
+    <Thickness x:Key="Space32">32</Thickness>
+    <Thickness x:Key="GapRight4">0,0,4,0</Thickness>
+    <Thickness x:Key="GapRight8">0,0,8,0</Thickness>
+    <Thickness x:Key="GapRight12">0,0,12,0</Thickness>
+    <Thickness x:Key="GapBottom4">0,0,0,4</Thickness>
+    <Thickness x:Key="GapBottom8">0,0,0,8</Thickness>
+    <Thickness x:Key="GapBottom16">0,0,0,16</Thickness>
+    <Thickness x:Key="GapBottom24">0,0,0,24</Thickness>
+    <Thickness x:Key="GapLeft8">8,0,0,0</Thickness>
+    <Thickness x:Key="GapLeft12">12,0,0,0</Thickness>
+    <Thickness x:Key="GapTop4">0,4,0,0</Thickness>
+    <Thickness x:Key="GapTop8">0,8,0,0</Thickness>
+    <Thickness x:Key="GapTop16">0,16,0,0</Thickness>
+    <Thickness x:Key="GapTile">0,0,8,8</Thickness>
+    <Thickness x:Key="PaddingControl">12,6</Thickness>
+    <Thickness x:Key="PaddingCompact">8,4</Thickness>
+    <Thickness x:Key="PaddingChip">12,4</Thickness>
+    <Thickness x:Key="PaddingField">12,20,12,6</Thickness>
+    <Thickness x:Key="PaddingCard">16</Thickness>
+    <Thickness x:Key="PaddingOverlay">24</Thickness>
+    <Thickness x:Key="PaddingFlyout">4</Thickness>
+    <Thickness x:Key="PaddingSegments">2</Thickness>
+    <Thickness x:Key="PaddingListItem">12,8</Thickness>
+    <Thickness x:Key="PaddingTab">12,0</Thickness>
+    <Thickness x:Key="PaddingTile">4</Thickness>
+    <Thickness x:Key="TileTitleMargin">4,8,4,4</Thickness>
+    <Thickness x:Key="PaddingPage">32,24,32,32</Thickness>
+    <Thickness x:Key="PaddingTooltip">8,4</Thickness>
+    <Thickness x:Key="PaddingMenuItem">12,8</Thickness>
+    <!-- Место вокруг всплывающей карточки, чтобы тень не обрезалась краем окна-попапа -->
+    <Thickness x:Key="ShadowRoom">12</Thickness>
+    <Thickness x:Key="SectionLabelMargin">0,24,0,8</Thickness>
+
+    <!-- Шрифты -->
+    <FontFamily x:Key="FontText">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="FontDisplay">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <FontFamily x:Key="FontIcon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+    <!-- Размеры шрифта -->
+    <sys:Double x:Key="FontSizeCaption">12</sys:Double>
+    <sys:Double x:Key="FontSizeBody">14</sys:Double>
+    <sys:Double x:Key="FontSizeSubtitle">16</sys:Double>
+    <sys:Double x:Key="FontSizeTitle">20</sys:Double>
+    <sys:Double x:Key="FontSizePageTitle">28</sys:Double>
+    <sys:Double x:Key="FontSizeIcon">16</sys:Double>
+    <sys:Double x:Key="FontSizeIconSmall">12</sys:Double>
+    <sys:Double x:Key="FontSizeIconLarge">48</sys:Double>
+    <sys:Double x:Key="FontSizeFieldLabel">12</sys:Double>
+
+    <!-- Размеры элементов -->
+    <sys:Double x:Key="ControlHeight">32</sys:Double>
+    <sys:Double x:Key="FieldHeight">48</sys:Double>
+    <sys:Double x:Key="CaptionHeight">48</sys:Double>
+    <GridLength x:Key="CaptionRowHeight">48</GridLength>
+    <sys:Double x:Key="CaptionButtonWidth">46</sys:Double>
+    <sys:Double x:Key="IconButtonSize">32</sys:Double>
+    <sys:Double x:Key="ToggleWidth">40</sys:Double>
+    <sys:Double x:Key="ToggleHeight">20</sys:Double>
+    <sys:Double x:Key="ToggleKnobSize">12</sys:Double>
+    <sys:Double x:Key="ToggleKnobTravel">20</sys:Double>
+    <sys:Double x:Key="ToggleKnobHoverScale">1.17</sys:Double>
+    <Thickness x:Key="ToggleKnobMargin">3,0</Thickness>
+    <sys:Double x:Key="SliderTrackHeight">4</sys:Double>
+    <sys:Double x:Key="SliderThumbSize">20</sys:Double>
+    <sys:Double x:Key="SliderThumbInnerSize">10</sys:Double>
+    <sys:Double x:Key="SliderThumbInnerHoverSize">12</sys:Double>
+    <sys:Double x:Key="SliderThumbInnerPressedSize">8</sys:Double>
+    <sys:Double x:Key="FieldUnderlineHeight">2</sys:Double>
+    <Thickness x:Key="FieldLabelMargin">12,6,12,0</Thickness>
+    <Thickness x:Key="PaddingSearch">32,6,12,6</Thickness>
+    <Thickness x:Key="SearchIconMargin">10,0,0,0</Thickness>
+    <sys:Double x:Key="SliderHeight">24</sys:Double>
+    <sys:Double x:Key="ScrollBarSize">12</sys:Double>
+    <sys:Double x:Key="ScrollThumbThin">3</sys:Double>
+    <sys:Double x:Key="ScrollThumbThick">6</sys:Double>
+    <sys:Double x:Key="TileWidth">132</sys:Double>
+    <sys:Double x:Key="TilePreviewHeight">56</sys:Double>
+    <sys:Double x:Key="TabIndicatorWidth">16</sys:Double>
+    <sys:Double x:Key="TabIndicatorHeight">3</sys:Double>
+    <sys:Double x:Key="FlyoutMinWidth">200</sys:Double>
+    <sys:Double x:Key="PickerMinWidth">240</sys:Double>
+    <sys:Double x:Key="PickerListMaxHeight">280</sys:Double>
+    <sys:Double x:Key="DialogMaxWidth">440</sys:Double>
+    <sys:Double x:Key="ContentMaxWidth">880</sys:Double>
+    <sys:Double x:Key="ColorWheelSize">200</sys:Double>
+    <sys:Double x:Key="SwatchSize">28</sys:Double>
+    <sys:Double x:Key="EmptyStateMaxWidth">360</sys:Double>
+
+    <!-- Обводки -->
+    <Thickness x:Key="StrokeThin">1</Thickness>
+    <Thickness x:Key="StrokeThick">2</Thickness>
+    <Thickness x:Key="StrokeBottom">0,0,0,1</Thickness>
+    <Thickness x:Key="StrokeTopLeft">1,1,0,0</Thickness>
+    <sys:Double x:Key="StrokeWidth">1</sys:Double>
+
+    <!-- Прозрачность выключенного элемента -->
+    <sys:Double x:Key="OpacityDisabled">0.4</sys:Double>
+
+    <!-- Движение: длительности и кривые -->
+    <Duration x:Key="MotionFast">0:0:0.1</Duration>
+    <Duration x:Key="MotionNormal">0:0:0.167</Duration>
+    <Duration x:Key="MotionSlow">0:0:0.25</Duration>
+    <CubicEase x:Key="EaseOut" EasingMode="EaseOut"/>
+    <CubicEase x:Key="EaseInOut" EasingMode="EaseInOut"/>
+    <!-- Плавающая подпись поля: насколько она опускается и увеличивается, пока поле пустое -->
+    <sys:Double x:Key="FieldLabelRestOffset">9</sys:Double>
+    <sys:Double x:Key="FieldLabelRestScale">1.17</sys:Double>
+
+</ResourceDictionary>
