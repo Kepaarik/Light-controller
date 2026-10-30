@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
              xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             xmlns:rk="clr-namespace:LightSpace.Devices.RoyalKludge;assembly=LightSpace.Devices"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:ShowcaseViewModel}">
 
@@ -426,6 +427,14 @@
                         <TextBlock Text="{Binding ColorHex}" Style="{StaticResource BodyStrong}" Margin="{StaticResource GapTop8}"/>
                     </StackPanel>
                 </StackPanel>
+            </Border>
+
+            <!-- Раскладка клавиатуры -->
+            <TextBlock Text="Раскладка клавиатуры" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
+                    <controls:KeyboardLayout Keys="{x:Static rk:RkS98Layout.Keys}"/>
+                </Viewbox>
             </Border>
 
             <!-- Текст и поверхности -->

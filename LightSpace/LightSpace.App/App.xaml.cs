@@ -34,6 +34,9 @@ public partial class App : Application
 
         _tray = new TrayIcon(_viewModel, ShowWindow, ExitApplication);
 
+        // Устройства ищем сразу при запуске: найденные получают свои сохранённые цвета, даже если окно не открывали
+        _viewModel.Devices.FindCommand.Execute(null);
+
         // При автозапуске окно не показываем: приложение сразу уходит в трей
         if (!e.Args.Contains(StartupRegistration.TrayArgument))
             ShowWindow();
@@ -42,6 +45,7 @@ public partial class App : Application
     private void OnExit(object sender, ExitEventArgs e)
     {
         _tray?.Dispose();
+        _viewModel?.Shutdown();
         _viewModel?.Settings.SaveNow();
         ThemeService.Shutdown();
     }

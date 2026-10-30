@@ -8,6 +8,13 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
-    <!-- Пока устройств нет — пустое состояние; живая карта стола появится вместе с устройствами -->
-    <controls:EmptyState Icon="&#xE7F4;" Title="Устройств пока нет" Hint="Light Space найдёт ленты и клавиатуры в сети, по Bluetooth и USB. Найденные устройства появятся на карте стола, их можно будет собрать в группы." ActionText="Найти устройства" ActionIcon="&#xE721;" Command="{Binding FindDevicesCommand}"/>
+    <Grid>
+        <!-- Пока устройств нет — пустое состояние; живая карта стола появится вместе с устройствами -->
+        <controls:EmptyState Icon="&#xE7F4;" Title="Устройств пока нет" Hint="Light Space найдёт ленты и клавиатуры в сети, по Bluetooth и USB. Найденные устройства появятся на карте стола, их можно будет собрать в группы." ActionText="Найти устройства" ActionIcon="&#xE721;" Command="{Binding FindDevicesCommand}"
+                             Visibility="{Binding Devices.HasDevices, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+        <!-- Устройства уже есть, а карты стола ещё нет: цвет пока задаётся на вкладке «Устройства» -->
+        <controls:EmptyState Icon="&#xE7F4;" Title="Карта стола скоро появится" Hint="Устройства найдены. Здесь они встанут на карту стола и соберутся в группы; цвет каждого устройства пока задаётся на вкладке «Устройства»." ActionText="Открыть устройства" ActionIcon="&#xE772;" Command="{Binding OpenDevicesCommand}"
+                             Visibility="{Binding Devices.HasDevices, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+    </Grid>
 </UserControl>
