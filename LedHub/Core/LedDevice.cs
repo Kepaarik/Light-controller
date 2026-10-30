@@ -26,6 +26,11 @@ public abstract class LedDevice : IDisposable
     /// </summary>
     public virtual string? StatusText => null;
 
+    /// <summary>
+    /// Как часто устройство может принимать кадры эффекта; ноль — так часто, как их шлёт приложение.
+    /// </summary>
+    public virtual TimeSpan MinFrameInterval => TimeSpan.Zero;
+
     public abstract Task SetPowerAsync(bool isOn, CancellationToken ct = default);
 
     /// <summary>

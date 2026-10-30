@@ -57,8 +57,8 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice, IKeyboardEffe
 
     private const int KeyLedCount = 126;
 
-    // Неизвестно, пишет ли клавиатура цвета во флеш-память, поэтому не шлём кадры чаще 10 раз в секунду
-    private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(100);
+    // Не шлём кадры чаще 20 раз в секунду: столько же кадров считают эффекты приложения
+    private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(50);
 
     /// <summary>
     /// Эффекты прошивки S98 под их номерами режимов; названия переведены с внутренних имён режимов настройщика RK.
@@ -123,6 +123,8 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice, IKeyboardEffe
     public override string? StatusText => IsReady
         ? null
         : $"Не удалось прочитать настройки клавиатуры ({_readError}). Закройте программу RK и повторите поиск";
+
+    public override TimeSpan MinFrameInterval => FrameInterval;
 
     public int LedCount => KeyLedCount;
 
@@ -279,6 +281,9 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice, IKeyboardEffe
             if (wait > TimeSpan.Zero)
                 await Task.Delay(wait, ct);
 
+            // Интервал отсчитывается от начала отправки, иначе время самой отправки сдвигало бы каждый следующий кадр
+            _sinceFrame.Restart();
+
             await Task.Run(() =>
             {
                 // Цвета отдельных клавиш клавиатура показывает только в своём режиме «свои цвета» — включаем его при первом кадре
@@ -292,7 +297,6 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice, IKeyboardEffe
             }, ct);
 
             _lastFrame = frame;
-            _sinceFrame.Restart();
         }
         finally
         {

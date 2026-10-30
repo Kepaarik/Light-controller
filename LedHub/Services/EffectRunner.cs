@@ -16,6 +16,12 @@ public sealed class EffectRunner
 {
     private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(50);
 
+    // Таймер срабатывает с небольшим разбросом — без запаса устройство с тем же интервалом пропускало бы каждый второй кадр
+    private static readonly TimeSpan FrameTolerance = TimeSpan.FromMilliseconds(10);
+
+    // Какая доля разницы гасится за кадр, когда клавиша на клавиатуре темнеет
+    private const double FadeStep = 0.6;
+
     private CancellationTokenSource? _cts;
     private ILightSource? _source;
 
@@ -51,6 +57,8 @@ public sealed class EffectRunner
     private static async Task RunAsync(ILightSource source, IReadOnlyList<LedDevice> devices, Func<EffectSettings> getSettings, CancellationToken ct)
     {
         var pending = new Dictionary<LedDevice, Task>();
+        var lastSent = new Dictionary<LedDevice, TimeSpan>();
+        var smoothed = new Dictionary<LedDevice, RgbColor[]>();
         var clock = Stopwatch.StartNew();
         var phase = 0.0;
         var lastTick = 0.0;
@@ -76,7 +84,13 @@ public sealed class EffectRunner
                     if (pending.TryGetValue(device, out var previous) && !previous.IsCompleted)
                         continue;
 
-                    pending[device] = SendFrameAsync(source, device, settings, ct);
+                    // Устройству, которое не принимает кадры так часто, шлём свежий кадр в его момент, а не старый с задержкой
+                    var elapsed = clock.Elapsed;
+                    if (lastSent.TryGetValue(device, out var sent) && elapsed - sent < device.MinFrameInterval - FrameTolerance)
+                        continue;
+
+                    lastSent[device] = elapsed;
+                    pending[device] = SendFrameAsync(source, device, settings, smoothed, ct);
                 }
             }
         }
@@ -85,13 +99,21 @@ public sealed class EffectRunner
         }
     }
 
-    private static async Task SendFrameAsync(ILightSource source, LedDevice device, EffectSettings settings, CancellationToken ct)
+    /// <summary>
+    /// smoothed — последние отправленные цвета клавиатур; меняется только до первого await, то есть в потоке кадров.
+    /// </summary>
+    private static async Task SendFrameAsync(ILightSource source, LedDevice device, EffectSettings settings,
+        Dictionary<LedDevice, RgbColor[]> smoothed, CancellationToken ct)
     {
         try
         {
             if (device is IAddressableLedDevice { LedCount: > 0 } strip)
             {
                 var colors = source.RenderStrip(device, strip.LedCount);
+
+                // Клавиши видно вблизи, и на них заметна каждая мелкая просадка яркости между кадрами
+                if (device is IKeyboardDevice)
+                    colors = Smooth(device, colors, smoothed);
 
                 await strip.SetLedColorsAsync(colors, settings.Brightness, ct);
                 return;
@@ -103,5 +125,34 @@ public sealed class EffectRunner
         {
             // Ошибка одного кадра не должна останавливать эффект — следующий кадр попробует снова
         }
+    }
+
+    /// <summary>
+    /// Убирает дрожание: светлеет клавиша сразу, поэтому вспышки не запаздывают, а темнеет плавно, за несколько кадров.
+    /// </summary>
+    private static IReadOnlyList<RgbColor> Smooth(LedDevice device, IReadOnlyList<RgbColor> colors, Dictionary<LedDevice, RgbColor[]> smoothed)
+    {
+        if (!smoothed.TryGetValue(device, out var last) || last.Length != colors.Count)
+        {
+            smoothed[device] = colors.ToArray();
+            return colors;
+        }
+
+        for (var i = 0; i < last.Length; i++)
+            last[i] = new RgbColor(Fade(last[i].R, colors[i].R), Fade(last[i].G, colors[i].G), Fade(last[i].B, colors[i].B));
+
+        // Отдаём копию: массив меняется уже на следующем кадре
+        return (RgbColor[])last.Clone();
+    }
+
+    private static byte Fade(byte from, byte to)
+    {
+        if (to >= from)
+            return to;
+
+        // Шаг не меньше единицы, иначе цвет навсегда застрял бы рядом с целью
+        var step = Math.Max(1, (int)Math.Ceiling((from - to) * FadeStep));
+
+        return (byte)Math.Max(to, from - step);
     }
 }
