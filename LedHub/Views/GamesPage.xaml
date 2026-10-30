@@ -215,7 +215,8 @@
                         <TextBlock Text="Подсветка по экрану" Style="{StaticResource CardTitle}"/>
                         <TextBlock Style="{StaticResource Hint}"
                                    Text="Для других игр и для фона «Картинка экрана»: лента за монитором повторяет края картинки, а остальные ленты играют выбранный режим."/>
-                        <ComboBox ItemsSource="{Binding Games.ScreenEffects}" SelectedItem="{Binding Games.SelectedScreenEffect}" DisplayMemberPath="Title" Margin="0,12,0,0"/>
+                        <ListBox ItemsSource="{Binding Games.ScreenEffects}" SelectedItem="{Binding Games.SelectedScreenEffect}"
+                                 Style="{StaticResource EffectGallery}" Margin="0,12,0,0"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

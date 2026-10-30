@@ -614,8 +614,11 @@
                                 </StackPanel>
                             </DockPanel>
 
-                            <ListBox ItemsSource="{Binding HardwareEffects}" SelectedItem="{Binding SelectedHardwareEffect}" MaxHeight="260"
-                                     DisplayMemberPath="Title"/>
+                            <!-- Встроенных эффектов бывает больше двухсот — у галереи своя прокрутка -->
+                            <ScrollViewer MaxHeight="340" VerticalScrollBarVisibility="Auto">
+                                <ListBox ItemsSource="{Binding HardwareEffects}" SelectedItem="{Binding SelectedHardwareEffect}"
+                                         Style="{StaticResource EffectGallery}"/>
+                            </ScrollViewer>
 
                             <DockPanel Margin="0,12,0,6">
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding HardwareEffectSpeed, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
@@ -662,12 +665,13 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Style="{StaticResource EffectTile}" Width="210" HorizontalContentAlignment="Stretch"
+                                        <Button Style="{StaticResource EffectTile}" Width="132" ToolTip="{Binding Description}"
                                                 Command="{Binding DataContext.StartMusicCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}">
-                                            <StackPanel Margin="6,4">
-                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
-                                                <TextBlock Text="{Binding Description}" Style="{StaticResource Hint}" Margin="0,4,0,0"/>
+                                            <StackPanel>
+                                                <controls:EffectPreview Effect="{Binding Converter={StaticResource EffectLook}}" Height="50" CornerRadius="9"/>
+                                                <TextBlock Text="{Binding Title}" Foreground="{StaticResource TextBrush}" Margin="4,8,4,2"
+                                                           TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                         </Button>
                                     </DataTemplate>
@@ -712,13 +716,8 @@
                             </DockPanel>
 
                             <TextBlock Text="Музыкальный режим" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
-                            <ListBox ItemsSource="{Binding MicrophoneModes}" SelectedItem="{Binding SelectedMicrophoneMode}" DisplayMemberPath="Title">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel/>
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                            </ListBox>
+                            <ListBox ItemsSource="{Binding MicrophoneModes}" SelectedItem="{Binding SelectedMicrophoneMode}"
+                                     Style="{StaticResource EffectGallery}"/>
 
                             <DockPanel Margin="0,12,0,6">
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding MicrophoneSensitivity, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
@@ -887,13 +886,8 @@
                                     </StackPanel>
                                 </DockPanel>
 
-                                <ListBox ItemsSource="{Binding KeyboardEffects}" SelectedItem="{Binding SelectedKeyboardEffect}" DisplayMemberPath="Title">
-                                    <ListBox.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel/>
-                                        </ItemsPanelTemplate>
-                                    </ListBox.ItemsPanel>
-                                </ListBox>
+                                <ListBox ItemsSource="{Binding KeyboardEffects}" SelectedItem="{Binding SelectedKeyboardEffect}"
+                                         Style="{StaticResource EffectGallery}"/>
 
                                 <CheckBox Content="Все цвета (радуга)" IsChecked="{Binding IsKeyboardEffectMulticolor}" Margin="0,12,0,0"/>
                                 <TextBlock Text="Без галочки эффект идёт цветом, выбранным на круге выше"

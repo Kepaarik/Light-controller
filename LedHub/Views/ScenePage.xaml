@@ -259,7 +259,10 @@
                             <StackPanel Visibility="{Binding HasSelectedLayer, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
                                 <StackPanel DataContext="{Binding SelectedLayer}">
                                     <TextBlock Text="Эффект слоя" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
-                                    <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Effect}" DisplayMemberPath="Title"/>
+                                    <!-- Колонка узкая — плитки по две в ряд -->
+                                    <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                                        <ListBox ItemsSource="{Binding Options}" SelectedItem="{Binding Effect}" Style="{StaticResource EffectGallery}"/>
+                                    </ScrollViewer>
 
                                     <DockPanel Margin="0,12,0,6">
                                         <TextBlock DockPanel.Dock="Right" Text="{Binding X, StringFormat='{}{0:0} см'}" FontWeight="SemiBold"/>

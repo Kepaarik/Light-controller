@@ -17,6 +17,27 @@ public static class EffectLibrary
         Black, RgbColor.Parse("#3A0500"), RgbColor.Parse("#FF3D00"), RgbColor.Parse("#FFA040"), RgbColor.Parse("#FFE6C4")
     };
 
+    // Какой эффект библиотеки рисовать на плитке встроенного эффекта: по словам из его названия, первое совпадение
+    private static readonly (string[] Words, string Id)[] HardwareLooks =
+    {
+        (new[] { "спектр" }, "music-spectrum"),
+        (new[] { "энергичн", "ритм" }, "music-pulse"),
+        (new[] { "прокрутка" }, "music-eq"),
+        (new[] { "огонь" }, "fire"),
+        (new[] { "капли", "круги" }, "ripple"),
+        (new[] { "звёзд", "звезд" }, "twinkle"),
+        (new[] { "вечеринка", "реакция", "след" }, "confetti"),
+        (new[] { "дыхание", "пульс" }, "breathing"),
+        (new[] { "вспышки", "мигающ" }, "strobe"),
+        (new[] { "сканер", "лифт" }, "scanner"),
+        (new[] { "занавес", "затухание", "распускание" }, "wipe"),
+        (new[] { "бегущ", "погоня", "змейка" }, "chase"),
+        (new[] { "неонов", "синусоида", "водопад" }, "plasma"),
+        (new[] { "поток", "перелив" }, "wave"),
+        (new[] { "постоянн" }, "gradient"),
+        (new[] { "радуга", "радужн", "вертушка" }, "rainbow")
+    };
+
     public static IReadOnlyList<EffectDefinition> All { get; } = new[]
     {
         // Цвета
@@ -644,6 +665,18 @@ public static class EffectLibrary
     public static EffectDefinition? Find(string id)
     {
         return All.FirstOrDefault(e => e.Id == id);
+    }
+
+    /// <summary>
+    /// Эффект библиотеки, похожий по названию на встроенный эффект ленты или клавиатуры, — для картинки на его плитке.
+    /// Если похожего нет — радуга.
+    /// </summary>
+    public static EffectDefinition LookAlike(string title)
+    {
+        var name = title.ToLowerInvariant();
+        var id = HardwareLooks.FirstOrDefault(look => look.Words.Any(name.Contains)).Id ?? "rainbow";
+
+        return Find(id) ?? All[0];
     }
 
     public static string CategoryTitle(EffectCategory category) => category switch
