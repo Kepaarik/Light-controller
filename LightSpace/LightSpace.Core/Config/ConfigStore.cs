@@ -24,6 +24,9 @@ public static class ConfigStore
     private static readonly Action<JsonObject>[] Migrations =
     {
         // 0 → 1: файлы без поля Version; формат совпадает с первой версией
+        _ => { },
+
+        // 1 → 2: появился список известных устройств Devices; в старых файлах его нет, он начинается пустым
         _ => { }
     };
 

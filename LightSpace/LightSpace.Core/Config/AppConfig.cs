@@ -8,7 +8,7 @@ public sealed class AppConfig
     /// <summary>
     /// Версия формата настроек, которую понимает эта сборка приложения.
     /// </summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     /// <summary>
     /// Частоты кадров, из которых можно выбрать.
@@ -51,6 +51,11 @@ public sealed class AppConfig
     public bool MinimizeToTrayOnClose { get; set; } = true;
 
     /// <summary>
+    /// Устройства, которые уже находились хотя бы раз, в порядке их появления.
+    /// </summary>
+    public List<DeviceConfig> Devices { get; set; } = new();
+
+    /// <summary>
     /// Приводит значения к допустимым: файл могли поправить руками.
     /// </summary>
     public void Normalize()
@@ -60,5 +65,15 @@ public sealed class AppConfig
 
         TransitionMilliseconds = Math.Clamp(TransitionMilliseconds, 0, 5000);
         FocusReleaseDelaySeconds = Math.Clamp(FocusReleaseDelaySeconds, 0, 30);
+
+        // Устройство без идентификатора не узнать при поиске, а повторы одного устройства путали бы его настройки
+        Devices = Devices
+            .Where(d => !string.IsNullOrWhiteSpace(d.Id))
+            .GroupBy(d => d.Id)
+            .Select(g => g.First())
+            .ToList();
+
+        foreach (var device in Devices)
+            device.Brightness = Math.Clamp(device.Brightness, 0, 100);
     }
 }
