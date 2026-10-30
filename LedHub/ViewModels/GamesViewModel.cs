@@ -143,8 +143,7 @@ public sealed partial class GamesViewModel : ObservableObject
 
     public IReadOnlyList<GameChoice<KeyboardHud>> KeyboardHudOptions { get; } = new[]
     {
-        new GameChoice<KeyboardHud>(KeyboardHud.FunctionAndNumberRows, "Здоровье на F1–F12, мана или броня на цифрах"),
-        new GameChoice<KeyboardHud>(KeyboardHud.FunctionRow, "Обе полоски на F1–F12"),
+        new GameChoice<KeyboardHud>(KeyboardHud.WholeKeyboard, "Вся клавиатура: здоровье сверху, мана или броня снизу"),
         new GameChoice<KeyboardHud>(KeyboardHud.Off, "Без полосок")
     };
 
@@ -216,7 +215,8 @@ public sealed partial class GamesViewModel : ObservableObject
 
     public KeyboardHud KeyboardHud
     {
-        get => _config.KeyboardHud;
+        // Прежние варианты с полосками на рядах теперь тоже на всю клавиатуру
+        get => _config.KeyboardHud == KeyboardHud.Off ? KeyboardHud.Off : KeyboardHud.WholeKeyboard;
         set
         {
             if (_config.KeyboardHud == value)

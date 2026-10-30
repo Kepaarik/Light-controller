@@ -34,10 +34,6 @@ public sealed class GameSource : ILightSource, IDisposable
     private static readonly RgbColor Armor = new(170, 200, 255);
     private static readonly RgbColor Fire = new(255, 90, 0);
 
-    // Коды F1–F12 и цифр 1…0 в порядке слева направо — по ним на клавиатуре стоят полоски
-    private static readonly int[] FunctionKeys = Enumerable.Range(0x70, 12).ToArray();
-    private static readonly int[] NumberKeys = "1234567890".Select(c => (int)c).ToArray();
-
     private readonly GameKind _kind;
     private readonly GsiServer _server;
     private readonly GamesConfig _config;
@@ -385,8 +381,8 @@ public sealed class GameSource : ILightSource, IDisposable
     }
 
     /// <summary>
-    /// Клавиатура: полоски на рядах F1–F12 и цифр (или обе на F1–F12), на остальных клавишах — фон.
-    /// Вне матча, когда полосок нет, вся клавиатура светится как обычная лента.
+    /// Клавиатура: полоски на всю клавиатуру — здоровье на верхней половине рядов, мана или броня на нижней;
+    /// без полосок — фон. Вне матча, когда полосок нет, вся клавиатура светится как обычная лента.
     /// </summary>
     private IReadOnlyList<RgbColor> RenderKeyboard(IKeyboardDevice keyboard, LedDevice device, int ledCount)
     {
@@ -395,32 +391,37 @@ public sealed class GameSource : ILightSource, IDisposable
 
         var colors = RenderBackdrop(device, ledCount);
 
-        var (health, other) = _config.KeyboardHud switch
-        {
-            KeyboardHud.FunctionAndNumberRows => (FunctionKeys, NumberKeys),
-            KeyboardHud.FunctionRow => (FunctionKeys[..6], FunctionKeys[6..]),
-            _ => (Array.Empty<int>(), Array.Empty<int>())
-        };
-
-        PaintBar(keyboard, colors, health, true);
-        PaintBar(keyboard, colors, other, false);
+        // Прежние варианты с полосками на рядах F1–F12 и цифр тоже рисуются на всю клавиатуру
+        if (_config.KeyboardHud != KeyboardHud.Off)
+            PaintHalves(keyboard, colors);
 
         return colors;
     }
 
     /// <summary>
-    /// Рисует полоску на клавишах с этими кодами по порядку; клавиш, которых на клавиатуре нет, полоска пропускает.
+    /// Делит клавиатуру по рядам пополам: верхняя половина — здоровье, нижняя — мана или броня.
+    /// Обе полоски заполняются слева направо по месту клавиши.
     /// </summary>
-    private void PaintBar(IKeyboardDevice keyboard, RgbColor[] colors, int[] codes, bool isLeft)
+    private void PaintHalves(IKeyboardDevice keyboard, RgbColor[] colors)
     {
-        var keys = codes
-            .Select(code => keyboard.Keys.FirstOrDefault(k => k.Code == code))
-            .OfType<KeyboardKey>()
-            .Where(k => k.Led < colors.Length)
-            .ToList();
+        var keys = keyboard.Keys.Where(k => k.Led < colors.Length).ToList();
 
-        for (var i = 0; i < keys.Count; i++)
-            colors[keys[i].Led] = Bar(isLeft, (i + 0.5) / keys.Count);
+        if (keys.Count == 0)
+            return;
+
+        var left = keys.Min(k => k.X);
+        var right = keys.Max(k => k.X + k.Width);
+        var top = keys.Min(k => k.Y + k.Height / 2);
+        var bottom = keys.Max(k => k.Y + k.Height / 2);
+        var middle = (top + bottom) / 2;
+
+        foreach (var key in keys)
+        {
+            var center = key.X + key.Width / 2;
+            var position = right > left ? (center - left) / (right - left) : 0.5;
+
+            colors[key.Led] = Bar(key.Y + key.Height / 2 < middle, position);
+        }
     }
 
     /// <summary>

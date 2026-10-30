@@ -175,7 +175,7 @@ public sealed class GamesConfig
     /// <summary>
     /// Где на клавиатуре показывать полоски здоровья и маны или брони.
     /// </summary>
-    public KeyboardHud KeyboardHud { get; set; } = KeyboardHud.FunctionAndNumberRows;
+    public KeyboardHud KeyboardHud { get; set; } = KeyboardHud.WholeKeyboard;
 
     /// <summary>
     /// На остальных лентах (не за монитором и не клавиатурах) показывать полоски; иначе — фон и события.
@@ -234,10 +234,13 @@ public enum GameBackground
 /// </summary>
 public enum KeyboardHud
 {
-    /// <summary>Здоровье на F1–F12, мана или броня на цифрах.</summary>
+    /// <summary>Полоски на всю клавиатуру: здоровье на верхней половине, мана или броня на нижней.</summary>
+    WholeKeyboard,
+
+    /// <summary>Прежний вариант: здоровье на F1–F12, мана или броня на цифрах. Теперь показывается как WholeKeyboard.</summary>
     FunctionAndNumberRows,
 
-    /// <summary>Обе полоски на F1–F12: здоровье слева, мана или броня справа.</summary>
+    /// <summary>Прежний вариант: обе полоски на F1–F12. Теперь показывается как WholeKeyboard.</summary>
     FunctionRow,
 
     /// <summary>Без полосок: только фон и события.</summary>
