@@ -21,6 +21,9 @@ public sealed class EffectRunner
     // Какая доля разницы гасится за 50 мс, когда клавиша на клавиатуре темнеет; при другой частоте шаг пересчитывается
     private const double FadePer50Ms = 0.6;
 
+    // Сколько остановка ждёт, пока досчитается и уйдёт последний кадр
+    private static readonly TimeSpan StopTimeout = TimeSpan.FromMilliseconds(500);
+
     /// <summary>
     /// Сколько кадров в секунду считают эффекты; меняется на ходу.
     /// </summary>
@@ -28,6 +31,7 @@ public sealed class EffectRunner
 
     private CancellationTokenSource? _cts;
     private ILightSource? _source;
+    private Task? _loop;
 
     /// <summary>
     /// Ленты, на которых сейчас что-то играет; пусто, если ничего не запущено.
@@ -43,12 +47,27 @@ public sealed class EffectRunner
         _source = source;
         Devices = devices;
         _cts = new CancellationTokenSource();
-        _ = RunAsync(source, devices, getSettings, _cts.Token);
+
+        // Кадры считаются и отправляются не в потоке окна: занятый интерфейс больше не задерживает эффект
+        var ct = _cts.Token;
+        _loop = Task.Run(() => RunAsync(source, devices, getSettings, ct));
     }
 
     public void Stop()
     {
         _cts?.Cancel();
+
+        // Дожидаемся последнего кадра: иначе он мог бы прийти на ленту уже после того, что включили вместо эффекта,
+        // а источник освободился бы посреди кадра
+        try
+        {
+            _loop?.Wait(StopTimeout);
+        }
+        catch (AggregateException)
+        {
+        }
+
+        _loop = null;
         _cts?.Dispose();
         _cts = null;
         Devices = Array.Empty<LedDevice>();
@@ -82,14 +101,24 @@ public sealed class EffectRunner
                 if (timer.Period != interval)
                     timer.Period = interval;
 
-                var settings = getSettings();
+                EffectSettings settings;
 
-                // Фаза копится по шагам, чтобы смена скорости не вызывала скачок эффекта
-                var now = clock.Elapsed.TotalSeconds;
-                phase += (now - lastTick) * settings.Speed;
-                lastTick = now;
+                try
+                {
+                    settings = getSettings();
 
-                source.BeginFrame(phase, settings);
+                    // Фаза копится по шагам, чтобы смена скорости не вызывала скачок эффекта
+                    var now = clock.Elapsed.TotalSeconds;
+                    phase += (now - lastTick) * settings.Speed;
+                    lastTick = now;
+
+                    source.BeginFrame(phase, settings);
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    // Настройки эффекта меняют в окне прямо во время кадра — такой кадр пропускаем, следующий посчитается заново
+                    continue;
+                }
 
                 foreach (var device in devices)
                 {
@@ -121,6 +150,9 @@ public sealed class EffectRunner
         {
             TimeEndPeriod(1);
         }
+
+        // Последние кадры уходят на ленты до того, как остановка вернёт управление; ошибки кадров уже перехвачены
+        await Task.WhenAll(pending.Values);
     }
 
     private static TimeSpan FrameIntervalOf(int framesPerSecond)
