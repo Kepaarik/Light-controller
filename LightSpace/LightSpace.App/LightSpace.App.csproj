@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Окно, трей, страницы и компоненты дизайн-системы -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>LightSpace.App</RootNamespace>
+    <AssemblyName>LightSpace</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LightSpace.Core\LightSpace.Core.csproj" />
+    <ProjectReference Include="..\LightSpace.Engine\LightSpace.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

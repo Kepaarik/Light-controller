@@ -1,0 +1,9 @@
+<Project>
+
+  <!-- Общие настройки всех проектов Light Space -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

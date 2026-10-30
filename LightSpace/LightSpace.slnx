@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="LightSpace.Core/LightSpace.Core.csproj" />
+  <Project Path="LightSpace.Devices/LightSpace.Devices.csproj" />
+  <Project Path="LightSpace.Engine/LightSpace.Engine.csproj" />
+  <Project Path="LightSpace.App/LightSpace.App.csproj" />
+</Solution>
