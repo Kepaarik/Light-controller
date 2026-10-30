@@ -6,8 +6,203 @@
              xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
              xmlns:controls="clr-namespace:LightSpace.App.Controls"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance vm:MainViewModel}">
+             d:DataContext="{d:DesignInstance vm:DevicesViewModel}">
 
-    <!-- Пустое состояние; поиск и список устройств появятся вместе с драйверами -->
-    <controls:EmptyState Icon="&#xE772;" Title="Устройства не найдены" Hint="Включите ленты и клавиатуры и запустите поиск. Здесь будут статус связи, возможности и диагностика каждого устройства." ActionText="Найти устройства" ActionIcon="&#xE721;" Command="{Binding FindDevicesCommand}"/>
+    <UserControl.Resources>
+        <!-- Состояние связи цветом: подключено, нужна настройка, нет связи; не найденное — приглушённым -->
+        <Style x:Key="StatusLabel" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="Connected">
+                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="NeedsSetup">
+                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Failing">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Строка «название — значение» в карточке: название слева, значение справа -->
+        <Style x:Key="FactRow" TargetType="DockPanel">
+            <Setter Property="Margin" Value="{StaticResource GapBottom4}"/>
+        </Style>
+
+        <Style x:Key="FactLabel" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="{StaticResource GapRight12}"/>
+        </Style>
+
+        <Style x:Key="FactValue" TargetType="TextBlock" BasedOn="{StaticResource Body}">
+            <Setter Property="DockPanel.Dock" Value="Right"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="{StaticResource PaddingPage}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок и поиск -->
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                <TextBlock Text="Идёт поиск: Bluetooth, Wi-Fi, USB…" Style="{StaticResource Hint}" VerticalAlignment="Center"
+                           Margin="{StaticResource GapRight12}"
+                           Visibility="{Binding IsSearching, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                <Button Style="{StaticResource AccentButton}" Content="Найти устройства" controls:Appearance.Icon="&#xE721;"
+                        Command="{Binding FindCommand}"/>
+            </StackPanel>
+            <TextBlock Text="Устройства" Style="{StaticResource PageTitle}"/>
+        </DockPanel>
+
+        <TextBlock Grid.Row="1" Text="{Binding SearchProblems}" Style="{StaticResource Warning}" Margin="{StaticResource GapBottom16}"/>
+
+        <!-- Устройств нет: подсказка и поиск -->
+        <controls:EmptyState Grid.Row="2" Icon="&#xE772;" Title="{Binding EmptyTitle}"
+                             Hint="Включите ленты и клавиатуры и запустите поиск: Bluetooth, Wi-Fi (Magic Home, Govee, Tuya) и USB."
+                             ActionText="Найти устройства" ActionIcon="&#xE721;" Command="{Binding FindCommand}"
+                             Visibility="{Binding HasDevices, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+        <!-- Список устройств слева, выбранное устройство справа -->
+        <Grid Grid.Row="2" Visibility="{Binding HasDevices, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource ListPaneWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:DeviceItemViewModel">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding Protocol}" Style="{StaticResource Caption}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding StatusTitle}" Style="{StaticResource StatusLabel}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Grid Grid.Column="1" Margin="{StaticResource GapLeft24}">
+                <controls:EmptyState Icon="&#xE772;" Title="Выберите устройство"
+                                     Hint="Здесь появятся его возможности, цвет и диагностика связи."
+                                     Visibility="{Binding HasSelection, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding SelectedItem}"
+                              Visibility="{Binding DataContext.HasSelection, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                    <StackPanel d:DataContext="{d:DesignInstance vm:DeviceItemViewModel}">
+                        <!-- Название, способ подключения и состояние связи -->
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Забыть" controls:Appearance.Icon="&#xE74D;"
+                                    VerticalAlignment="Top" CommandParameter="{Binding}"
+                                    Command="{Binding DataContext.ForgetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource Title}"/>
+                                <TextBlock Style="{StaticResource Caption}">
+                                    <Run Text="{Binding Protocol, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Address, Mode=OneWay}"/>
+                                </TextBlock>
+                                <TextBlock Text="{Binding StatusTitle}" Style="{StaticResource StatusLabel}" Margin="{StaticResource GapTop4}"/>
+                                <TextBlock Text="{Binding StatusText}" Style="{StaticResource Warning}" Margin="{StaticResource GapTop4}"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <!-- Один цвет на всё устройство -->
+                        <TextBlock Text="Цвет" Style="{StaticResource SectionLabel}"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:ColorWheel Width="{StaticResource ColorWheelSize}" Height="{StaticResource ColorWheelSize}"
+                                                         SelectedColor="{Binding Color}"/>
+                                    <StackPanel VerticalAlignment="Center" Margin="{StaticResource Space24}">
+                                        <Border Width="{StaticResource FieldHeight}" Height="{StaticResource FieldHeight}" CornerRadius="{StaticResource RadiusControl}"
+                                                Background="{Binding ColorBrush}" BorderBrush="{DynamicResource StrokeBrush}"
+                                                BorderThickness="{StaticResource StrokeThin}" HorizontalAlignment="Left"/>
+                                        <TextBlock Text="{Binding ColorHex}" Style="{StaticResource BodyStrong}" Margin="{StaticResource GapTop8}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                                      Value="{Binding Brightness}" Margin="{StaticResource GapTop16}"/>
+                                <TextBlock Text="{Binding ColorHint}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Сетевой ключ Tuya -->
+                        <StackPanel Visibility="{Binding NeedsNetworkKey, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                            <TextBlock Text="Ключ устройства" Style="{StaticResource SectionLabel}"/>
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBox Tag="Local Key (16 символов)" Text="{Binding LocalKey, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <DockPanel Margin="{StaticResource GapTop8}">
+                                        <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Сохранить"
+                                                Command="{Binding SaveNetworkKeyCommand}"/>
+                                        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding DataPointSchemes}" SelectedItem="{Binding DataPoints}"/>
+                                    </DockPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
+                                               Text="Без локального ключа Tuya не принимает команды. V2 — точки данных 20–24 у большинства лент, V1 — 1–5 у старых контроллеров."/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Возможности -->
+                        <TextBlock Text="Возможности" Style="{StaticResource SectionLabel}"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding KindText}" Style="{StaticResource FactValue}"/>
+                                    <TextBlock Text="Тип" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding LedCountText}" Style="{StaticResource FactValue}"/>
+                                    <TextBlock Text="Адресных светодиодов" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding FrameRateText}" Style="{StaticResource FactValue}"/>
+                                    <TextBlock Text="Частота кадров" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Раскладка клавиатуры -->
+                        <StackPanel Visibility="{Binding HasKeys, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                            <TextBlock Text="Раскладка" Style="{StaticResource SectionLabel}"/>
+                            <Border Style="{StaticResource Card}">
+                                <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
+                                    <controls:KeyboardLayout Keys="{Binding Keys}"/>
+                                </Viewbox>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Диагностика вывода -->
+                        <TextBlock Text="Диагностика" Style="{StaticResource SectionLabel}"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding SentFramesText}" Style="{StaticResource FactValue}"/>
+                                    <TextBlock Text="Отправлено кадров" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding DroppedFramesText}" Style="{StaticResource FactValue}"/>
+                                    <TextBlock Text="Пропущено кадров" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding LastSendText}" Style="{StaticResource FactValue}"/>
+                                    <TextBlock Text="Последняя отправка" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding LastErrorText}" Style="{StaticResource FactValue}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="Последняя ошибка" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
+                                           Text="Кадр, который не успел уйти, заменяется более свежим: медленное устройство пропускает кадры, а не задерживает остальные."/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Grid>
 </UserControl>

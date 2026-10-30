@@ -60,3 +60,21 @@ public sealed class BooleanToVisibilityConverter : IValueConverter
         return value is Visibility.Visible;
     }
 }
+
+/// <summary>
+/// Показывает элемент, когда значение false; иначе убирает его из раскладки. Например, пустое состояние, пока список пуст.
+/// </summary>
+public sealed class InverseBooleanToVisibilityConverter : IValueConverter
+{
+    public static readonly InverseBooleanToVisibilityConverter Instance = new();
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is true ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is not Visibility.Visible;
+    }
+}

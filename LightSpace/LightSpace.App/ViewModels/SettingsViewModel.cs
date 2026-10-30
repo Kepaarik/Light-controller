@@ -78,13 +78,21 @@ public sealed class SettingsViewModel : ObservableObject
         ConfigStore.Save(_config);
     }
 
+    /// <summary>
+    /// Сохраняет настройки чуть позже: частые изменения подряд дают одну запись в файл.
+    /// </summary>
+    public void ScheduleSave()
+    {
+        _saveTimer.Stop();
+        _saveTimer.Start();
+    }
+
     private bool Update<T>(T oldValue, T newValue, Action<AppConfig, T> apply, [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
     {
         if (!SetProperty(oldValue, newValue, _config, apply, propertyName))
             return false;
 
-        _saveTimer.Stop();
-        _saveTimer.Start();
+        ScheduleSave();
 
         return true;
     }

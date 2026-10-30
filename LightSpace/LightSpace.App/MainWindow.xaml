@@ -61,7 +61,8 @@
             <Grid x:Name="Pages">
                 <views:ScenePage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Scene}"/>
                 <views:ScenariosPage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Scenarios}"/>
-                <views:DevicesPage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Devices}"/>
+                <views:DevicesPage DataContext="{Binding Devices}"
+                                   Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Devices}"/>
                 <views:SettingsPage DataContext="{Binding Settings}"
                                     Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Settings}"/>
             </Grid>

@@ -30,6 +30,7 @@
     <Thickness x:Key="GapBottom24">0,0,0,24</Thickness>
     <Thickness x:Key="GapLeft8">8,0,0,0</Thickness>
     <Thickness x:Key="GapLeft12">12,0,0,0</Thickness>
+    <Thickness x:Key="GapLeft24">24,0,0,0</Thickness>
     <Thickness x:Key="GapTop4">0,4,0,0</Thickness>
     <Thickness x:Key="GapTop8">0,8,0,0</Thickness>
     <Thickness x:Key="GapTop16">0,16,0,0</Thickness>
@@ -107,6 +108,11 @@
     <sys:Double x:Key="ColorWheelSize">200</sys:Double>
     <sys:Double x:Key="SwatchSize">28</sys:Double>
     <sys:Double x:Key="EmptyStateMaxWidth">360</sys:Double>
+    <!-- Колонка списка слева от панели выбранного элемента -->
+    <GridLength x:Key="ListPaneWidth">300</GridLength>
+    <!-- Раскладка клавиатуры: сторона стандартной клавиши и зазор между клавишами -->
+    <sys:Double x:Key="KeyUnitSize">32</sys:Double>
+    <sys:Double x:Key="KeyGap">4</sys:Double>
 
     <!-- Обводки -->
     <Thickness x:Key="StrokeThin">1</Thickness>
