@@ -1,6 +1,7 @@
 using LedHub.Core;
 using LedHub.Protocols.Tuya;
 using LedHub.Services.Effects;
+using LedHub.Services.Games;
 using LedHub.Services.Scene;
 
 namespace LedHub.Services;
@@ -117,9 +118,19 @@ public sealed class GlassConfig
 public sealed class GamesConfig
 {
     /// <summary>
-    /// Сам узнавать запущенную игру и переключать подсветку.
+    /// Что включать при запуске Dota 2.
     /// </summary>
-    public bool AutoMode { get; set; } = true;
+    public GameProfile Dota { get; set; } = new();
+
+    /// <summary>
+    /// Что включать при запуске Counter-Strike 2.
+    /// </summary>
+    public GameProfile CounterStrike { get; set; } = new();
+
+    /// <summary>
+    /// Что включать при запуске любой другой игры на весь главный монитор.
+    /// </summary>
+    public GameProfile OtherGames { get; set; } = new();
 
     /// <summary>
     /// Кроме подсветки главного монитора, показывать игру на всех найденных лентах.
@@ -130,6 +141,92 @@ public sealed class GamesConfig
     /// Режим по картинке экрана для игр без своей интеграции — идентификатор эффекта.
     /// </summary>
     public string OtherGamesEffect { get; set; } = "screen-ambient";
+
+    /// <summary>
+    /// Показывать игру на клавиатурах, даже если «все ленты» выключены.
+    /// </summary>
+    public bool UseKeyboards { get; set; } = true;
+
+    /// <summary>
+    /// Что светится под полосками и событиями в играх с интеграцией.
+    /// </summary>
+    public GameBackground Background { get; set; } = GameBackground.Screen;
+
+    /// <summary>
+    /// Яркость фона в процентах.
+    /// </summary>
+    public int BackgroundBrightness { get; set; } = 40;
+
+    /// <summary>
+    /// Где на клавиатуре показывать полоски здоровья и маны или брони.
+    /// </summary>
+    public KeyboardHud KeyboardHud { get; set; } = KeyboardHud.FunctionAndNumberRows;
+
+    /// <summary>
+    /// На остальных лентах (не за монитором и не клавиатурах) показывать полоски; иначе — фон и события.
+    /// </summary>
+    public bool BarsOnOtherDevices { get; set; } = true;
+
+    /// <summary>
+    /// События, которые пользователь выключил, — ключи из <see cref="Games.GameTriggers.ConfigKey"/>.
+    /// </summary>
+    public HashSet<string> DisabledTriggers { get; set; } = new();
+
+    public GameProfile ProfileFor(GameKind kind)
+    {
+        return kind switch
+        {
+            GameKind.Dota2 => Dota,
+            GameKind.CounterStrike2 => CounterStrike,
+            _ => OtherGames
+        };
+    }
+}
+
+/// <summary>
+/// Что делать с подсветкой, когда запущена игра.
+/// </summary>
+public sealed class GameProfile
+{
+    /// <summary>
+    /// Подсвечивать ли эту игру.
+    /// </summary>
+    public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Имя пресета, который включается при запуске игры; пустая строка — игровая подсветка.
+    /// </summary>
+    public string Preset { get; set; } = "";
+}
+
+/// <summary>
+/// Фон игровой подсветки.
+/// </summary>
+public enum GameBackground
+{
+    /// <summary>Картинка экрана выбранным режимом «по картинке монитора».</summary>
+    Screen,
+
+    /// <summary>Цвет своей команды.</summary>
+    Team,
+
+    /// <summary>Без фона: светятся только полоски и события.</summary>
+    Off
+}
+
+/// <summary>
+/// Где на клавиатуре полоски игры.
+/// </summary>
+public enum KeyboardHud
+{
+    /// <summary>Здоровье на F1–F12, мана или броня на цифрах.</summary>
+    FunctionAndNumberRows,
+
+    /// <summary>Обе полоски на F1–F12: здоровье слева, мана или броня справа.</summary>
+    FunctionRow,
+
+    /// <summary>Без полосок: только фон и события.</summary>
+    Off
 }
 
 /// <summary>

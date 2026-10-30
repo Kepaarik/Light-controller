@@ -65,7 +65,8 @@ public sealed class EffectPreview : FrameworkElement
         var frame = new EffectFrame(effect, new EffectValues(), false, 0.5, height / 2, 1, height, SampleAudio())
         {
             Time = PreviewTime,
-            Screen = SampleScreen(height)
+            Screen = SampleScreen(height),
+            Keys = SampleKeys(height)
         };
 
         var pixels = new byte[Columns * Rows * 4];
@@ -105,6 +106,19 @@ public sealed class EffectPreview : FrameworkElement
         audio.Beats.Add(new AudioBeat(PreviewTime - 0.45, 260));
 
         return audio;
+    }
+
+    /// <summary>
+    /// Придуманные нажатия для превью эффектов клавиатуры: несколько клавиш, нажатых в разное время.
+    /// </summary>
+    private static IReadOnlyList<KeyHit> SampleKeys(double height)
+    {
+        return new[]
+        {
+            new KeyHit(0.22, height * 0.35, PreviewTime - 0.7, 280),
+            new KeyHit(0.55, height * 0.6, PreviewTime - 0.35, 190),
+            new KeyHit(0.8, height * 0.4, PreviewTime - 0.1, 330)
+        };
     }
 
     /// <summary>

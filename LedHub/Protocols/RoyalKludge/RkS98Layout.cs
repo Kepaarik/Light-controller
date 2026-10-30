@@ -96,6 +96,74 @@ public static class RkS98Layout
     /// </summary>
     private static KeyboardKey Key(int row, int column, string label, double x, double width = 1, double height = 1)
     {
-        return new KeyboardKey(row + Rows * column, label, x, row == 0 ? 0 : row + 0.25, width, height);
+        return new KeyboardKey(row + Rows * column, label, x, row == 0 ? 0 : row + 0.25, width, height, CodeFor(row, column, label));
+    }
+
+    /// <summary>
+    /// Код клавиши в Windows по её месту в матрице и надписи.
+    /// </summary>
+    private static int CodeFor(int row, int column, string label)
+    {
+        // Цифровой блок: столбцы 15–18 и два последних места нижнего ряда
+        var isNumpad = row is >= 1 and <= 4 && column >= 15 || row == 5 && column >= 16;
+
+        if (isNumpad)
+        {
+            return label switch
+            {
+                "Num" => 0x90,
+                "/" => 0x6F,
+                "*" => 0x6A,
+                "-" => 0x6D,
+                "+" => 0x6B,
+                "." => 0x6E,
+                "Enter" => KeyboardKey.NumpadEnter,
+                _ => 0x60 + label[0] - '0'
+            };
+        }
+
+        // Буквы и цифры совпадают со своими кодами
+        if (label.Length == 1 && char.IsLetterOrDigit(label[0]))
+            return label[0];
+
+        if (label.Length > 1 && label[0] == 'F' && char.IsDigit(label[1]))
+            return 0x6F + int.Parse(label[1..]);
+
+        // Левые и правые Shift, Ctrl и Alt различаются по столбцу
+        var isRight = column >= 8;
+
+        return label switch
+        {
+            "Esc" => 0x1B,
+            "Del" => 0x2E,
+            "`" => 0xC0,
+            "-" => 0xBD,
+            "=" => 0xBB,
+            "Backspace" => 0x08,
+            "Home" => 0x24,
+            "Tab" => 0x09,
+            "[" => 0xDB,
+            "]" => 0xDD,
+            "\\" => 0xDC,
+            "PgUp" => 0x21,
+            "Caps" => 0x14,
+            ";" => 0xBA,
+            "'" => 0xDE,
+            "Enter" => 0x0D,
+            "PgDn" => 0x22,
+            "Shift" => isRight ? 0xA1 : 0xA0,
+            "," => 0xBC,
+            "." => 0xBE,
+            "/" => 0xBF,
+            "↑" => 0x26,
+            "Ctrl" => isRight ? 0xA3 : 0xA2,
+            "Win" => 0x5B,
+            "Alt" => isRight ? 0xA5 : 0xA4,
+            "" => 0x20,
+            "←" => 0x25,
+            "↓" => 0x28,
+            "→" => 0x27,
+            _ => 0
+        };
     }
 }

@@ -94,11 +94,13 @@ public sealed class PatternSource : ILightSource, IDisposable
     private readonly IEffectPointMap _map;
     private readonly AudioTracker? _audio;
     private readonly ScreenTracker? _screen;
+    private readonly KeyPressTracker? _keys;
     private EffectFrame _frame;
 
     /// <summary>
     /// values читаются на каждом кадре, поэтому настройки эффекта можно менять на ходу.
     /// Для музыкальных эффектов сразу начинает слушать звук и может выбросить исключение, если звука в системе нет.
+    /// Эффект от нажатий начинает слушать клавиатуру, поэтому создавать его нужно в потоке окна.
     /// </summary>
     public PatternSource(EffectDefinition effect, EffectValues values, IEffectPointMap map)
     {
@@ -107,11 +109,14 @@ public sealed class PatternSource : ILightSource, IDisposable
         _map = map;
         _audio = effect.UsesAudio ? new AudioTracker() : null;
         _screen = effect.UsesScreen ? new ScreenTracker() : null;
+        _keys = effect.UsesKeys ? new KeyPressTracker() : null;
         _frame = CreateFrame();
     }
 
     public void BeginFrame(double phase, EffectSettings settings)
     {
+        _keys?.Update(phase);
+
         // Раскладку сцены можно менять на ходу, поэтому пространство берётся заново на каждом кадре
         _frame = CreateFrame();
         _frame.Time = phase;
@@ -151,6 +156,7 @@ public sealed class PatternSource : ILightSource, IDisposable
     {
         _audio?.Dispose();
         _screen?.Dispose();
+        _keys?.Dispose();
     }
 
     private EffectFrame CreateFrame()
@@ -161,7 +167,28 @@ public sealed class PatternSource : ILightSource, IDisposable
         return new EffectFrame(_effect, _values, _map.IsLinear, _map.OriginX, _map.OriginY, _map.Width, _map.Height,
             _audio?.Frame ?? Silence)
         {
-            Screen = _screen?.Frame ?? NoScreen
+            Screen = _screen?.Frame ?? NoScreen,
+            Keys = FindHits()
         };
+    }
+
+    /// <summary>
+    /// Где на клавиатуре клавиши, нажатые недавно; нажатия клавиш, которых на ней нет, пропускаются.
+    /// </summary>
+    private IReadOnlyList<KeyHit> FindHits()
+    {
+        if (_keys == null || _map is not KeyboardPointMap keyboard)
+            return Array.Empty<KeyHit>();
+
+        var hits = new List<KeyHit>();
+
+        foreach (var press in _keys.Presses)
+        {
+            // Разноцветные вспышки идут по кругу цветов с шагом золотого угла, чтобы соседние нажатия не совпадали
+            if (keyboard.FindKey(press.Code) is { } point)
+                hits.Add(new KeyHit(point.X, point.Y, press.Time, press.Index * 137.5 % 360));
+        }
+
+        return hits;
     }
 }

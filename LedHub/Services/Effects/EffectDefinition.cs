@@ -8,7 +8,8 @@ public enum EffectCategory
     Motion,
     Nature,
     Music,
-    Screen
+    Screen,
+    Keyboard
 }
 
 /// <summary>
@@ -60,6 +61,11 @@ public sealed class EffectDefinition
     /// </summary>
     public bool UsesScreen { get; init; }
 
+    /// <summary>
+    /// Эффект отвечает на нажатия клавиш и играет только на клавиатуре.
+    /// </summary>
+    public bool UsesKeys { get; init; }
+
     public EffectParameter? Find(string key)
     {
         return _parameters.GetValueOrDefault(key);
@@ -75,6 +81,11 @@ public sealed class EffectDefinition
 /// Удар в музыке: когда он случился (во времени эффекта) и каким цветом его показать.
 /// </summary>
 public readonly record struct AudioBeat(double Time, double Hue);
+
+/// <summary>
+/// Нажатие клавиши: где она на клавиатуре, когда её нажали (во времени эффекта) и тон для разноцветных вспышек.
+/// </summary>
+public readonly record struct KeyHit(double X, double Y, double Time, double Hue);
 
 /// <summary>
 /// Звук на текущем кадре, уже приведённый к 0–1 с автоусилением.
@@ -171,6 +182,11 @@ public sealed class EffectFrame
     /// Картинка главного монитора; у эффектов не «по экрану» — пустая и чёрная.
     /// </summary>
     public ScreenFrame Screen { get; init; } = NoScreen;
+
+    /// <summary>
+    /// Недавние нажатия клавиш, самое свежее последним; у эффектов не от нажатий — пусто.
+    /// </summary>
+    public IReadOnlyList<KeyHit> Keys { get; init; } = Array.Empty<KeyHit>();
 
     /// <summary>
     /// Расстояние от центра до самого дальнего угла пространства.

@@ -136,7 +136,7 @@
         </ItemsControl>
 
         <!-- Настройки выбранного эффекта: меняются прямо во время работы -->
-        <Border Style="{StaticResource Card}" Width="300" VerticalAlignment="Top" HorizontalAlignment="Left" Padding="20"
+        <Border Style="{StaticResource Panel}" Width="300" VerticalAlignment="Top" HorizontalAlignment="Left" Padding="20"
                 Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibility}}">
             <StackPanel>
                 <DockPanel>

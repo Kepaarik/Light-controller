@@ -7,45 +7,89 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
+    <UserControl.Resources>
+        <!-- Переключатель события игры -->
+        <DataTemplate DataType="{x:Type vm:GameTriggerViewModel}">
+            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding IsEnabled}" Margin="0,10,0,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}"/>
+                    <TextBlock Text="{Binding Description}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+            </CheckBox>
+        </DataTemplate>
+
+        <!-- Игра в списке «Мои игры»: название, что включать и выключатель -->
+        <DataTemplate DataType="{x:Type vm:GameProfileViewModel}">
+            <Border Padding="0,14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Description}" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding ConnectionText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Warning}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource AccentHoverBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Note}" Style="{StaticResource Warning}"
+                                   Visibility="{Binding ShowNote, Converter={StaticResource BoolToVisibility}}"/>
+                    </StackPanel>
+
+                    <ComboBox Grid.Column="1" Width="200" Margin="16,0,0,0" VerticalAlignment="Center" ToolTip="Что включать при запуске игры"
+                              ItemsSource="{Binding Options}" SelectedValue="{Binding Preset}" SelectedValuePath="Value" DisplayMemberPath="Title"
+                              IsEnabled="{Binding IsEnabled}"/>
+
+                    <CheckBox Grid.Column="2" Style="{StaticResource Switch}" IsChecked="{Binding IsEnabled}" Margin="4,0,0,0"
+                              VerticalAlignment="Center" ToolTip="Подсвечивать эту игру"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="32,28,32,24" MaxWidth="760" HorizontalAlignment="Left">
             <TextBlock Text="Игры" Style="{StaticResource PageTitle}"/>
-            <TextBlock Text="Подсветка сама узнаёт запущенную игру и показывает, что в ней происходит" Style="{StaticResource Hint}" FontSize="13" Margin="0,4,0,0"/>
+            <TextBlock Text="Включите нужные игры — при запуске игры LedHub сам включит её подсветку или выбранный пресет" Style="{StaticResource Hint}" FontSize="13" Margin="0,4,0,0"/>
 
             <!-- Что сейчас запущено -->
             <Border Style="{StaticResource Card}" Margin="0,24,0,0">
                 <StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE7FC;" Style="{StaticResource Icon}" FontSize="18" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,10,0"/>
-                        <TextBlock Text="{Binding Games.GameTitle, TargetNullValue='Игра не запущена'}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding Games.Status}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,6,0,0"/>
-                    <TextBlock Text="{Binding Games.ServerError}" TextWrapping="Wrap" Margin="0,6,0,0">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource Warning}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Games.ServerError}" Value="{x:Null}">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="16,0,0,0">
+                            <Button Command="{Binding Games.StartCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="12"/>
+                                    <TextBlock Text="Включить" Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding Games.StopCommand}" Style="{StaticResource GhostButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE71A;" Style="{StaticResource Icon}" FontSize="12"/>
+                                    <TextBlock Text="Остановить" Margin="8,0,0,0"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                        <Button Command="{Binding Games.StartCommand}" Style="{StaticResource AccentButton}" Margin="0,0,8,0">
+                        <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE768;" Style="{StaticResource Icon}" FontSize="12"/>
-                                <TextBlock Text="Включить" Margin="8,0,0,0"/>
+                                <TextBlock Text="&#xE7FC;" Style="{StaticResource Icon}" FontSize="18" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,10,0"/>
+                                <TextBlock Text="{Binding Games.GameTitle, TargetNullValue='Игра не запущена'}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             </StackPanel>
-                        </Button>
-                        <Button Command="{Binding Games.StopCommand}" Style="{StaticResource GhostButton}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE71A;" Style="{StaticResource Icon}" FontSize="12"/>
-                                <TextBlock Text="Остановить" Margin="8,0,0,0"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                            <TextBlock Text="{Binding Games.Status}" Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                            <TextBlock Text="{Binding Games.ServerError}" Style="{StaticResource Warning}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </DockPanel>
 
                     <DockPanel Margin="0,18,0,6">
                         <TextBlock DockPanel.Dock="Right" Text="{Binding Games.Brightness, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
@@ -55,74 +99,126 @@
                 </StackPanel>
             </Border>
 
-            <!-- Где и как светить -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="Главный монитор" Style="{StaticResource CardTitle}"/>
-                    <ComboBox ItemsSource="{Binding MainMonitorOptions}" SelectedItem="{Binding SelectedMainMonitor}" DisplayMemberPath="Title"/>
-                    <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,0"
-                               Text="На этом мониторе ищется игра, и его лента из раздела «Мониторы» показывает события. Он же — экран для эффектов «По картинке монитора»."/>
+            <!-- Мои игры -->
+            <TextBlock Text="МОИ ИГРЫ" Style="{StaticResource SectionLabel}" Margin="0,28,0,0"/>
+            <ItemsControl ItemsSource="{Binding Games.Profiles}"/>
+            <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                       Text="Пресеты сохраняются в разделе «Устройства». Dota 2 и CS2 подключаются сами — если игра уже была запущена, перезапустите её."/>
 
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Games.AutoMode}" Margin="0,16,0,0">
-                        <StackPanel>
-                            <TextBlock Text="Включать подсветку игры автоматически"/>
-                            <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
-                                       Text="Как только запускается игра, подсветка переключается на неё, а когда игра закрыта — выключается."/>
-                        </StackPanel>
-                    </CheckBox>
-                    <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Games.UseAllDevices}" Margin="0,12,0,0">
-                        <StackPanel>
-                            <TextBlock Text="Все ленты"/>
-                            <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
-                                       Text="Показывать игру не только за главным монитором, но и на всех найденных лентах."/>
-                        </StackPanel>
-                    </CheckBox>
-                </StackPanel>
-            </Border>
+            <!-- Всё остальное спрятано, чтобы не мешать -->
+            <ToggleButton IsChecked="{Binding Games.ShowAdvanced}" HorizontalAlignment="Left" Margin="-10,24,0,0"
+                          Cursor="Hand" FocusVisualStyle="{x:Null}">
+                <ToggleButton.Template>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Root" CornerRadius="10" Padding="10,8" Background="Transparent">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="Chevron" Text="&#xE70D;" Style="{StaticResource Icon}" FontSize="11" Margin="0,0,10,0"
+                                           Foreground="{StaticResource MutedBrush}"/>
+                                <TextBlock Text="Дополнительные настройки" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chevron" Property="Text" Value="&#xE70E;"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </ToggleButton.Template>
+            </ToggleButton>
 
-            <!-- Dota 2 -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Command="{Binding Games.ConnectDotaCommand}" Style="{StaticResource ChipButton}" Margin="0">
-                            <TextBlock Text="Подключить Dota 2"/>
-                        </Button>
-                        <TextBlock Text="Dota 2" Style="{StaticResource CardTitle}"/>
-                    </DockPanel>
-                    <TextBlock Text="✓ Подключена" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,0,6"
-                               Visibility="{Binding Games.IsDotaConnected, Converter={StaticResource BoolToVisibility}}"/>
-                    <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
-                               Text="Слева от экрана — здоровье героя (зелёный → красный), справа — мана. Выбор героя — мигание, оглушение — белое мерцание, превращение, немота и дымка — свой оттенок, урон — красная вспышка, смерть — тусклый красный, победа — радуга."/>
-                    <TextBlock Style="{StaticResource Warning}" TextWrapping="Wrap" Margin="0,8,0,0"
-                               Text="В Steam добавьте Dota 2 параметр запуска -gamestateintegration (Свойства → Параметры запуска), иначе игра не присылает события."/>
-                </StackPanel>
-            </Border>
+            <StackPanel Visibility="{Binding Games.ShowAdvanced, Converter={StaticResource BoolToVisibility}}">
 
-            <!-- Counter-Strike 2 -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Command="{Binding Games.ConnectCsCommand}" Style="{StaticResource ChipButton}" Margin="0">
-                            <TextBlock Text="Подключить CS2"/>
-                        </Button>
-                        <TextBlock Text="Counter-Strike 2" Style="{StaticResource CardTitle}"/>
-                    </DockPanel>
-                    <TextBlock Text="✓ Подключена" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,0,6"
-                               Visibility="{Binding Games.IsCsConnected, Converter={StaticResource BoolToVisibility}}"/>
-                    <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
-                               Text="Слева — здоровье, справа — броня. Ослепление — белый, горение — оранжевое мерцание, урон — красная вспышка, заложенная бомба пищит красным всё чаще, взрыв и разминирование — вспышка, конец раунда — цвет победившей команды."/>
-                </StackPanel>
-            </Border>
+                <!-- Где светить -->
+                <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Где светить" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Text="Главный монитор" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding MainMonitorOptions}" SelectedItem="{Binding SelectedMainMonitor}" DisplayMemberPath="Title"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                                   Text="На этом мониторе ищется игра, и его лента из раздела «Мониторы» показывает события. Он же — экран для эффектов «По картинке монитора»."/>
 
-            <!-- Прочие игры -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="Другие игры" Style="{StaticResource CardTitle}"/>
-                    <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap"
-                               Text="Любая программа на весь главный монитор считается игрой: лента за монитором повторяет края картинки, а остальные ленты играют выбранный режим."/>
-                    <ComboBox ItemsSource="{Binding Games.ScreenEffects}" SelectedItem="{Binding Games.SelectedScreenEffect}" DisplayMemberPath="Title" Margin="0,12,0,0"/>
-                </StackPanel>
-            </Border>
+                        <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Games.UseAllDevices}" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Все ленты"/>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
+                                           Text="Показывать игру не только за главным монитором, но и на всех найденных лентах."/>
+                            </StackPanel>
+                        </CheckBox>
+                        <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Games.UseKeyboards}" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Клавиатуры"/>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
+                                           Text="Показывать игру на клавиатурах, даже когда «Все ленты» выключены."/>
+                            </StackPanel>
+                        </CheckBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- Слои: фон, полоски и события поверх -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Слои игровой подсветки" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,14"
+                                   Text="В Dota 2 и CS2 подсветка собирается из слоёв: снизу фон, на нём полоски здоровья и маны или брони, поверх — вспышки событий."/>
+
+                        <TextBlock Text="Фон" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding Games.BackgroundOptions}" SelectedValue="{Binding Games.Background}"
+                                  SelectedValuePath="Value" DisplayMemberPath="Title"/>
+
+                        <DockPanel Margin="0,14,0,6">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding Games.BackgroundBrightness, StringFormat='{}{0} %'}" FontWeight="SemiBold"/>
+                            <TextBlock Text="Яркость фона" Style="{StaticResource Hint}"/>
+                        </DockPanel>
+                        <Slider Minimum="0" Maximum="100" IsSnapToTickEnabled="True" TickFrequency="5" Value="{Binding Games.BackgroundBrightness}"/>
+
+                        <TextBlock Text="Полоски на клавиатуре" Style="{StaticResource Hint}" Margin="0,14,0,6"/>
+                        <ComboBox ItemsSource="{Binding Games.KeyboardHudOptions}" SelectedValue="{Binding Games.KeyboardHud}"
+                                  SelectedValuePath="Value" DisplayMemberPath="Title"/>
+
+                        <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Games.BarsOnOtherDevices}" Margin="0,16,0,0"
+                                  Visibility="{Binding Games.UseAllDevices, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="Полоски на остальных лентах"/>
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,2,0,0"
+                                           Text="Ленты не за монитором делятся пополам: здоровье и мана или броня. Если выключить — они светят фоном и событиями."/>
+                            </StackPanel>
+                        </CheckBox>
+                    </StackPanel>
+                </Border>
+
+                <!-- События Dota 2 -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="События Dota 2" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="Слева от экрана — здоровье героя (зелёный → красный), справа — мана. Выбор героя — мигание, оглушение — белое мерцание, превращение, немота и дымка — свой оттенок, урон — красная вспышка, смерть — тусклый красный, победа — радуга."/>
+                        <ItemsControl ItemsSource="{Binding Games.DotaTriggers}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- События Counter-Strike 2 -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="События Counter-Strike 2" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="Слева — здоровье, справа — броня. Ослепление — белый, горение — оранжевое мерцание, урон — красная вспышка, заложенная бомба пищит красным всё чаще, взрыв и разминирование — вспышка, конец раунда — цвет победившей команды."/>
+                        <ItemsControl ItemsSource="{Binding Games.CsTriggers}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Подсветка по экрану -->
+                <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Подсветка по экрану" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="Для других игр и для фона «Картинка экрана»: лента за монитором повторяет края картинки, а остальные ленты играют выбранный режим."/>
+                        <ComboBox ItemsSource="{Binding Games.ScreenEffects}" SelectedItem="{Binding Games.SelectedScreenEffect}" DisplayMemberPath="Title" Margin="0,12,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

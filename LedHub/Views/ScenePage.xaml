@@ -48,7 +48,7 @@
             <controls:ResponsivePanel BreakWidth="900" Spacing="16" Margin="0,24,0,0">
 
                 <!-- Схема: расстановка на стене, вид спереди -->
-                <Border Style="{StaticResource Card}" controls:ResponsivePanel.Fill="True" Padding="14">
+                <Border Style="{StaticResource Panel}" controls:ResponsivePanel.Fill="True" Padding="14">
                     <StackPanel>
                         <Border Background="{StaticResource InsetBrush}" CornerRadius="14" Height="440">
                             <Grid>
@@ -70,7 +70,7 @@
                 <StackPanel Width="300" HorizontalAlignment="Left">
 
                     <!-- Выбранный элемент -->
-                    <Border Style="{StaticResource Card}" Padding="20">
+                    <Border Style="{StaticResource Card}">
                         <Grid>
                             <TextBlock Style="{StaticResource Hint}" Text="Выберите элемент на схеме, чтобы настроить его размер и поворот."
                                        Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolToVisibility}}"/>
@@ -166,7 +166,7 @@
                     </Border>
 
                     <!-- Что ещё можно поставить на сцену -->
-                    <Border Style="{StaticResource Card}" Padding="20" Margin="0,16,0,0">
+                    <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                         <StackPanel>
                             <TextBlock Text="Добавить на сцену" Style="{StaticResource CardTitle}" Margin="0,0,0,8"/>
                             <TextBlock Style="{StaticResource Hint}" Text="Всё уже на сцене. Новые ленты появятся здесь после поиска."

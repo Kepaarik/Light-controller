@@ -235,7 +235,8 @@ public sealed partial class MainViewModel : ObservableObject
         EffectPicker = new EffectPickerViewModel(_config, StartTargetEffect, StopEffect, () => ConfigStore.Save(_config));
         Scene = new SceneViewModel(_config, Devices, () => ConfigStore.Save(_config), StopConflicts);
         Glass = new GlassViewModel(_config.Glass, () => ConfigStore.Save(_config));
-        Games = new GamesViewModel(_config.Games, () => ConfigStore.Save(_config), GameTargets, StopConflicts, EffectPicker);
+        Games = new GamesViewModel(_config.Games, () => ConfigStore.Save(_config), GameTargets, StopConflicts, EffectPicker,
+            Scenes, ApplySceneAsync);
 
         RefreshMainMonitors();
 
@@ -1431,11 +1432,20 @@ public sealed partial class MainViewModel : ObservableObject
     private bool StartTargetEffect(EffectOption option)
     {
         var effect = option.Definition;
+        var keyboard = (Target as DeviceItemViewModel)?.Device as IKeyboardDevice;
         PatternSource source;
+
+        if (effect.UsesKeys && keyboard == null)
+        {
+            StatusText = $"«{option.Title}» играет только на клавиатуре";
+            return false;
+        }
 
         try
         {
-            source = new PatternSource(effect, EffectPicker.ValuesFor(effect), new StripPointMap());
+            // На клавиатуре эффект идёт по местам клавиш, а не по номерам светодиодов
+            IEffectPointMap map = keyboard != null ? new KeyboardPointMap(keyboard) : new StripPointMap();
+            source = new PatternSource(effect, EffectPicker.ValuesFor(effect), map);
         }
         catch (Exception e)
         {
@@ -1676,9 +1686,10 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Ленты для игровой подсветки: лента главного монитора со своей раскладкой, а если нужно — и все остальные готовые ленты.
+    /// Ленты для игровой подсветки: лента главного монитора со своей раскладкой, а если нужно — и все остальные готовые ленты
+    /// или только клавиатуры.
     /// </summary>
-    private IReadOnlyDictionary<LedDevice, MonitorBinding?> GameTargets(bool allDevices)
+    private IReadOnlyDictionary<LedDevice, MonitorBinding?> GameTargets(bool allDevices, bool keyboards)
     {
         var targets = new Dictionary<LedDevice, MonitorBinding?>();
 
@@ -1694,6 +1705,13 @@ public sealed partial class MainViewModel : ObservableObject
         if (allDevices)
         {
             foreach (var device in Devices.Where(d => d.Device.IsReady))
+                targets.TryAdd(device.Device, null);
+        }
+
+        // Клавиатуры показывают полоски на клавишах и без «всех лент»
+        if (keyboards)
+        {
+            foreach (var device in Devices.Where(d => d.Device is IKeyboardDevice && d.Device.IsReady))
                 targets.TryAdd(device.Device, null);
         }
 
@@ -1763,6 +1781,8 @@ public sealed partial class MainViewModel : ObservableObject
                     KeyCells.Add(new KeyCellViewModel(LedCells[key.Led], key, KeyUnit));
             }
         }
+
+        EffectPicker.ShowKeyboardEffects = IsKeyboardSelected;
 
         OnPropertyChanged(nameof(IsAddressableSelected));
         OnPropertyChanged(nameof(IsKeyboardSelected));

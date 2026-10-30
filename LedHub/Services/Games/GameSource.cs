@@ -6,8 +6,9 @@ namespace LedHub.Services.Games;
 
 /// <summary>
 /// Подсветка под игру. В Dota 2 подсветка монитора показывает здоровье и ману героя, в Counter-Strike 2 —
-/// здоровье и броню, а поверх — события: выбор героя, оглушение, вспышка, бомба, победа. Прочие игры
-/// подсвечиваются по картинке экрана.
+/// здоровье и броню, а поверх — события: выбор героя, оглушение, вспышка, бомба, победа. Клавиатура показывает
+/// те же полоски на рядах клавиш, а остальные клавиши и ленты без полосок — фон: картинку экрана или цвет команды.
+/// Прочие игры подсвечиваются по картинке экрана.
 /// </summary>
 public sealed class GameSource : ILightSource, IDisposable
 {
@@ -33,16 +34,23 @@ public sealed class GameSource : ILightSource, IDisposable
     private static readonly RgbColor Armor = new(170, 200, 255);
     private static readonly RgbColor Fire = new(255, 90, 0);
 
+    // Коды F1–F12 и цифр 1…0 в порядке слева направо — по ним на клавиатуре стоят полоски
+    private static readonly int[] FunctionKeys = Enumerable.Range(0x70, 12).ToArray();
+    private static readonly int[] NumberKeys = "1234567890".Select(c => (int)c).ToArray();
+
     private readonly GameKind _kind;
     private readonly GsiServer _server;
+    private readonly GamesConfig _config;
     private readonly Func<LedDevice, MonitorBinding?> _bindingFor;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
-    // Прочие игры: лента вокруг монитора повторяет края картинки, остальные ленты играют эффект по экрану
+    // Прочие игры: лента вокруг монитора повторяет края картинки, остальные ленты играют эффект по экрану.
+    // В играх с интеграцией эффект по экрану — фон под полосками
     private readonly MonitorSyncSource? _screen;
     private readonly ILightSource? _screenEffect;
 
     private GameLook _look = GameLook.Fill(Black, 0);
+    private RgbColor _teamColor = Gold;
     private double _lastTime;
 
     // Вспышка урона: health упал — подсветка коротко краснеет
@@ -58,12 +66,15 @@ public sealed class GameSource : ILightSource, IDisposable
 
     /// <summary>
     /// bindingFor — монитор для ленты вокруг главного монитора; у остальных лент — null.
-    /// screenEffect — эффект по картинке экрана для остальных лент в прочих играх.
+    /// screenEffect — эффект по картинке экрана: для остальных лент в прочих играх и для фона в играх с интеграцией.
+    /// config читается на каждом кадре, поэтому фон, полоски и события можно менять на ходу.
     /// </summary>
-    public GameSource(GameKind kind, GsiServer server, Func<LedDevice, MonitorBinding?> bindingFor, ILightSource? screenEffect)
+    public GameSource(GameKind kind, GsiServer server, Func<LedDevice, MonitorBinding?> bindingFor, ILightSource? screenEffect,
+        GamesConfig config)
     {
         _kind = kind;
         _server = server;
+        _config = config;
         _bindingFor = bindingFor;
         _screenEffect = screenEffect;
 
@@ -81,10 +92,12 @@ public sealed class GameSource : ILightSource, IDisposable
         {
             case GameKind.Dota2:
                 _look = DotaLook(_server.Dota, now, dt);
+                _screenEffect?.BeginFrame(phase, settings);
                 break;
 
             case GameKind.CounterStrike2:
                 _look = CsLook(_server.Cs, now, dt);
+                _screenEffect?.BeginFrame(phase, settings);
                 break;
 
             default:
@@ -103,6 +116,10 @@ public sealed class GameSource : ILightSource, IDisposable
                 : _screenEffect?.RenderSolid(device) ?? Black;
         }
 
+        // Лента без полосок в матче светит фоном, а события — поверх него
+        if (_look.HasBars && _bindingFor(device) == null && !_config.BarsOnOtherDevices)
+            return Shade(Backdrop(_screenEffect?.RenderSolid(device)));
+
         return Shade(_look.Solid);
     }
 
@@ -117,9 +134,15 @@ public sealed class GameSource : ILightSource, IDisposable
                 : _screenEffect?.RenderStrip(device, ledCount) ?? new RgbColor[ledCount];
         }
 
-        return binding?.Layout != null
-            ? RenderAroundMonitor(binding, ledCount)
-            : RenderAlongStrip(ledCount);
+        if (binding?.Layout != null)
+            return RenderAroundMonitor(binding, ledCount);
+
+        if (binding == null && device is IKeyboardDevice keyboard)
+            return RenderKeyboard(keyboard, device, ledCount);
+
+        return binding != null || _config.BarsOnOtherDevices || !_look.HasBars
+            ? RenderAlongStrip(ledCount)
+            : RenderBackdrop(device, ledCount);
     }
 
     public void Dispose()
@@ -138,13 +161,17 @@ public sealed class GameSource : ILightSource, IDisposable
             case DotaState.HeroSelection:
             case DotaState.StrategyTime:
                 // Выбор героя — просто мигаем
-                return GameLook.Fill(Gold, Frac(time * 1.2) < 0.5 ? 1 : 0.1);
+                return IsEnabled(GameTriggers.HeroSelection)
+                    ? GameLook.Fill(Gold, Frac(time * 1.2) < 0.5 ? 1 : 0.1)
+                    : GameLook.Fill(Gold, 0.4);
 
             case DotaState.PreGame:
                 return GameLook.Fill(TeamColor(state.Team), Breathe(time, 0.4, 0.4, 1));
 
             case DotaState.PostGame:
-                return Finale(state.WinTeam, state.Team, time);
+                return IsEnabled(GameTriggers.Victory)
+                    ? Finale(state.WinTeam, state.Team, time)
+                    : GameLook.Fill(TeamColor(state.Team), 0.6);
 
             case DotaState.InProgress:
                 break;
@@ -153,12 +180,17 @@ public sealed class GameSource : ILightSource, IDisposable
                 return GameLook.Fill(DotaRed, Breathe(time, 0.25, 0.15, 0.5));
         }
 
+        _teamColor = TeamColor(state.Team);
+
         if (!state.HasHero)
             return GameLook.Fill(TeamColor(state.Team), 0.6);
 
         if (!state.IsAlive)
         {
             _lastHealth = -1;
+
+            if (!IsEnabled(GameTriggers.Death))
+                return GameLook.Fill(TeamColor(state.Team), 0.3);
 
             // Последние секунды до возрождения — частое белое мигание
             return state.RespawnSeconds is > 0 and <= 3
@@ -172,24 +204,26 @@ public sealed class GameSource : ILightSource, IDisposable
         var level = state.IsDaytime ? 1 : 0.8;
 
         // Мало здоровья — подсветка тревожно пульсирует
-        if (health < 0.25)
+        if (health < 0.25 && IsEnabled(GameTriggers.LowHealth))
             level *= 0.55 + 0.45 * Breathe(time, 2.5, 0, 1);
 
-        var (overlay, amount) = state switch
-        {
-            { IsStunned: true } => (Stun, 0.3 + 0.25 * Math.Sin(time * 40)),
-            { IsHexed: true } => (Hex, 0.45),
-            { IsSilenced: true } => (Silence, 0.35),
-            { IsSmoked: true } => (Smoke, 0.5),
-            _ => (Black, 0.0)
-        };
+        var (overlay, amount) = IsEnabled(GameTriggers.Status)
+            ? state switch
+            {
+                { IsStunned: true } => (Stun, 0.3 + 0.25 * Math.Sin(time * 40)),
+                { IsHexed: true } => (Hex, 0.45),
+                { IsSilenced: true } => (Silence, 0.35),
+                { IsSmoked: true } => (Smoke, 0.5),
+                _ => (Black, 0.0)
+            }
+            : (Black, 0.0);
 
-        if (_hit > amount)
+        if (_hit > amount && IsEnabled(GameTriggers.Damage))
             (overlay, amount) = (Hit, _hit);
 
         var healthColor = HealthColor(health);
 
-        return new GameLook(health, healthColor, state.Mana / 100.0, Mana, healthColor, overlay, amount, level);
+        return new GameLook(health, healthColor, state.Mana / 100.0, Mana, healthColor, overlay, amount, level, true);
     }
 
     private GameLook CsLook(CsState? state, double time, double dt)
@@ -202,9 +236,11 @@ public sealed class GameSource : ILightSource, IDisposable
         var team = state.Team == "CT" ? CounterTerrorists : Terrorists;
         GameLook look;
 
+        _teamColor = team;
+
         if (state.RoundPhase == "over")
         {
-            look = Finale(state.WinTeam, state.Team, time);
+            look = IsEnabled(GameTriggers.Victory) ? Finale(state.WinTeam, state.Team, time) : GameLook.Fill(team, 0.6);
         }
         else if (state.RoundPhase == "freezetime")
         {
@@ -224,16 +260,19 @@ public sealed class GameSource : ILightSource, IDisposable
             var healthColor = HealthColor(health);
             var (overlay, amount) = (Black, 0.0);
 
-            if (state.Flashed > 0)
+            if (state.Flashed > 0 && IsEnabled(GameTriggers.Flash))
                 (overlay, amount) = (White, state.Flashed / 255.0);
-            else if (state.Burning > 0)
+            else if (state.Burning > 0 && IsEnabled(GameTriggers.Burn))
                 (overlay, amount) = (Fire, state.Burning / 255.0 * (0.6 + 0.4 * Noise(time * 8, 0, 0)));
 
-            if (_hit > amount)
+            if (_hit > amount && IsEnabled(GameTriggers.Damage))
                 (overlay, amount) = (Hit, _hit);
 
-            look = new GameLook(health, healthColor, state.Armor / 100.0, Armor, healthColor, overlay, amount, 1);
+            look = new GameLook(health, healthColor, state.Armor / 100.0, Armor, healthColor, overlay, amount, 1, true);
         }
+
+        if (!IsEnabled(GameTriggers.Bomb))
+            return look;
 
         // Заложенная бомба пищит красным поверх всего, взрыв и разминирование — общая вспышка
         if (state.Bomb == "planted" && state.RoundPhase != "over" && Frac(_beepPhase) < 0.25 && look.OverlayAmount < 0.7)
@@ -346,6 +385,79 @@ public sealed class GameSource : ILightSource, IDisposable
     }
 
     /// <summary>
+    /// Клавиатура: полоски на рядах F1–F12 и цифр (или обе на F1–F12), на остальных клавишах — фон.
+    /// Вне матча, когда полосок нет, вся клавиатура светится как обычная лента.
+    /// </summary>
+    private IReadOnlyList<RgbColor> RenderKeyboard(IKeyboardDevice keyboard, LedDevice device, int ledCount)
+    {
+        if (!_look.HasBars)
+            return Enumerable.Repeat(Shade(_look.Solid), ledCount).ToList();
+
+        var colors = RenderBackdrop(device, ledCount);
+
+        var (health, other) = _config.KeyboardHud switch
+        {
+            KeyboardHud.FunctionAndNumberRows => (FunctionKeys, NumberKeys),
+            KeyboardHud.FunctionRow => (FunctionKeys[..6], FunctionKeys[6..]),
+            _ => (Array.Empty<int>(), Array.Empty<int>())
+        };
+
+        PaintBar(keyboard, colors, health, true);
+        PaintBar(keyboard, colors, other, false);
+
+        return colors;
+    }
+
+    /// <summary>
+    /// Рисует полоску на клавишах с этими кодами по порядку; клавиш, которых на клавиатуре нет, полоска пропускает.
+    /// </summary>
+    private void PaintBar(IKeyboardDevice keyboard, RgbColor[] colors, int[] codes, bool isLeft)
+    {
+        var keys = codes
+            .Select(code => keyboard.Keys.FirstOrDefault(k => k.Code == code))
+            .OfType<KeyboardKey>()
+            .Where(k => k.Led < colors.Length)
+            .ToList();
+
+        for (var i = 0; i < keys.Count; i++)
+            colors[keys[i].Led] = Bar(isLeft, (i + 0.5) / keys.Count);
+    }
+
+    /// <summary>
+    /// Фон с событиями поверх: картинка экрана, цвет команды или темнота.
+    /// </summary>
+    private RgbColor[] RenderBackdrop(LedDevice device, int ledCount)
+    {
+        var screen = _config.Background == GameBackground.Screen ? _screenEffect?.RenderStrip(device, ledCount) : null;
+        var colors = new RgbColor[ledCount];
+
+        for (var i = 0; i < ledCount; i++)
+            colors[i] = Shade(Backdrop(screen != null && i < screen.Count ? screen[i] : null));
+
+        return colors;
+    }
+
+    /// <summary>
+    /// Цвет фона, приглушённый до выбранной яркости; screen — цвет картинки экрана в этой точке, если он есть.
+    /// </summary>
+    private RgbColor Backdrop(RgbColor? screen)
+    {
+        var color = _config.Background switch
+        {
+            GameBackground.Screen => screen ?? Black,
+            GameBackground.Team => _teamColor,
+            _ => Black
+        };
+
+        return Dim(color, _config.BackgroundBrightness / 100.0);
+    }
+
+    private bool IsEnabled(string trigger)
+    {
+        return !_config.DisabledTriggers.Contains(GameTriggers.ConfigKey(_kind, trigger));
+    }
+
+    /// <summary>
     /// Лента без раскладки: первая половина — здоровье, вторая — мана или броня.
     /// </summary>
     private IReadOnlyList<RgbColor> RenderAlongStrip(int ledCount)
@@ -399,7 +511,8 @@ public sealed class GameSource : ILightSource, IDisposable
 
     /// <summary>
     /// Как выглядит подсветка на этом кадре: две полоски (здоровье слева, мана или броня справа),
-    /// цвет для обычных лент, цвет поверх всего и общая яркость.
+    /// цвет для обычных лент, цвет поверх всего и общая яркость. HasBars — идёт матч и полоски есть;
+    /// иначе (выбор героя, смерть, конец раунда) всё светится одним цветом.
     /// </summary>
     private readonly record struct GameLook(
         double Left,
@@ -409,7 +522,8 @@ public sealed class GameSource : ILightSource, IDisposable
         RgbColor Solid,
         RgbColor Overlay,
         double OverlayAmount,
-        double Level)
+        double Level,
+        bool HasBars = false)
     {
         public static GameLook Fill(RgbColor color, double level)
         {

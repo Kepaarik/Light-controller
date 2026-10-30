@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -18,9 +19,10 @@ public sealed partial class GamesViewModel : ObservableObject
 
     private readonly GamesConfig _config;
     private readonly Action _save;
-    private readonly Func<bool, IReadOnlyDictionary<LedDevice, MonitorBinding?>> _targets;
+    private readonly Func<bool, bool, IReadOnlyDictionary<LedDevice, MonitorBinding?>> _targets;
     private readonly Action<IReadOnlyCollection<LedDevice>> _stopConflicts;
     private readonly EffectPickerViewModel _effects;
+    private readonly Func<SceneConfig, Task> _applyPreset;
     private readonly GsiServer _server = new();
     private readonly EffectRunner _runner = new();
     private readonly DispatcherTimer _timer;
@@ -34,6 +36,9 @@ public sealed partial class GamesViewModel : ObservableObject
 
     // Подсветку этой игры остановили вручную или заняли её ленты другим — сами не включаем до следующей игры
     private bool _isSuspended;
+
+    // Пресет этой игры уже включён — повторно не включаем до следующей игры
+    private bool _isPresetApplied;
 
     [ObservableProperty]
     private string _status = "Игра не запущена";
@@ -51,11 +56,11 @@ public sealed partial class GamesViewModel : ObservableObject
     [ObservableProperty]
     private int _brightness = 100;
 
+    /// <summary>
+    /// Показаны ли дополнительные настройки: мониторы, слои и события.
+    /// </summary>
     [ObservableProperty]
-    private bool _isDotaConnected;
-
-    [ObservableProperty]
-    private bool _isCsConnected;
+    private bool _showAdvanced;
 
     /// <summary>
     /// Почему игры не могут присылать события; null — всё в порядке.
@@ -64,20 +69,44 @@ public sealed partial class GamesViewModel : ObservableObject
     private string? _serverError;
 
     /// <summary>
-    /// targets — ленты для игры: лента главного монитора с его привязкой, а при «всех лентах» — и остальные без привязки.
+    /// targets — ленты для игры: лента главного монитора с его привязкой, а при «всех лентах» и «клавиатурах» —
+    /// и остальные ленты или клавиатуры без привязки.
     /// stopConflicts — останавливает то, что уже играет на этих лентах.
+    /// scenes — пресеты, которые можно включать при запуске игры, applyPreset — включает пресет.
     /// </summary>
-    public GamesViewModel(GamesConfig config, Action save, Func<bool, IReadOnlyDictionary<LedDevice, MonitorBinding?>> targets,
-        Action<IReadOnlyCollection<LedDevice>> stopConflicts, EffectPickerViewModel effects)
+    public GamesViewModel(GamesConfig config, Action save, Func<bool, bool, IReadOnlyDictionary<LedDevice, MonitorBinding?>> targets,
+        Action<IReadOnlyCollection<LedDevice>> stopConflicts, EffectPickerViewModel effects,
+        ObservableCollection<SceneConfig> scenes, Func<SceneConfig, Task> applyPreset)
     {
         _config = config;
         _save = save;
         _targets = targets;
         _stopConflicts = stopConflicts;
         _effects = effects;
+        _applyPreset = applyPreset;
 
         ScreenEffects = EffectLibrary.All.Where(e => e.Category == EffectCategory.Screen).ToList();
+        DotaTriggers = GameTriggers.Dota.Select(t => new GameTriggerViewModel(GameKind.Dota2, t, config, save)).ToList();
+        CsTriggers = GameTriggers.CounterStrike.Select(t => new GameTriggerViewModel(GameKind.CounterStrike2, t, config, save)).ToList();
+
+        Profiles = new[]
+        {
+            new GameProfileViewModel(GameKind.Dota2, "Dota 2", "Здоровье и мана героя, урон, смерть и победа",
+                "Игровая подсветка",
+                "В Steam добавьте Dota 2 параметр запуска -gamestateintegration (Свойства → Параметры запуска), иначе игра не присылает события.",
+                config.Dota, scenes, save, OnProfileChanged),
+            new GameProfileViewModel(GameKind.CounterStrike2, "Counter-Strike 2", "Здоровье и броня, ослепление, бомба и конец раунда",
+                "Игровая подсветка", null, config.CounterStrike, scenes, save, OnProfileChanged),
+            new GameProfileViewModel(GameKind.Other, "Другие игры", "Любая программа на весь главный монитор",
+                "Подсветка по экрану", null, config.OtherGames, scenes, save, OnProfileChanged)
+        };
+
         ServerError = _server.Start();
+
+        // Файл настроек пишем при каждом запуске: так игра всегда знает, куда слать события
+        foreach (var profile in Profiles.Where(p => p.IsEnabled && p.NeedsConnection))
+            Connect(profile.Kind);
+
         RefreshConnections();
 
         _timer = new DispatcherTimer { Interval = CheckInterval };
@@ -90,24 +119,36 @@ public sealed partial class GamesViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<EffectDefinition> ScreenEffects { get; }
 
-    public bool HasGame => GameTitle != null;
+    /// <summary>
+    /// Игры, которые LedHub узнаёт, и что включать при запуске каждой.
+    /// </summary>
+    public IReadOnlyList<GameProfileViewModel> Profiles { get; }
 
-    public bool AutoMode
+    /// <summary>
+    /// События Dota 2, которые можно выключить.
+    /// </summary>
+    public IReadOnlyList<GameTriggerViewModel> DotaTriggers { get; }
+
+    /// <summary>
+    /// События Counter-Strike 2, которые можно выключить.
+    /// </summary>
+    public IReadOnlyList<GameTriggerViewModel> CsTriggers { get; }
+
+    public IReadOnlyList<GameChoice<GameBackground>> BackgroundOptions { get; } = new[]
     {
-        get => _config.AutoMode;
-        set
-        {
-            if (_config.AutoMode == value)
-                return;
+        new GameChoice<GameBackground>(GameBackground.Screen, "Картинка экрана"),
+        new GameChoice<GameBackground>(GameBackground.Team, "Цвет команды"),
+        new GameChoice<GameBackground>(GameBackground.Off, "Без фона")
+    };
 
-            _config.AutoMode = value;
-            _save();
-            OnPropertyChanged();
+    public IReadOnlyList<GameChoice<KeyboardHud>> KeyboardHudOptions { get; } = new[]
+    {
+        new GameChoice<KeyboardHud>(KeyboardHud.FunctionAndNumberRows, "Здоровье на F1–F12, мана или броня на цифрах"),
+        new GameChoice<KeyboardHud>(KeyboardHud.FunctionRow, "Обе полоски на F1–F12"),
+        new GameChoice<KeyboardHud>(KeyboardHud.Off, "Без полосок")
+    };
 
-            if (!value)
-                StopLighting();
-        }
-    }
+    public bool HasGame => GameTitle != null;
 
     public bool UseAllDevices
     {
@@ -124,6 +165,83 @@ public sealed partial class GamesViewModel : ObservableObject
         }
     }
 
+    public bool UseKeyboards
+    {
+        get => _config.UseKeyboards;
+        set
+        {
+            if (_config.UseKeyboards == value)
+                return;
+
+            _config.UseKeyboards = value;
+            _save();
+            OnPropertyChanged();
+            Restart();
+        }
+    }
+
+    public GameBackground Background
+    {
+        get => _config.Background;
+        set
+        {
+            if (_config.Background == value)
+                return;
+
+            _config.Background = value;
+            _save();
+            OnPropertyChanged();
+
+            // Картинку экрана для фона снимают, только когда она нужна, — запускаем подсветку заново
+            Restart();
+        }
+    }
+
+    /// <summary>
+    /// Яркость фона в процентах; подсветка подхватывает её на ходу.
+    /// </summary>
+    public int BackgroundBrightness
+    {
+        get => _config.BackgroundBrightness;
+        set
+        {
+            if (_config.BackgroundBrightness == value)
+                return;
+
+            _config.BackgroundBrightness = value;
+            _save();
+            OnPropertyChanged();
+        }
+    }
+
+    public KeyboardHud KeyboardHud
+    {
+        get => _config.KeyboardHud;
+        set
+        {
+            if (_config.KeyboardHud == value)
+                return;
+
+            _config.KeyboardHud = value;
+            _save();
+            OnPropertyChanged();
+        }
+    }
+
+    public bool BarsOnOtherDevices
+    {
+        get => _config.BarsOnOtherDevices;
+        set
+        {
+            if (_config.BarsOnOtherDevices == value)
+                return;
+
+            _config.BarsOnOtherDevices = value;
+            _save();
+            OnPropertyChanged();
+        }
+    }
+
     public EffectDefinition? SelectedScreenEffect
     {
         get => ScreenEffects.FirstOrDefault(e => e.Id == _config.OtherGamesEffect) ?? ScreenEffects.FirstOrDefault();
@@ -136,7 +254,7 @@ public sealed partial class GamesViewModel : ObservableObject
             _save();
             OnPropertyChanged();
 
-            if (_game?.Kind == GameKind.Other)
+            if (_game?.Kind == GameKind.Other || Background == GameBackground.Screen)
                 Restart();
         }
     }
@@ -162,11 +280,13 @@ public sealed partial class GamesViewModel : ObservableObject
     private async Task StartAsync()
     {
         _isSuspended = false;
+        _isPresetApplied = false;
 
         // Ищем игру сразу, не дожидаясь очередной проверки по таймеру
         await CheckAsync();
 
-        if (_game == null || IsRunning)
+        // Кнопка включает подсветку и для игры, которую в списке выключили
+        if (_game == null || IsRunning || _isPresetApplied)
             return;
 
         StartLighting(_game);
@@ -180,37 +300,50 @@ public sealed partial class GamesViewModel : ObservableObject
         Status = _game != null ? $"{_game.Title}: подсветка игры остановлена" : "Подсветка игры остановлена";
     }
 
-    [RelayCommand]
-    private void ConnectDota()
+    private void OnProfileChanged(GameProfileViewModel profile)
     {
-        Connect(GameKind.Dota2, "Dota 2");
+        if (profile.IsEnabled && profile.NeedsConnection)
+        {
+            Connect(profile.Kind);
+            RefreshConnections();
+        }
+
+        if (_game?.Kind != profile.Kind)
+            return;
+
+        // Запущенная игра сразу переходит на новый выбор
+        StopLighting();
+        _isSuspended = false;
+        _isPresetApplied = false;
+        _ = CheckAsync();
     }
 
-    [RelayCommand]
-    private void ConnectCs()
+    /// <summary>
+    /// Кладёт игре файл настроек; если Steam или игра не найдены, игра просто остаётся неподключённой.
+    /// </summary>
+    private void Connect(GameKind kind)
     {
-        Connect(GameKind.CounterStrike2, "Counter-Strike 2");
-    }
+        if (ServerError != null)
+            return;
 
-    private void Connect(GameKind kind, string title)
-    {
         try
         {
             GsiInstaller.Install(kind, _server.Address);
-            Status = $"{title} подключена — перезапустите игру, чтобы она начала присылать события";
         }
         catch (Exception e) when (e is InvalidOperationException or IOException or UnauthorizedAccessException)
         {
-            Status = $"Не удалось подключить {title}: {e.Message}";
         }
-
-        RefreshConnections();
     }
 
     private void RefreshConnections()
     {
-        IsDotaConnected = GsiInstaller.IsInstalled(GameKind.Dota2);
-        IsCsConnected = GsiInstaller.IsInstalled(GameKind.CounterStrike2);
+        foreach (var profile in Profiles)
+            profile.IsConnected = profile.NeedsConnection && GsiInstaller.IsInstalled(profile.Kind);
+    }
+
+    private GameProfileViewModel ProfileFor(GameKind kind)
+    {
+        return Profiles.First(p => p.Kind == kind);
     }
 
     private async Task CheckAsync()
@@ -246,6 +379,7 @@ public sealed partial class GamesViewModel : ObservableObject
             {
                 StopLighting();
                 _isSuspended = false;
+                _isPresetApplied = false;
                 _game = game;
             }
 
@@ -260,12 +394,20 @@ public sealed partial class GamesViewModel : ObservableObject
                 return;
             }
 
-            if (IsRunning || _isSuspended)
+            if (IsRunning || _isSuspended || _isPresetApplied)
                 return;
 
-            if (!AutoMode)
+            var profile = ProfileFor(_game.Kind);
+
+            if (!profile.IsEnabled)
             {
-                Status = $"{_game.Title}: игра запущена, автоматическая подсветка выключена";
+                Status = $"{_game.Title}: игра запущена, подсветка для неё выключена в списке «Мои игры»";
+                return;
+            }
+
+            if (profile.Scene is { } scene)
+            {
+                await ApplyPresetAsync(_game, scene);
                 return;
             }
 
@@ -277,6 +419,15 @@ public sealed partial class GamesViewModel : ObservableObject
         }
     }
 
+    private async Task ApplyPresetAsync(DetectedGame game, SceneConfig scene)
+    {
+        _isPresetApplied = true;
+
+        await _applyPreset(scene);
+
+        Status = $"{game.Title}: включён пресет «{scene.Name}»";
+    }
+
     private void Restart()
     {
         if (IsRunning && _game != null)
@@ -285,7 +436,7 @@ public sealed partial class GamesViewModel : ObservableObject
 
     private void StartLighting(DetectedGame game)
     {
-        var targets = _targets(UseAllDevices);
+        var targets = _targets(UseAllDevices, UseKeyboards);
 
         if (targets.Count == 0)
         {
@@ -301,11 +452,14 @@ public sealed partial class GamesViewModel : ObservableObject
 
         try
         {
-            var screenEffect = game.Kind == GameKind.Other && effect != null
+            // Картинка экрана нужна прочим играм целиком, а играм с интеграцией — как фон
+            var needsScreen = game.Kind == GameKind.Other || Background == GameBackground.Screen;
+            var screenEffect = needsScreen && effect != null
                 ? new PatternSource(effect, _effects.ValuesFor(effect), new StripPointMap())
                 : null;
 
-            var source = new GameSource(game.Kind, _server, device => targets.TryGetValue(device, out var binding) ? binding : null, screenEffect);
+            var source = new GameSource(game.Kind, _server, device => targets.TryGetValue(device, out var binding) ? binding : null,
+                screenEffect, _config);
             var speed = effect != null ? _effects.SpeedOf(effect) : 1;
 
             _runner.Start(source, targets.Keys.ToList(), () => new EffectSettings(RgbColor.White, Brightness, speed));
@@ -320,9 +474,9 @@ public sealed partial class GamesViewModel : ObservableObject
         IsRunning = true;
         Status = game.Kind switch
         {
-            GameKind.Dota2 when !IsDotaConnected => "Dota 2: игра не подключена — нажмите «Подключить Dota 2», пока подсветка ждёт событий",
+            GameKind.Dota2 when !ProfileFor(GameKind.Dota2).IsConnected => "Dota 2: игра не найдена в библиотеках Steam, события не придут",
             GameKind.Dota2 => "Dota 2: здоровье и мана героя на подсветке",
-            GameKind.CounterStrike2 when !IsCsConnected => "Counter-Strike 2: игра не подключена — нажмите «Подключить CS2», пока подсветка ждёт событий",
+            GameKind.CounterStrike2 when !ProfileFor(GameKind.CounterStrike2).IsConnected => "Counter-Strike 2: игра не найдена в библиотеках Steam, события не придут",
             GameKind.CounterStrike2 => "Counter-Strike 2: здоровье, броня и события раунда на подсветке",
             _ => $"{game.Title}: подсветка по картинке экрана"
         };

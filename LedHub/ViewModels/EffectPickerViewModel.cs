@@ -16,6 +16,7 @@ public sealed partial class EffectPickerViewModel : ObservableObject
     private readonly Func<EffectOption, bool> _start;
     private readonly Action _stop;
     private readonly Action _save;
+    private readonly IReadOnlyList<EffectGroup> _allGroups;
 
     // Настройки сохраняются, когда ползунок перестали двигать, а не на каждом шаге
     private CancellationTokenSource? _saveDelay;
@@ -29,6 +30,10 @@ public sealed partial class EffectPickerViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(StatusText))]
     private EffectOption? _runningEffect;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Groups))]
+    private bool _showKeyboardEffects;
+
     /// <summary>
     /// start запускает эффект и сообщает, удалось ли; stop останавливает запущенный.
     /// </summary>
@@ -40,7 +45,7 @@ public sealed partial class EffectPickerViewModel : ObservableObject
         _save = save;
 
         Options = EffectLibrary.All.Select(e => new EffectOption(e)).ToList();
-        Groups = Options
+        _allGroups = Options
             .GroupBy(o => o.Definition.Category)
             .Select(g => new EffectGroup(EffectLibrary.CategoryTitle(g.Key), g.ToList()))
             .ToList();
@@ -50,7 +55,11 @@ public sealed partial class EffectPickerViewModel : ObservableObject
 
     public IReadOnlyList<EffectOption> Options { get; }
 
-    public IReadOnlyList<EffectGroup> Groups { get; }
+    /// <summary>
+    /// Разделы галереи; эффекты от нажатий есть, только когда выбрана клавиатура.
+    /// </summary>
+    public IReadOnlyList<EffectGroup> Groups =>
+        ShowKeyboardEffects ? _allGroups : _allGroups.Where(g => g.Effects.All(o => !o.Definition.UsesKeys)).ToList();
 
     public ObservableCollection<EffectParameterViewModel> Parameters { get; } = new();
 
@@ -119,6 +128,13 @@ public sealed partial class EffectPickerViewModel : ObservableObject
             parameter.Reset();
 
         ScheduleSave();
+    }
+
+    partial void OnShowKeyboardEffectsChanged(bool value)
+    {
+        // Эффект от нажатий без клавиатуры не сыграть — показываем вместо него первый обычный
+        if (!value && SelectedEffect?.Definition.UsesKeys == true)
+            SelectedEffect = Options[0];
     }
 
     partial void OnSelectedEffectChanged(EffectOption? value)

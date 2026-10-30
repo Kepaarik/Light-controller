@@ -9,6 +9,9 @@ namespace LedHub.Services.Effects;
 /// </summary>
 public static class EffectLibrary
 {
+    // Примерная ширина одной клавиши, когда большая сторона клавиатуры равна 1
+    private const double KeyUnit = 0.05;
+
     private static readonly RgbColor[] SunriseColors =
     {
         Black, RgbColor.Parse("#3A0500"), RgbColor.Parse("#FF3D00"), RgbColor.Parse("#FFA040"), RgbColor.Parse("#FFE6C4")
@@ -536,7 +539,106 @@ public static class EffectLibrary
                 var color = LoopPalette(f.Along(p) / f.Number("scale") - f.Time * 0.05, mood);
 
                 return Boost(color, f.Number("vivid"));
-            }) { UsesScreen = true }
+            }) { UsesScreen = true },
+
+        // Клавиатура: отвечают на нажатия клавиш
+        new EffectDefinition("key-flash", "Нажатия", EffectCategory.Keyboard,
+            "Нажатая клавиша вспыхивает и плавно гаснет; можно зажигать и клавиши вокруг",
+            new[]
+            {
+                KeyColorMode(), ColorOf("color", "Цвет", "#9C8CFF"),
+                EffectParameter.Number("fade", "Затухание", 0.2, 3, 0.8, "{0:0.0} с"),
+                EffectParameter.Number("spread", "Захват соседних", 0, 4, 0, "{0:0} кл."),
+                Backdrop(), ColorOf("background", "Цвет фона", "#140F2E"), BackdropLevel()
+            },
+            (f, p) =>
+            {
+                var result = BackdropColor(f, p);
+                var fade = f.Number("fade");
+                var reach = (f.Number("spread") + 0.6) * KeyUnit;
+
+                foreach (var hit in f.Keys)
+                {
+                    var age = f.Time - hit.Time;
+                    if (age < 0 || age > fade)
+                        continue;
+
+                    var glow = Smooth(1 - HitDistance(p, hit) / reach) * Math.Pow(1 - age / fade, 2);
+
+                    result = Max(result, Dim(KeyColor(f, p, hit), glow));
+                }
+
+                return result;
+            }) { UsesKeys = true },
+
+        new EffectDefinition("key-ripple", "Круги от нажатий", EffectCategory.Keyboard,
+            "От каждой нажатой клавиши по клавиатуре расходится кольцо света",
+            new[]
+            {
+                KeyColorMode(), ColorOf("color", "Цвет", "#3BE8FF"),
+                EffectParameter.Number("pace", "Скорость кругов", 0.3, 3, 1, "{0:0.0}×"),
+                EffectParameter.Number("reach", "Дальность", 2, 20, 8, "{0:0} кл."),
+                EffectParameter.Number("width", "Толщина кольца", 0.5, 3, 1, "{0:0.0}×"),
+                Backdrop(), ColorOf("background", "Цвет фона", "#06142E"), BackdropLevel()
+            },
+            (f, p) =>
+            {
+                var result = BackdropColor(f, p);
+                var reach = f.Number("reach") * KeyUnit;
+                var width = f.Number("width") * KeyUnit * 0.7;
+
+                foreach (var hit in f.Keys)
+                {
+                    var radius = (f.Time - hit.Time) * f.Number("pace") * 0.6;
+                    if (radius < 0 || radius > reach)
+                        continue;
+
+                    var ring = Math.Exp(-Math.Pow((HitDistance(p, hit) - radius) / width, 2)) * (1 - radius / reach);
+
+                    result = Max(result, Dim(KeyColor(f, p, hit), ring));
+                }
+
+                return result;
+            }) { UsesKeys = true },
+
+        new EffectDefinition("key-beam", "Лучи", EffectCategory.Keyboard,
+            "Нажатие пускает лучи света по ряду клавиш в обе стороны, а если включить — и по столбцу",
+            new[]
+            {
+                KeyColorMode(), ColorOf("color", "Цвет", "#FF3B8B"),
+                EffectParameter.Number("pace", "Скорость лучей", 0.3, 3, 1, "{0:0.0}×"),
+                EffectParameter.Number("tail", "Длина хвоста", 0.5, 6, 2, "{0:0.0} кл."),
+                EffectParameter.Toggle("vertical", "И вверх-вниз", false),
+                Backdrop(), ColorOf("background", "Цвет фона", "#1A0612"), BackdropLevel()
+            },
+            (f, p) =>
+            {
+                const double life = 1.6;
+
+                var result = BackdropColor(f, p);
+                var tail = f.Number("tail") * KeyUnit;
+
+                foreach (var hit in f.Keys)
+                {
+                    var age = f.Time - hit.Time;
+                    if (age < 0 || age > life)
+                        continue;
+
+                    var front = age * f.Number("pace") * 0.6;
+                    var beam = 0.0;
+
+                    // Луч по ряду идёт вдоль X, по столбцу — вдоль Y; соседний ряд или столбец он не задевает
+                    if (Math.Abs(p.Y - hit.Y) < KeyUnit * 0.6)
+                        beam = Math.Max(beam, Beam(Math.Abs(p.X - hit.X), front, tail));
+
+                    if (f.Flag("vertical") && Math.Abs(p.X - hit.X) < KeyUnit * 0.6)
+                        beam = Math.Max(beam, Beam(Math.Abs(p.Y - hit.Y), front, tail));
+
+                    result = Max(result, Dim(KeyColor(f, p, hit), beam * (1 - age / life)));
+                }
+
+                return result;
+            }) { UsesKeys = true }
     };
 
     public static EffectDefinition? Find(string id)
@@ -550,6 +652,7 @@ public static class EffectLibrary
         EffectCategory.Motion => "Движение",
         EffectCategory.Nature => "Природа",
         EffectCategory.Screen => "По картинке монитора",
+        EffectCategory.Keyboard => "Клавиатура: от нажатий",
         _ => "Музыка с компьютера"
     };
 
@@ -579,6 +682,64 @@ public static class EffectLibrary
             new EffectChoice(3, "↑ Вверх"),
             new EffectChoice(4, "От центра"),
             new EffectChoice(5, "К центру"));
+
+    private static EffectParameter KeyColorMode() =>
+        EffectParameter.Choice("key-colors", "Цвет вспышек", 0,
+            new EffectChoice(0, "Свой цвет"),
+            new EffectChoice(1, "Разные на каждое нажатие"),
+            new EffectChoice(2, "Радуга по клавиатуре"));
+
+    private static EffectParameter Backdrop() =>
+        EffectParameter.Choice("backdrop", "Фон", 0,
+            new EffectChoice(0, "Свой цвет"),
+            new EffectChoice(1, "Медленная радуга"));
+
+    private static EffectParameter BackdropLevel() =>
+        EffectParameter.Number("backdrop-level", "Яркость фона", 0, 100, 35, "{0:0} %");
+
+    /// <summary>
+    /// Цвет вспышки от нажатия в точке: свой, свой у каждого нажатия или радуга по месту на клавиатуре.
+    /// </summary>
+    private static RgbColor KeyColor(EffectFrame f, EffectPixel p, KeyHit hit)
+    {
+        return (int)f.Number("key-colors") switch
+        {
+            1 => RgbColor.FromHsv(hit.Hue, 1, 1),
+            2 => RgbColor.FromHsv(p.X / f.Width * 360 + f.Time * 30, 1, 1),
+            _ => f.Color("color")
+        };
+    }
+
+    /// <summary>
+    /// Фон под вспышками: свой цвет или медленная радуга, приглушённые до выбранной яркости.
+    /// </summary>
+    private static RgbColor BackdropColor(EffectFrame f, EffectPixel p)
+    {
+        var color = f.Number("backdrop") >= 1
+            ? RgbColor.FromHsv(p.X / f.Width * 360 - f.Time * 20, 1, 1)
+            : f.Color("background");
+
+        return Dim(color, f.Number("backdrop-level") / 100);
+    }
+
+    private static double HitDistance(EffectPixel p, KeyHit hit)
+    {
+        var dx = p.X - hit.X;
+        var dy = p.Y - hit.Y;
+
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    /// <summary>
+    /// Яркость луча на расстоянии distance от клавиши: яркая голова на front и затухающий хвост за ней.
+    /// </summary>
+    private static double Beam(double distance, double front, double tail)
+    {
+        if (distance > front)
+            return Math.Exp(-Math.Pow((distance - front) / (KeyUnit * 0.4), 2));
+
+        return Math.Exp(-(front - distance) / tail);
+    }
 
     /// <summary>
     /// Цвет по «температуре» пламени от 0 (темно) до 1 (почти белое).
