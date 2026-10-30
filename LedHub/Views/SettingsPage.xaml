@@ -100,6 +100,17 @@
 
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
+                    <TextBlock Text="Эффекты" Style="{StaticResource CardTitle}"/>
+                    <TextBlock Text="Частота кадров" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                    <ComboBox ItemsSource="{Binding FrameRateOptions}" SelectedItem="{Binding FramesPerSecond}"
+                              ItemStringFormat="{}{0} кадров в секунду" HorizontalAlignment="Left" MinWidth="220"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                               Text="Больше кадров — плавнее эффекты на клавиатуре по проводу, но выше нагрузка на процессор. Ленты по Bluetooth и Wi-Fi всё равно получают не больше 20 кадров в секунду."/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
                     <TextBlock Text="Запуск" Style="{StaticResource CardTitle}"/>
                     <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding ScanOnStartup}">
                         <StackPanel>

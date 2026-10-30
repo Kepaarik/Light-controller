@@ -76,6 +76,11 @@ public sealed class AppConfig
     public bool IsDeviceListCollapsed { get; set; }
 
     /// <summary>
+    /// Сколько кадров в секунду считают эффекты.
+    /// </summary>
+    public int FramesPerSecond { get; set; } = 20;
+
+    /// <summary>
     /// Главный монитор для режимов по картинке экрана и игр; null — основной монитор Windows.
     /// </summary>
     public string? MainMonitor { get; set; }

@@ -27,9 +27,10 @@ public abstract class LedDevice : IDisposable
     public virtual string? StatusText => null;
 
     /// <summary>
-    /// Как часто устройство может принимать кадры эффекта; ноль — так часто, как их шлёт приложение.
+    /// Как часто устройство может принимать кадры эффекта. По умолчанию 20 кадров в секунду — больше ленты
+    /// по Bluetooth и Wi-Fi не выдерживают, сколько бы кадров ни считали эффекты.
     /// </summary>
-    public virtual TimeSpan MinFrameInterval => TimeSpan.Zero;
+    public virtual TimeSpan MinFrameInterval => TimeSpan.FromMilliseconds(50);
 
     public abstract Task SetPowerAsync(bool isOn, CancellationToken ct = default);
 

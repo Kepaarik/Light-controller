@@ -221,6 +221,7 @@ public sealed partial class MainViewModel : ObservableObject
         // Сцена и режимы по экрану читают главный монитор с самого начала
         MainMonitor.Key = _config.MainMonitor;
         IsDeviceListCollapsed = _config.IsDeviceListCollapsed;
+        EffectRunner.FramesPerSecond = _config.FramesPerSecond;
 
         foreach (var group in _config.Groups)
             Groups.Add(new GroupItemViewModel(group, FindDevice));
@@ -381,6 +382,29 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
 
             _config.ScanOnStartup = value;
+            ConfigStore.Save(_config);
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// Варианты частоты кадров эффектов.
+    /// </summary>
+    public IReadOnlyList<int> FrameRateOptions { get; } = new[] { 20, 30, 60 };
+
+    /// <summary>
+    /// Сколько кадров в секунду считают эффекты; играющие эффекты подхватывают её на ходу.
+    /// </summary>
+    public int FramesPerSecond
+    {
+        get => _config.FramesPerSecond;
+        set
+        {
+            if (_config.FramesPerSecond == value)
+                return;
+
+            _config.FramesPerSecond = value;
+            EffectRunner.FramesPerSecond = value;
             ConfigStore.Save(_config);
             OnPropertyChanged();
         }
