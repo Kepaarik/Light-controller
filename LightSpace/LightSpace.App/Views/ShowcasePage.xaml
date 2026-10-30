@@ -1,0 +1,469 @@
+<UserControl x:Class="LightSpace.App.Views.ShowcasePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:ShowcaseViewModel}">
+
+    <!-- Витрина компонентов (только отладочная сборка): все компоненты во всех состояниях и переключатель темы.
+         Наведение и нажатие показаны принудительно через Appearance.ForceHover и Appearance.ForcePressed -->
+    <UserControl.Resources>
+        <Style x:Key="Cell" TargetType="StackPanel">
+            <Setter Property="Margin" Value="{StaticResource GapRight12}"/>
+            <Setter Property="MinWidth" Value="{StaticResource TileWidth}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{StaticResource PaddingPage}">
+            <TextBlock Text="Витрина" Style="{StaticResource PageTitle}"/>
+
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Status}" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+                <TextBlock Text="Тема" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="{StaticResource GapRight12}"/>
+                <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"/>
+            </DockPanel>
+
+            <!-- Кнопки -->
+            <TextBlock Text="Кнопки" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Accent" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource AccentButton}" Content="Найти устройства"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource AccentButton}" Content="Найти устройства" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource AccentButton}" Content="Найти устройства" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource AccentButton}" Content="Найти устройства" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Обычная" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Content="Обзор…"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Content="Обзор…" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Content="Обзор…" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Content="Обзор…" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Ghost" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource GhostButton}" Content="Отмена"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource GhostButton}" Content="Отмена" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource GhostButton}" Content="Отмена" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource GhostButton}" Content="Отмена" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Danger" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource DangerButton}" Content="Удалить"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource DangerButton}" Content="Удалить" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource DangerButton}" Content="Удалить" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource DangerButton}" Content="Удалить" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Со значком" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Content="Добавить сценарий" controls:Appearance.Icon="&#xE710;"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Content="Добавить сценарий" controls:Appearance.Icon="&#xE710;" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Content="Добавить сценарий" controls:Appearance.Icon="&#xE710;" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Content="Добавить сценарий" controls:Appearance.Icon="&#xE710;" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Иконка" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE713;" ToolTip="Настройки"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE713;" ToolTip="Настройки" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE713;" ToolTip="Настройки" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE713;" ToolTip="Настройки" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Пункт меню" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource MenuButton}" Width="200" Content="Открыть Light Space" controls:Appearance.Icon="&#xE8A7;"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource MenuButton}" Width="200" Content="Открыть Light Space" controls:Appearance.Icon="&#xE8A7;" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource MenuButton}" Width="200" Content="Открыть Light Space" controls:Appearance.Icon="&#xE8A7;" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Button Style="{StaticResource MenuButton}" Width="200" Content="Открыть Light Space" controls:Appearance.Icon="&#xE8A7;" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Кнопка-переключатель" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Content="Закрепить"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Content="Закрепить" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Content="Закрепить" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Content="Закрепить" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Content="Закрепить" IsChecked="True"/>
+                            <TextBlock Text="Выбрано" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Ввод -->
+            <TextBlock Text="Ввод" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Тумблер" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Content="Подсветка"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Content="Подсветка" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Content="Подсветка" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Content="Подсветка" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Content="Подсветка" IsChecked="True"/>
+                            <TextBlock Text="Выбрано" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Content="Подсветка" IsChecked="True" IsEnabled="False"/>
+                            <TextBlock Text="Выбрано, выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Чип" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Style="{StaticResource Chip}" Content="Стол"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Style="{StaticResource Chip}" Content="Стол" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Style="{StaticResource Chip}" Content="Стол" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Style="{StaticResource Chip}" Content="Стол" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <CheckBox Style="{StaticResource Chip}" Content="Стол" IsChecked="True"/>
+                            <TextBlock Text="Выбрано" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Сегмент (одиночный)" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <RadioButton GroupName="Demo0" Content="В фокусе"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <RadioButton GroupName="Demo1" Content="В фокусе" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <RadioButton GroupName="Demo2" Content="В фокусе" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <RadioButton GroupName="Demo3" Content="В фокусе" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <RadioButton GroupName="DemoChecked" Content="Запущен" IsChecked="True"/>
+                            <TextBlock Text="Выбрано" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Поле с плавающей подписью" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Tag="Название" Width="220"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Tag="Название" Width="220" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Tag="Название" Width="220" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Tag="Название" Width="220" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Tag="Название" Width="220" Text="{Binding FieldText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="С текстом" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Поле поиска" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Style="{StaticResource SearchField}" Tag="Поиск приложений" Width="220"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Style="{StaticResource SearchField}" Tag="Поиск приложений" Width="220" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Style="{StaticResource SearchField}" Tag="Поиск приложений" Width="220" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <TextBox Style="{StaticResource SearchField}" Tag="Поиск приложений" Width="220" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Кнопка выпадающей панели" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Style="{StaticResource PickerButton}" Content="Выберите приложение" Width="220"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Style="{StaticResource PickerButton}" Content="Выберите приложение" Width="220" controls:Appearance.ForceHover="True"/>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Style="{StaticResource PickerButton}" Content="Выберите приложение" Width="220" controls:Appearance.ForcePressed="True"/>
+                            <TextBlock Text="Нажатие" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Style="{StaticResource PickerButton}" Content="Выберите приложение" Width="220" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <ToggleButton Style="{StaticResource PickerButton}" Content="Выберите приложение" Width="220" IsChecked="True"/>
+                            <TextBlock Text="Открыта" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Выпадающая панель-карточка с поиском" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <controls:SearchPicker Width="280" ItemsSource="{Binding Apps}" SelectedItem="{Binding SelectedApp}"
+                                               Placeholder="Выберите приложение" Margin="{StaticResource GapRight12}"/>
+                        <controls:SearchPicker Width="280" ItemsSource="{Binding Apps}" Placeholder="Ничего не выбрано"
+                                               Margin="{StaticResource GapRight12}"/>
+                        <controls:SearchPicker Width="280" ItemsSource="{Binding Apps}" Placeholder="Выключено" IsEnabled="False"/>
+                    </WrapPanel>
+
+                    <TextBlock Text="Ползунок с подписью значения" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <controls:ValueSlider Width="280" Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                              Value="{Binding Brightness}" Margin="{StaticResource GapRight12}"/>
+                        <controls:ValueSlider Width="280" Label="Своя заливка" Unit="%" Minimum="0" Maximum="100" Step="5"
+                                              Value="{Binding Brightness}" Fill="{Binding ColorBrush}" Margin="{StaticResource GapRight12}"/>
+                        <controls:ValueSlider Width="280" Label="Выключено" Unit="мс" Minimum="0" Maximum="2000" Step="50"
+                                              Value="400" IsEnabled="False"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Выбор из набора -->
+            <TextBlock Text="Выбор из набора" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Сегменты" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Segments}" SelectedItem="{Binding SelectedSegment}"
+                                 Margin="{StaticResource GapRight12}"/>
+                        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Segments}" SelectedIndex="0" IsEnabled="False"/>
+                    </WrapPanel>
+
+                    <TextBlock Text="Плитки-галерея" Style="{StaticResource CardTitle}"/>
+                    <ListBox Style="{StaticResource TileGallery}" ItemsSource="{Binding Tiles}" SelectedItem="{Binding SelectedTile}"
+                             Margin="{StaticResource GapBottom16}"/>
+
+                    <TextBlock Text="Список" Style="{StaticResource CardTitle}"/>
+                    <ListBox ItemsSource="{Binding Apps}" SelectedIndex="1" MaxHeight="160" Width="320" HorizontalAlignment="Left"
+                             Margin="{StaticResource GapBottom16}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Всплывающие карточки -->
+            <TextBlock Text="Всплывающие карточки" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <WrapPanel>
+                    <Button Content="Подсказка (наведите)" ToolTip="Подсказка — своя карточка, а не системная" Margin="{StaticResource GapRight12}"/>
+                    <Button Content="Контекстное меню (правый клик)" Margin="{StaticResource GapRight12}">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Переименовать" Icon="&#xE8AC;" InputGestureText="F2"/>
+                                <MenuItem Header="Закрепить" IsCheckable="True" IsChecked="True"/>
+                                <MenuItem Header="Переместить в группу">
+                                    <MenuItem Header="Стол"/>
+                                    <MenuItem Header="Полка"/>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Недоступно" IsEnabled="False"/>
+                                <MenuItem Header="Удалить" Icon="&#xE74D;" InputGestureText="Del"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button Content="Модальная карточка" Command="{Binding ShowDialogCommand}" Margin="{StaticResource GapRight12}"/>
+                    <Button Content="Опасное подтверждение" Command="{Binding ShowDangerDialogCommand}" Margin="{StaticResource GapRight12}"/>
+                    <Button Content="Сообщение" Command="{Binding ShowMessageCommand}"/>
+                </WrapPanel>
+            </Border>
+
+            <!-- Выбор цвета -->
+            <TextBlock Text="Выбор цвета" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel Orientation="Horizontal">
+                    <controls:ColorWheel Width="{StaticResource ColorWheelSize}" Height="{StaticResource ColorWheelSize}"
+                                         SelectedColor="{Binding Color}"/>
+                    <StackPanel VerticalAlignment="Center" Margin="{StaticResource Space24}">
+                        <Border Width="{StaticResource FieldHeight}" Height="{StaticResource FieldHeight}" CornerRadius="{StaticResource RadiusControl}"
+                                Background="{Binding ColorBrush}" BorderBrush="{DynamicResource StrokeBrush}"
+                                BorderThickness="{StaticResource StrokeThin}" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding ColorHex}" Style="{StaticResource BodyStrong}" Margin="{StaticResource GapTop8}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Текст и поверхности -->
+            <TextBlock Text="Текст и поверхности" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Заголовок страницы" Style="{StaticResource PageTitle}"/>
+                    <TextBlock Text="Заголовок" Style="{StaticResource Title}"/>
+                    <TextBlock Text="Подзаголовок" Style="{StaticResource Subtitle}"/>
+                    <TextBlock Text="Основной текст" Style="{StaticResource Body}"/>
+                    <TextBlock Text="Основной текст, полужирный" Style="{StaticResource BodyStrong}"/>
+                    <TextBlock Text="Пояснение под настройкой" Style="{StaticResource Hint}"/>
+                    <TextBlock Text="Предупреждение" Style="{StaticResource Warning}"/>
+                    <Border Style="{StaticResource Divider}"/>
+                    <WrapPanel Margin="{StaticResource GapTop8}">
+                        <Border Style="{StaticResource FlyoutCard}">
+                            <TextBlock Text="Всплывающая карточка" Margin="{StaticResource PaddingMenuItem}"/>
+                        </Border>
+                        <Border Style="{StaticResource DialogCard}" Margin="{StaticResource ShadowRoom}">
+                            <TextBlock Text="Модальная карточка" Style="{StaticResource Subtitle}"/>
+                        </Border>
+                        <StackPanel Margin="{StaticResource ShadowRoom}">
+                            <TextBlock Text="Состояния" Style="{StaticResource Caption}"/>
+                            <TextBlock Text="Успех" Foreground="{DynamicResource SuccessBrush}"/>
+                            <TextBlock Text="Предупреждение" Foreground="{DynamicResource WarningBrush}"/>
+                            <TextBlock Text="Ошибка" Foreground="{DynamicResource DangerBrush}"/>
+                            <TextBlock Text="Информация" Foreground="{DynamicResource InfoBrush}"/>
+                        </StackPanel>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Пустое состояние -->
+            <TextBlock Text="Пустое состояние" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <controls:EmptyState Icon="&#xE7F4;" Title="Устройств пока нет" Hint="Подсказка, что здесь появится и как этого добиться."
+                                     ActionText="Найти устройства" ActionIcon="&#xE721;"/>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

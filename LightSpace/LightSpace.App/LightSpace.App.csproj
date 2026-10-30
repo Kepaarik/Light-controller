@@ -6,9 +6,33 @@
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
+    <!-- WinForms нужен только для значка в трее (NotifyIcon) -->
+    <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>LightSpace.App</RootNamespace>
     <AssemblyName>LightSpace</AssemblyName>
+    <ApplicationIcon>Assets\LightSpace.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <!-- Глобальные using WinForms конфликтуют с WPF (Application, Button, Color...) — типы WinForms берём только явно -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\LightSpace.ico" />
+  </ItemGroup>
+
+  <!-- Витрина компонентов есть только в отладочной сборке -->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Page Remove="Views\ShowcasePage.xaml" />
+    <Compile Remove="Views\ShowcasePage.xaml.cs" />
+    <Compile Remove="ViewModels\ShowcaseViewModel.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LightSpace.Core\LightSpace.Core.csproj" />
