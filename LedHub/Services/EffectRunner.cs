@@ -99,14 +99,16 @@ public sealed class EffectRunner
 
                     // Устройству, которое не принимает кадры так часто, шлём свежий кадр в его момент, а не старый с задержкой
                     var elapsed = clock.Elapsed;
-                    if (lastSent.TryGetValue(device, out var sent) && elapsed - sent < device.MinFrameInterval - FrameTolerance)
+                    var hasSent = lastSent.TryGetValue(device, out var sent);
+                    if (hasSent && elapsed - sent < device.MinFrameInterval - FrameTolerance)
                         continue;
 
                     lastSent[device] = elapsed;
 
-                    // Сглаживание считается по времени, поэтому от частоты кадров зависит доля, гасимая за кадр
-                    var deviceInterval = device.MinFrameInterval > interval ? device.MinFrameInterval : interval;
-                    var fade = 1 - Math.Pow(1 - FadePer50Ms, deviceInterval.TotalMilliseconds / 50);
+                    // Сглаживание считается по настоящему времени с прошлого кадра этой ленты: если кадры пропускались,
+                    // клавиши всё равно гаснут вовремя, а не тянут за эффектом хвост
+                    var since = hasSent ? elapsed - sent : interval;
+                    var fade = 1 - Math.Pow(1 - FadePer50Ms, Math.Min(since.TotalMilliseconds, 200) / 50);
 
                     pending[device] = SendFrameAsync(source, device, settings, smoothed, fade, ct);
                 }

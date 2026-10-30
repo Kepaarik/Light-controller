@@ -817,8 +817,10 @@ public sealed partial class MainViewModel : ObservableObject
         if (Target is not DeviceItemViewModel { KeyboardEffects: { } keyboard } item || SelectedKeyboardEffect == null)
             return;
 
-        // Кадры программного эффекта сбросили бы клавиатуру обратно в режим своих цветов
+        // Кадры программного эффекта сбросили бы клавиатуру обратно в режим своих цветов —
+        // останавливаем и сцену, игры и подсветку по экрану, если они играют на этой клавиатуре
         StopEffect();
+        StopConflicts(new[] { item.Device });
 
         try
         {
