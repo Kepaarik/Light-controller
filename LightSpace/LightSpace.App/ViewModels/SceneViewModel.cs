@@ -61,6 +61,7 @@ public sealed partial class SceneViewModel : ObservableObject
         _openScenario = openScenario;
 
         Editor = new EffectEditorViewModel(contentChanged);
+        SceneEditor = new SceneEditorViewModel(config, manager, contentChanged);
 
         _manager.DevicesChanged += (_, _) => SyncDevices();
         SyncDevices();
@@ -73,6 +74,51 @@ public sealed partial class SceneViewModel : ObservableObject
     /// Галерея и настройки эффекта, который играет в выбранной группе «По умолчанию».
     /// </summary>
     public EffectEditorViewModel Editor { get; }
+
+    /// <summary>
+    /// Холст и слои, которые играют в выбранной группе «По умолчанию», если её содержимое — сцена.
+    /// </summary>
+    public SceneEditorViewModel SceneEditor { get; }
+
+    /// <summary>
+    /// Типы содержимого «По умолчанию» для сегментов: эффект или сцена.
+    /// </summary>
+    public IReadOnlyList<ContentKindOption> DefaultKinds { get; } = new[] { ContentKindOption.Effect, ContentKindOption.Scene };
+
+    /// <summary>
+    /// Тип содержимого «По умолчанию» выбранной группы. Сцена без слоёв получает первый слой во всю сцену с эффектом,
+    /// который играл до этого.
+    /// </summary>
+    public ContentKindOption? SelectedDefaultKind
+    {
+        get => _selectedGroup == null ? null : IsDefaultScene ? ContentKindOption.Scene : ContentKindOption.Effect;
+        set
+        {
+            var content = _selectedGroup?.Content;
+            var kind = value == ContentKindOption.Scene ? ContentKind.Scene : ContentKind.Effect;
+
+            // Сегменты сбрасывают выбор в null, когда пересобираются
+            if (content == null || value == null || kind == content.Kind)
+                return;
+
+            content.Kind = kind;
+
+            if (kind == ContentKind.Scene && content.Layers.Count == 0)
+            {
+                content.Layers.Add(SceneLayerConfig.Covering(content));
+                SceneEditor.Edit(content);
+            }
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsDefaultScene));
+            _contentChanged();
+        }
+    }
+
+    /// <summary>
+    /// Содержимое «По умолчанию» выбранной группы — сцена со слоями.
+    /// </summary>
+    public bool IsDefaultScene => _selectedGroup?.Content.Kind == ContentKind.Scene;
 
     public ObservableCollection<SceneDeviceViewModel> Devices { get; } = new();
 
@@ -250,6 +296,9 @@ public sealed partial class SceneViewModel : ObservableObject
             return;
         }
 
+        // Пока сцену не видели, устройства могли переставить
+        SceneEditor.RefreshDevices();
+
         _clock.Restart();
         _lastTick = TimeSpan.Zero;
         _liveTimer.Start();
@@ -372,6 +421,10 @@ public sealed partial class SceneViewModel : ObservableObject
 
     partial void OnIsEditingLayoutChanged(bool value)
     {
+        // Холст сцены «По умолчанию» показывает устройства на их новых местах
+        if (!value)
+            SceneEditor.RefreshDevices();
+
         OnPropertyChanged(nameof(SceneHint));
         OnSelectionCountChanged();
     }
@@ -473,10 +526,13 @@ public sealed partial class SceneViewModel : ObservableObject
 
         OnPropertyChanged(nameof(SelectedGroup));
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectedDefaultKind));
+        OnPropertyChanged(nameof(IsDefaultScene));
 
         if (group == null)
         {
             Editor.Edit(null);
+            SceneEditor.Edit(null);
             return;
         }
 
@@ -484,6 +540,7 @@ public sealed partial class SceneViewModel : ObservableObject
 
         // Превью плиток рисуются с настройками эффектов этой группы
         Editor.Edit(group.Content);
+        SceneEditor.Edit(group.Content);
     }
 
     /// <summary>
@@ -634,7 +691,11 @@ public sealed partial class SceneViewModel : ObservableObject
         var seconds = (now - _lastTick).TotalSeconds;
         _lastTick = now;
 
-        Editor.Advance(seconds);
+        // У сцены «По умолчанию» свой холст и своя галерея — эффекта выбранного слоя
+        if (IsDefaultScene)
+            SceneEditor.Advance(seconds);
+        else
+            Editor.Advance(seconds);
 
         var live = _loop.LiveColors;
 

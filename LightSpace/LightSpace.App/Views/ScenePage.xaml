@@ -228,7 +228,16 @@
 
                             <!-- Содержимое «По умолчанию»: галерея, ниже настройки выбранного эффекта -->
                             <TextBlock Text="По умолчанию" Style="{StaticResource SectionLabel}"/>
-                            <views:EffectEditor DataContext="{Binding Editor}"/>
+                            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding DefaultKinds}" SelectedItem="{Binding SelectedDefaultKind}"
+                                     Margin="{StaticResource GapBottom16}"/>
+                            <StackPanel Visibility="{Binding IsDefaultScene, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                                <views:EffectEditor DataContext="{Binding Editor}"/>
+                            </StackPanel>
+
+                            <!-- Сцена «По умолчанию»: холст со слоями и их границами, список слоёв и эффект выбранного слоя -->
+                            <StackPanel Visibility="{Binding IsDefaultScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                <views:SceneEditor DataContext="{Binding SceneEditor}"/>
+                            </StackPanel>
 
                             <!-- Устройства группы и действия с ней -->
                             <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
