@@ -40,7 +40,10 @@ public sealed class ManagedDevice
 
     public string Id => Settings.Id;
 
-    public string Name => Device?.Name ?? Settings.Name;
+    /// <summary>
+    /// Имя устройства: своё имя пользователя, если оно есть, иначе имя от драйвера.
+    /// </summary>
+    public string Name => string.IsNullOrWhiteSpace(Settings.CustomName) ? Device?.Name ?? Settings.Name : Settings.CustomName;
 
     public string Protocol => Device?.Protocol ?? Settings.Protocol;
 
