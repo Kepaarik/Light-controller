@@ -52,6 +52,8 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <!-- Порт для событий игр занят: игровые сценарии не получают данных -->
+                        <TextBlock Text="{Binding GamesProblem}" Style="{StaticResource Warning}"/>
                     </StackPanel>
                 </Border>
 
