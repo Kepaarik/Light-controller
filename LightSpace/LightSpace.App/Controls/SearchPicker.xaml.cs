@@ -26,6 +26,12 @@ public partial class SearchPicker : UserControl
     public static readonly DependencyProperty DisplayMemberPathProperty = DependencyProperty.Register(
         nameof(DisplayMemberPath), typeof(string), typeof(SearchPicker), new PropertyMetadata(null, OnDisplayMemberPathChanged));
 
+    public static readonly DependencyProperty ItemTemplateProperty = DependencyProperty.Register(
+        nameof(ItemTemplate), typeof(DataTemplate), typeof(SearchPicker), new PropertyMetadata(null, OnItemTemplateChanged));
+
+    public static readonly DependencyProperty OpenCommandProperty = DependencyProperty.Register(
+        nameof(OpenCommand), typeof(ICommand), typeof(SearchPicker), new PropertyMetadata(null));
+
     private ICollectionView? _view;
 
     // Пока список заполняется или выделение ставится из кода, выбор не считается действием пользователя
@@ -68,6 +74,25 @@ public partial class SearchPicker : UserControl
         set => SetValue(DisplayMemberPathProperty, value);
     }
 
+    /// <summary>
+    /// Как выглядит вариант в списке и выбранный вариант на кнопке; если не задан — текстом варианта.
+    /// Поиск всё равно идёт по тексту варианта.
+    /// </summary>
+    public DataTemplate? ItemTemplate
+    {
+        get => (DataTemplate?)GetValue(ItemTemplateProperty);
+        set => SetValue(ItemTemplateProperty, value);
+    }
+
+    /// <summary>
+    /// Команда, которая выполняется при каждом открытии панели, например чтобы обновить список вариантов.
+    /// </summary>
+    public ICommand? OpenCommand
+    {
+        get => (ICommand?)GetValue(OpenCommandProperty);
+        set => SetValue(OpenCommandProperty, value);
+    }
+
     private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var picker = (SearchPicker)d;
@@ -99,12 +124,31 @@ public partial class SearchPicker : UserControl
     {
         var picker = (SearchPicker)d;
 
-        picker.Items.DisplayMemberPath = e.NewValue as string;
+        // Список не может одновременно показывать варианты шаблоном и текстом свойства
+        if (picker.ItemTemplate is null)
+            picker.Items.DisplayMemberPath = e.NewValue as string;
+
+        picker.UpdateSelectionText();
+    }
+
+    private static void OnItemTemplateChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var picker = (SearchPicker)d;
+        var template = e.NewValue as DataTemplate;
+
+        // Сначала убираем текст свойства, потом ставим шаблон: вместе их список не принимает
+        picker.Items.DisplayMemberPath = template is null ? picker.DisplayMemberPath : null;
+        picker.Items.ItemTemplate = template;
+        picker.SelectionContent.ContentTemplate = template;
+
         picker.UpdateSelectionText();
     }
 
     private void OnFlyoutOpened(object? sender, EventArgs e)
     {
+        if (OpenCommand?.CanExecute(null) == true)
+            OpenCommand.Execute(null);
+
         Search.Text = "";
         Search.Focus();
         Keyboard.Focus(Search);
@@ -194,9 +238,14 @@ public partial class SearchPicker : UserControl
             return;
 
         var hasSelection = SelectedItem is not null;
+        var isTemplated = hasSelection && ItemTemplate is not null;
 
         SelectionText.Text = hasSelection ? TextOf(SelectedItem!) : Placeholder;
         SelectionText.SetResourceReference(TextBlock.ForegroundProperty, hasSelection ? "TextBrush" : "TextTertiaryBrush");
+
+        SelectionContent.Content = isTemplated ? SelectedItem : null;
+        SelectionContent.Visibility = isTemplated ? Visibility.Visible : Visibility.Collapsed;
+        SelectionText.Visibility = isTemplated ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private string TextOf(object item)

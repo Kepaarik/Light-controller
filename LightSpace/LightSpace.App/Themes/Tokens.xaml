@@ -105,6 +105,10 @@
     <sys:Double x:Key="FlyoutMinWidth">200</sys:Double>
     <sys:Double x:Key="PickerMinWidth">240</sys:Double>
     <sys:Double x:Key="PickerListMaxHeight">280</sys:Double>
+    <!-- Значок приложения в списке выбора и в списке сценариев -->
+    <sys:Double x:Key="AppIconSize">24</sys:Double>
+    <!-- Живое превью сценария в редакторе -->
+    <sys:Double x:Key="ScenarioPreviewHeight">96</sys:Double>
     <sys:Double x:Key="DialogMaxWidth">440</sys:Double>
     <sys:Double x:Key="ContentMaxWidth">880</sys:Double>
     <sys:Double x:Key="ColorWheelSize">200</sys:Double>

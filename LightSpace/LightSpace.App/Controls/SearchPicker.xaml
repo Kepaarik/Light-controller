@@ -10,7 +10,11 @@
         <!-- Пока панель открыта, кнопка не ловит клик: иначе он закрыл бы панель и тут же открыл её снова -->
         <ToggleButton x:Name="Opener" Style="{StaticResource PickerButton}"
                       IsHitTestVisible="{Binding IsOpen, ElementName=Flyout, Converter={x:Static controls:InverseBooleanConverter.Instance}}">
-            <TextBlock x:Name="SelectionText" TextTrimming="CharacterEllipsis"/>
+            <Grid>
+                <TextBlock x:Name="SelectionText" TextTrimming="CharacterEllipsis"/>
+                <!-- С шаблоном вариантов выбранный вариант на кнопке выглядит так же, как в списке -->
+                <ContentPresenter x:Name="SelectionContent" Visibility="Collapsed"/>
+            </Grid>
         </ToggleButton>
 
         <Popup x:Name="Flyout" PlacementTarget="{Binding ElementName=Opener}" Placement="Bottom" StaysOpen="False"
