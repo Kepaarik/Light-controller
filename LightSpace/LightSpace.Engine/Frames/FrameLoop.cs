@@ -233,9 +233,25 @@ public sealed class FrameLoop : IDisposable
         foreach (var group in snapshot.Groups)
         {
             var playback = playbacks[group.Id];
+            var builtin = playback.Builtin;
 
             foreach (var device in group.Devices)
             {
+                // Встроенный эффект устройство играет само: ему уходит запуск эффекта, а не кадр. Живых цветов у него нет
+                if (builtin?.StartFor(device.Id, device.Output.Device, group.Brightness) is { } start)
+                {
+                    try
+                    {
+                        device.Output.StartBuiltin(start);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Устройство отключили в потоке окна; новый снимок без него придёт со следующим кадром
+                    }
+
+                    continue;
+                }
+
                 var colors = playback.Render(device);
 
                 var frame = device.Geometry.IsAddressable
@@ -359,6 +375,13 @@ public sealed class FrameLoop : IDisposable
         public EffectClock Clock { get; private set; }
 
         /// <summary>
+        /// Встроенный эффект, который устройства группы играют сами; null — играет что-то другое или идёт переход.
+        /// Переход к встроенному эффекту — уходящее содержимое плавно гаснет, и только потом устройства запускают эффект;
+        /// переход от него — новое содержимое плавно проявляется из темноты.
+        /// </summary>
+        public BuiltinSettings? Builtin => _leaving == null ? Content.Builtin : null;
+
+        /// <summary>
         /// Всё, что сейчас звучит в группе: содержимое и, во время перехода, уходящее содержимое.
         /// </summary>
         public IEnumerable<FrameContent> Playing
@@ -449,6 +472,10 @@ public sealed class FrameLoop : IDisposable
         /// </summary>
         private static RgbColor[] RenderContent(FrameContent content, EffectClock clock, FrameDevice device)
         {
+            // Встроенный эффект кадрами не показать: в переходах он — темнота, устройство без встроенных эффектов не светится
+            if (content.Builtin != null)
+                return new RgbColor[Math.Max(device.ScenePoints.Count, 1)];
+
             if (content.Screen != null || content.Music != null || content.Game != null)
                 return RenderSource(content, clock, device);
 

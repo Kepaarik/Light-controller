@@ -1,0 +1,61 @@
+<UserControl x:Class="LightSpace.App.Views.BuiltinEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:BuiltinEditorViewModel}">
+
+    <!-- Содержимое — встроенный эффект: вместо превью подсказка, эффект каждого устройства, скорость и цвет -->
+    <StackPanel>
+        <!-- Эффект играет само устройство, поэтому живого превью нет -->
+        <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="&#xE946;" Style="{StaticResource Icon}" Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Top" Margin="{StaticResource GapRight12}"/>
+                <TextBlock Style="{StaticResource Hint}"
+                           Text="Встроенный эффект играет сам контроллер устройства, поэтому показать его здесь нельзя — посмотрите на устройство, когда сценарий включится. Пока он играет, на сцене у устройства нет живых цветов."/>
+            </DockPanel>
+        </Border>
+
+        <!-- Какой эффект играет каждое устройство -->
+        <TextBlock Text="Устройства" Style="{StaticResource SectionLabel}"/>
+        <ItemsControl ItemsSource="{Binding Devices}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:BuiltinDeviceViewModel">
+                    <Border Style="{StaticResource SettingRow}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource Body}"/>
+                            <TextBlock Text="{Binding Protocol}" Style="{StaticResource Hint}"/>
+                            <controls:SearchPicker ItemsSource="{Binding Effects}" SelectedItem="{Binding SelectedEffect}"
+                                                   DisplayMemberPath="Title" Placeholder="Выберите эффект"
+                                                   Margin="{StaticResource GapTop8}"/>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="Сейчас не подключено ни одного устройства со встроенными эффектами. Они есть у лент ELK/MELK с известной моделью, подсветки Robobloq и клавиатуры RK S98 — найдите их на вкладке «Устройства»."
+                   Style="{StaticResource Hint}"
+                   Visibility="{Binding HasDevices, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+        <TextBlock Text="Устройство, которому эффект не выбран, играет свой первый эффект. Устройства группы без встроенных эффектов, пока играет сценарий, не светятся."
+                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+
+        <!-- Скорость и цвет общие для всех устройств -->
+        <TextBlock Text="Скорость" Style="{StaticResource SectionLabel}"/>
+        <controls:ValueSlider Label="Скорость эффекта" Unit="%" Minimum="0" Maximum="100" Step="5"
+                              Value="{Binding Speed}"/>
+
+        <TextBlock Text="Цвета" Style="{StaticResource SectionLabel}"/>
+        <DockPanel>
+            <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}" VerticalAlignment="Center"
+                                  Visibility="{Binding UseColor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ColorOptions}" SelectedItem="{Binding SelectedColors}"
+                     HorizontalAlignment="Left"/>
+        </DockPanel>
+        <TextBlock Text="Свой цвет и яркость группы меняют эффекты клавиатуры; ленты играют эффекты своими цветами и со своей яркостью."
+                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
+    </StackPanel>
+</UserControl>

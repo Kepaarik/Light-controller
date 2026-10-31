@@ -33,7 +33,12 @@ public sealed record ContentKindOption(string Title, bool IsAvailable)
     public static readonly ContentKindOption Game = new("Игра", true);
 
     /// <summary>
-    /// Все типы содержимого по порядку; пока работают все, кроме встроенного эффекта устройства.
+    /// Эффекты, которые устройства играют сами, без кадров от приложения.
+    /// </summary>
+    public static readonly ContentKindOption Builtin = new("Встроенный", true);
+
+    /// <summary>
+    /// Все типы содержимого по порядку.
     /// </summary>
     public static readonly IReadOnlyList<ContentKindOption> All = new ContentKindOption[]
     {
@@ -42,7 +47,7 @@ public sealed record ContentKindOption(string Title, bool IsAvailable)
         Screen,
         Music,
         Game,
-        new("Встроенный", false)
+        Builtin
     };
 
     public override string ToString() => Title;
