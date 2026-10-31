@@ -93,6 +93,20 @@ public sealed class DeviceManager : IDisposable
     }
 
     /// <summary>
+    /// Подхватывает устройства и ключи, которые появились в настройках не через поиск, например после импорта.
+    /// </summary>
+    public void SyncWithSettings()
+    {
+        foreach (var settings in _config.Devices.Where(s => _devices.All(d => d.Settings != s)))
+            _devices.Add(new ManagedDevice(settings));
+
+        foreach (var device in _devices)
+            ApplySettings(device);
+
+        DevicesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
     /// Отключает устройство и убирает его из списка и настроек; при следующем поиске оно найдётся заново.
     /// </summary>
     public void Forget(ManagedDevice device)

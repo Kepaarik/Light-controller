@@ -276,6 +276,18 @@ public sealed partial class ScenariosViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Показывает сценарии, которые появились в настройках не на этой вкладке, например после импорта.
+    /// </summary>
+    public void AddMissing()
+    {
+        foreach (var scenario in _config.Scenarios.Where(s => Items.All(i => i.Settings != s)))
+            Items.Add(new ScenarioItemViewModel(scenario, _contentChanged));
+
+        OnPropertyChanged(nameof(HasScenarios));
+        SelectedItem ??= Items.FirstOrDefault();
+    }
+
+    /// <summary>
     /// Обновляет то, что зависит от групп и запущенных приложений: где играет каждый сценарий, чипы групп
     /// и диагностику.
     /// </summary>

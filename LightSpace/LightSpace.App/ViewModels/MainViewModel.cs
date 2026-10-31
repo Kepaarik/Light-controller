@@ -1,10 +1,12 @@
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LightSpace.App.Services;
 using LightSpace.Core.Config;
 using LightSpace.Engine;
 using LightSpace.Engine.Apps;
 using LightSpace.Engine.Frames;
+using LightSpace.Engine.Import;
 using LightSpace.Engine.Sources;
 
 namespace LightSpace.App.ViewModels;
@@ -29,7 +31,7 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(AppConfig config)
     {
         _config = config;
-        Settings = new SettingsViewModel(config);
+        Settings = new SettingsViewModel(config, ImportFromLedHubAsync);
 
         _deviceManager = new DeviceManager(config);
         _apps = new AppWatcher { FocusReleaseDelay = TimeSpan.FromSeconds(config.FocusReleaseDelaySeconds) };
@@ -107,6 +109,42 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedPage = AppPage.Devices;
 
         await Devices.FindCommand.ExecuteAsync(null);
+    }
+
+    /// <summary>
+    /// «Импортировать из LedHub» в настройках: после подтверждения переносит настройки старого приложения, сразу
+    /// сохраняет их и показывает, что перенесено и что пропущено.
+    /// </summary>
+    private async Task ImportFromLedHubAsync()
+    {
+        if (!LedHubImport.IsAvailable)
+        {
+            await Dialogs.ShowAsync("Настройки LedHub не найдены", $"Файла {LedHubImport.FilePath} нет.");
+            return;
+        }
+
+        var confirmed = await Dialogs.ConfirmAsync("Импортировать настройки LedHub?",
+            "Устройства, группы, расстановка, настройки эффектов и игровые режимы добавятся к текущим. То, что уже настроено в Light Space, не изменится.",
+            "Импортировать");
+
+        if (!confirmed)
+            return;
+
+        var result = LedHubImport.Run(_config, Scene.NextGroupName, Scene.NextGroupColor);
+
+        Scenarios.AddMissing();
+        _deviceManager.SyncWithSettings();
+        Settings.SaveNow();
+
+        var lines = new List<string>();
+
+        if (result.Imported.Count > 0)
+            lines.Add("Перенесено:\n" + string.Join("\n", result.Imported.Select(l => "• " + l)));
+
+        if (result.Skipped.Count > 0)
+            lines.Add("Пропущено:\n" + string.Join("\n", result.Skipped.Select(l => "• " + l)));
+
+        await Dialogs.ShowAsync("Импорт из LedHub", lines.Count > 0 ? string.Join("\n\n", lines) : "В настройках LedHub нечего переносить.");
     }
 
     private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
