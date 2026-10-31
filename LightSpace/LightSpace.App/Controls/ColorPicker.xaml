@@ -17,6 +17,7 @@
         </ToggleButton>
 
         <Popup x:Name="Flyout" PlacementTarget="{Binding ElementName=Opener}" Placement="Bottom" StaysOpen="False"
+               HorizontalOffset="{StaticResource FlyoutOffsetX}" VerticalOffset="{StaticResource FlyoutOffsetY}"
                AllowsTransparency="True" PopupAnimation="Fade" Focusable="False"
                IsOpen="{Binding IsChecked, ElementName=Opener, Mode=TwoWay}">
             <Border Style="{StaticResource FlyoutCard}">

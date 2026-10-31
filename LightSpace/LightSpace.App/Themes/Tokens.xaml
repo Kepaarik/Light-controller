@@ -52,6 +52,11 @@
     <Thickness x:Key="PaddingMenuItem">12,8</Thickness>
     <!-- Место вокруг всплывающей карточки, чтобы тень не обрезалась краем окна-попапа -->
     <Thickness x:Key="ShadowRoom">12</Thickness>
+    <!-- Сдвиг выпадающей карточки на место для тени: карточка встаёт вровень с левым краем кнопки и чуть ниже неё,
+         а пункт вложенного меню — вровень с пунктом, который его открыл -->
+    <sys:Double x:Key="FlyoutOffsetX">-12</sys:Double>
+    <sys:Double x:Key="FlyoutOffsetY">-8</sys:Double>
+    <sys:Double x:Key="SubmenuOffsetY">-17</sys:Double>
     <Thickness x:Key="SectionLabelMargin">0,24,0,8</Thickness>
     <!-- Заголовок рамки группы на сцене: вровень с текстом карточек устройств внутри рамки -->
     <Thickness x:Key="GroupHeaderMargin">8,4,8,8</Thickness>
@@ -91,6 +96,8 @@
     <sys:Double x:Key="SliderThumbInnerHoverSize">12</sys:Double>
     <sys:Double x:Key="SliderThumbInnerPressedSize">8</sys:Double>
     <sys:Double x:Key="FieldUnderlineHeight">2</sys:Double>
+    <!-- Черта фокуса поля отступает от скруглённых углов, иначе её концы торчат за край поля -->
+    <Thickness x:Key="FieldUnderlineMargin">8,0</Thickness>
     <Thickness x:Key="FieldLabelMargin">12,6,12,0</Thickness>
     <Thickness x:Key="PaddingSearch">32,6,12,6</Thickness>
     <Thickness x:Key="SearchIconMargin">10,0,0,0</Thickness>
