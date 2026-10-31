@@ -8,7 +8,7 @@ public sealed class AppConfig
     /// <summary>
     /// Версия формата настроек, которую понимает эта сборка приложения.
     /// </summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     /// <summary>
     /// Частоты кадров, из которых можно выбрать.
@@ -29,6 +29,16 @@ public sealed class AppConfig
     /// Сколько кадров в секунду уходит на устройства: 20, 30 или 60.
     /// </summary>
     public int FrameRate { get; set; } = 30;
+
+    /// <summary>
+    /// Яркость подсветки всех устройств, 0–100 %.
+    /// </summary>
+    public int Brightness { get; set; } = 100;
+
+    /// <summary>
+    /// Содержимое «По умолчанию»: что играет на устройствах, пока не включён ни один сценарий.
+    /// </summary>
+    public ContentConfig DefaultContent { get; set; } = new();
 
     /// <summary>
     /// Длительность плавного перехода между сценариями, в миллисекундах.
@@ -63,6 +73,7 @@ public sealed class AppConfig
         if (!FrameRates.Contains(FrameRate))
             FrameRate = 30;
 
+        Brightness = Math.Clamp(Brightness, 0, 100);
         TransitionMilliseconds = Math.Clamp(TransitionMilliseconds, 0, 5000);
         FocusReleaseDelaySeconds = Math.Clamp(FocusReleaseDelaySeconds, 0, 30);
 
@@ -73,7 +84,9 @@ public sealed class AppConfig
             .Select(g => g.First())
             .ToList();
 
-        foreach (var device in Devices)
-            device.Brightness = Math.Clamp(device.Brightness, 0, 100);
+        // Пустые разделы в файле дали бы null вместо содержимого и настроек эффектов
+        DefaultContent ??= new ContentConfig();
+        DefaultContent.EffectId ??= "solid";
+        DefaultContent.Effects ??= new Dictionary<string, EffectValuesConfig>();
     }
 }
