@@ -23,6 +23,7 @@ public sealed partial class SceneEditorViewModel : ObservableObject
 
     private static readonly IReadOnlyList<EffectPixel?> PreviewPoints = PreviewGrid();
 
+    private readonly AppConfig _config;
     private readonly DeviceManager _manager;
     private readonly Action _changed;
     private readonly ColorBitmap _preview = new(PreviewColumns, PreviewRows);
@@ -33,9 +34,11 @@ public sealed partial class SceneEditorViewModel : ObservableObject
 
     /// <summary>
     /// changed вызывается после каждой правки слоёв: их состава, порядка, границ, настроек и эффектов.
+    /// config — откуда холст берёт яркость группы каждого устройства.
     /// </summary>
-    public SceneEditorViewModel(DeviceManager manager, Action changed)
+    public SceneEditorViewModel(AppConfig config, DeviceManager manager, Action changed)
     {
+        _config = config;
         _manager = manager;
         _changed = changed;
 
@@ -149,8 +152,9 @@ public sealed partial class SceneEditorViewModel : ObservableObject
         _clock.Advance(layers, seconds);
         _preview.Write(SceneRenderer.Render(layers, _clock, PreviewPoints));
 
+        // Устройство на холсте светится с яркостью своей группы, как и на самом деле
         foreach (var device in Devices)
-            device.Show(SceneRenderer.Render(layers, _clock, device.ScenePoints), 100);
+            device.Show(SceneRenderer.Render(layers, _clock, device.ScenePoints), _config.GroupOf(device.Id)?.Brightness ?? 100);
     }
 
     /// <summary>
