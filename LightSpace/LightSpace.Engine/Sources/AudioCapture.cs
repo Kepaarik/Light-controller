@@ -147,12 +147,17 @@ public sealed class AudioCapture : IDisposable
 
     private void OnDataAvailable(WaveFormat format, WaveInEventArgs e)
     {
-        // Общий формат WASAPI — 32-битные числа с плавающей точкой; другие форматы не разбираем
-        if (format.Encoding != WaveFormatEncoding.IeeeFloat || format.BitsPerSample != 32)
+        // Общий формат WASAPI — 32-битные числа с плавающей точкой; некоторые устройства отдают целые 16, 24 или 32 бита.
+        // Другие форматы не разбираем
+        var isFloat = format.Encoding == WaveFormatEncoding.IeeeFloat && format.BitsPerSample == 32;
+        var isPcm = format.Encoding == WaveFormatEncoding.Pcm && format.BitsPerSample is 16 or 24 or 32;
+
+        if (!isFloat && !isPcm)
             return;
 
         var channels = format.Channels;
-        var frames = e.BytesRecorded / 4 / channels;
+        var bytes = format.BitsPerSample / 8;
+        var frames = e.BytesRecorded / bytes / channels;
 
         lock (_lock)
         {
@@ -162,7 +167,7 @@ public sealed class AudioCapture : IDisposable
                 float sum = 0;
 
                 for (var channel = 0; channel < channels; channel++)
-                    sum += BitConverter.ToSingle(e.Buffer, (frame * channels + channel) * 4);
+                    sum += SampleAt(e.Buffer, (frame * channels + channel) * bytes, format.BitsPerSample, isFloat);
 
                 _samples[_writePosition] = sum / channels;
                 _writePosition = (_writePosition + 1) % FftSize;
@@ -170,6 +175,24 @@ public sealed class AudioCapture : IDisposable
 
             _lastDataAt = Environment.TickCount64;
         }
+    }
+
+    /// <summary>
+    /// Сэмпл из буфера по смещению offset в долях полной громкости, от −1 до 1.
+    /// </summary>
+    private static float SampleAt(byte[] buffer, int offset, int bits, bool isFloat)
+    {
+        if (isFloat)
+            return BitConverter.ToSingle(buffer, offset);
+
+        return bits switch
+        {
+            16 => BitConverter.ToInt16(buffer, offset) / 32768f,
+
+            // Три байта младшим вперёд; старший байт со знаком
+            24 => (buffer[offset] | buffer[offset + 1] << 8 | (sbyte)buffer[offset + 2] << 16) / 8388608f,
+            _ => BitConverter.ToInt32(buffer, offset) / 2147483648f
+        };
     }
 
     /// <summary>
