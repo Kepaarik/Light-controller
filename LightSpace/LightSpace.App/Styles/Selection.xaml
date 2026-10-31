@@ -108,7 +108,8 @@
     </Style>
 
     <!-- Сегменты: 2–5 вариантов в одну строку, выбранный залит акцентом. Замена ComboBox и RadioButton.
-         Варианты — ItemsSource, выбор — SelectedItem или SelectedValue -->
+         Варианты — ItemsSource, выбор — SelectedItem или SelectedValue. В узкой панели варианты переносятся на новую строку,
+         а не обрезаются краем -->
     <Style x:Key="Segments" TargetType="ListBox">
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Background" Value="{DynamicResource ControlBrush}"/>
@@ -134,7 +135,7 @@
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
-                    <StackPanel Orientation="Horizontal"/>
+                    <WrapPanel/>
                 </ItemsPanelTemplate>
             </Setter.Value>
         </Setter>
@@ -353,7 +354,6 @@
                                     </Trigger>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                        <Setter Property="FontWeight" Value="SemiBold"/>
                                         <Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
