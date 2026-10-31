@@ -48,6 +48,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
         SceneEditor = new SceneEditorViewModel(manager, contentChanged);
         ScreenEditor = new ScreenEditorViewModel(sources, contentChanged);
         MusicEditor = new MusicEditorViewModel(sources, contentChanged);
+        GameEditor = new GameEditorViewModel(sources, contentChanged);
 
         foreach (var scenario in config.Scenarios)
             Items.Add(new ScenarioItemViewModel(scenario, contentChanged));
@@ -83,6 +84,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
             SceneEditor.Edit(value?.Settings.Content);
             ScreenEditor.Edit(value?.Settings.Content);
             MusicEditor.Edit(value?.Settings.Content);
+            GameEditor.Edit(value?.Settings.Content);
             BuildGroupChips();
         }
     }
@@ -112,17 +114,22 @@ public sealed partial class ScenariosViewModel : ObservableObject
     public MusicEditorViewModel MusicEditor { get; }
 
     /// <summary>
+    /// Игра и её настройки, которые играют, пока сценарий активен, если его содержимое — игра.
+    /// </summary>
+    public GameEditorViewModel GameEditor { get; }
+
+    /// <summary>
     /// Режимы условия для сегментов «Когда».
     /// </summary>
     public IReadOnlyList<ConditionModeOption> Modes => ConditionModeOption.All;
 
     /// <summary>
-    /// Типы содержимого для сегментов «Что»; доступны эффект, сцена, экран и музыка.
+    /// Типы содержимого для сегментов «Что»; доступны эффект, сцена, экран, музыка и игра.
     /// </summary>
     public IReadOnlyList<ContentKindOption> ContentKinds => ContentKindOption.All;
 
     /// <summary>
-    /// Выбранный тип содержимого: эффект, сцена, экран или музыка. Сцена без слоёв получает первый слой во всю сцену
+    /// Выбранный тип содержимого: эффект, сцена, экран, музыка или игра. Сцена без слоёв получает первый слой во всю сцену
     /// с эффектом, который играл до этого.
     /// </summary>
     public ContentKindOption SelectedContentKind
@@ -132,6 +139,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
             ContentKind.Scene => ContentKindOption.Scene,
             ContentKind.Screen => ContentKindOption.Screen,
             ContentKind.Music => ContentKindOption.Music,
+            ContentKind.Game => ContentKindOption.Game,
             _ => ContentKindOption.Effect
         };
         set
@@ -141,6 +149,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
             var kind = value == ContentKindOption.Scene ? ContentKind.Scene
                 : value == ContentKindOption.Screen ? ContentKind.Screen
                 : value == ContentKindOption.Music ? ContentKind.Music
+                : value == ContentKindOption.Game ? ContentKind.Game
                 : ContentKind.Effect;
 
             // Недоступные типы выбрать нельзя; сегменты сбрасывают выбор в null, когда пересобираются
@@ -182,6 +191,11 @@ public sealed partial class ScenariosViewModel : ObservableObject
     public bool IsMusicContent => _selectedItem?.Settings.Content.Kind == ContentKind.Music;
 
     /// <summary>
+    /// Содержимое открытого сценария — игра.
+    /// </summary>
+    public bool IsGameContent => _selectedItem?.Settings.Content.Kind == ContentKind.Game;
+
+    /// <summary>
     /// Группы для чипов «Группы»: отмечены те, где стоит открытый сценарий.
     /// </summary>
     public ObservableCollection<ScenarioGroupChipViewModel> GroupChips { get; } = new();
@@ -207,6 +221,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
             // Пока превью не видно, монитор и звук для него не снимаются
             ScreenEditor.StopPreview();
             MusicEditor.StopPreview();
+            GameEditor.StopPreview();
             return;
         }
 
@@ -412,13 +427,15 @@ public sealed partial class ScenariosViewModel : ObservableObject
             ScreenEditor.Advance(seconds);
         else if (IsMusicContent)
             MusicEditor.Advance(seconds);
+        else if (IsGameContent)
+            GameEditor.Advance(seconds);
         else
             Editor.Advance(seconds);
     }
 
     /// <summary>
     /// Сменился тип содержимого открытого сценария или сам сценарий: показываются редактор и превью этого типа,
-    /// превью экрана и музыки, которых больше не видно, отпускают свои источники.
+    /// превью экрана, музыки и игры, которых больше не видно, отпускают свои источники.
     /// </summary>
     private void OnContentKindChanged()
     {
@@ -426,11 +443,15 @@ public sealed partial class ScenariosViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSceneContent));
         OnPropertyChanged(nameof(IsScreenContent));
         OnPropertyChanged(nameof(IsMusicContent));
+        OnPropertyChanged(nameof(IsGameContent));
 
         if (!IsScreenContent)
             ScreenEditor.StopPreview();
 
         if (!IsMusicContent)
             MusicEditor.StopPreview();
+
+        if (!IsGameContent)
+            GameEditor.StopPreview();
     }
 }
