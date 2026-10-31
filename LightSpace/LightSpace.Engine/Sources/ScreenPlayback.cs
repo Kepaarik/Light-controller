@@ -11,11 +11,13 @@ namespace LightSpace.Engine.Sources;
 /// <param name="Saturation">Множитель насыщенности: 1 — как на экране.</param>
 /// <param name="Brightness">Множитель яркости: 1 — как на экране.</param>
 /// <param name="Smoothing">Доля прежнего цвета, которая остаётся за 1/20 секунды, от 0 до 0,95.</param>
-public sealed record ScreenSettings(string MonitorKey, double Saturation, double Brightness, double Smoothing)
+/// <param name="KeepAspect">Сцена ложится на середину кадра без растяжения; false — растягивается на весь кадр.</param>
+public sealed record ScreenSettings(string MonitorKey, double Saturation, double Brightness, double Smoothing, bool KeepAspect = false)
 {
     public static ScreenSettings From(ScreenConfig screen)
     {
-        return new ScreenSettings(screen.MonitorKey, screen.Saturation / 100.0, screen.Brightness / 100.0, screen.Smoothing / 100.0);
+        return new ScreenSettings(screen.MonitorKey, screen.Saturation / 100.0, screen.Brightness / 100.0, screen.Smoothing / 100.0,
+            screen.KeepAspect);
     }
 }
 
@@ -56,7 +58,7 @@ public sealed class ScreenPlayback
     }
 
     /// <summary>
-    /// Цвета точек: points — места точек в пространстве width × height, которое целиком растягивается на кадр монитора;
+    /// Цвета точек: points — места точек в пространстве width × height, которое ложится на кадр монитора по настройкам;
     /// null — точка нигде не стоит и остаётся чёрной. key — чьи это точки: по нему помнятся прежние цвета.
     /// </summary>
     public RgbColor[] Render(string key, ScreenSettings settings, IReadOnlyList<EffectPixel?> points, double width, double height)
@@ -72,12 +74,16 @@ public sealed class ScreenPlayback
             _states[key] = states;
         }
 
+        var (scaleX, scaleY) = settings.KeepAspect ? AspectScale(width, height) : (1.0, 1.0);
+
         for (var i = 0; i < colors.Length; i++)
         {
             if (points[i] is not { } point)
                 continue;
 
-            var target = Adjust(_picture.Sample(point.X / width, point.Y / height), settings);
+            var u = 0.5 + (point.X / width - 0.5) * scaleX;
+            var v = 0.5 + (point.Y / height - 0.5) * scaleY;
+            var target = Adjust(_picture.Sample(u, v), settings);
 
             // Первый кадр сразу показывает картинку, дальше цвет плавно догоняет её
             var follow = isNew ? 1 : _follow;
@@ -93,6 +99,19 @@ public sealed class ScreenPlayback
         }
 
         return colors;
+    }
+
+    /// <summary>
+    /// Какую долю кадра по ширине и высоте видит сцена width × height, когда она ложится на середину кадра
+    /// без растяжения: по одной стороне — весь кадр, по другой — его середина.
+    /// </summary>
+    private (double X, double Y) AspectScale(double width, double height)
+    {
+        var scene = width / Math.Max(height, 0.01);
+        var picture = (double)_picture.Columns / Math.Max(_picture.Rows, 1);
+
+        // Сцена уже кадра — она видит всю высоту, а края кадра слева и справа не видны; шире — наоборот
+        return scene < picture ? (scene / picture, 1) : (1, picture / scene);
     }
 
     /// <summary>
