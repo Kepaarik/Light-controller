@@ -9,7 +9,13 @@ public enum ContentKind
     Effect,
 
     /// <summary>Сцена со слоями: эффекты слоёв ложатся на устройства по их местам на сцене.</summary>
-    Scene
+    Scene,
+
+    /// <summary>Экран: каждый светодиод повторяет цвет картинки монитора под своим местом на сцене.</summary>
+    Screen,
+
+    /// <summary>Музыка: свет следует за звуком компьютера или микрофона.</summary>
+    Music
 }
 
 /// <summary>
@@ -18,7 +24,7 @@ public enum ContentKind
 public sealed class ContentConfig
 {
     /// <summary>
-    /// Что играет: эффект из галереи или сцена со слоями.
+    /// Что играет: эффект из галереи, сцена со слоями, экран или музыка.
     /// </summary>
     public ContentKind Kind { get; set; } = ContentKind.Effect;
 
@@ -40,6 +46,16 @@ public sealed class ContentConfig
     public List<SceneLayerConfig> Layers { get; set; } = new();
 
     /// <summary>
+    /// Настройки экрана. Играют, только когда содержимое — экран; остаются, когда выбирают другой тип.
+    /// </summary>
+    public ScreenConfig Screen { get; set; } = new();
+
+    /// <summary>
+    /// Настройки музыки. Играют, только когда содержимое — музыка; остаются, когда выбирают другой тип.
+    /// </summary>
+    public MusicConfig Music { get; set; } = new();
+
+    /// <summary>
     /// Независимая копия содержимого: правки копии не меняют оригинал.
     /// </summary>
     public ContentConfig Clone()
@@ -53,7 +69,9 @@ public sealed class ContentConfig
                 Numbers = new Dictionary<string, double>(e.Value.Numbers),
                 Colors = new Dictionary<string, string>(e.Value.Colors)
             }),
-            Layers = Layers.Select(l => l.Clone()).ToList()
+            Layers = Layers.Select(l => l.Clone()).ToList(),
+            Screen = Screen.Clone(),
+            Music = Music.Clone()
         };
     }
 
@@ -84,6 +102,13 @@ public sealed class ContentConfig
                 ids.Add(layer.Id);
             }
         }
+
+        // В файлах до экрана и музыки этих разделов нет — тогда они получают настройки по умолчанию
+        Screen ??= new ScreenConfig();
+        Screen.Normalize();
+
+        Music ??= new MusicConfig();
+        Music.Normalize();
     }
 }
 
