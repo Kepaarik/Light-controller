@@ -327,6 +327,11 @@ public sealed class FrameLoop : IDisposable
         public GamePlayback Game { get; } = new();
 
         /// <summary>
+        /// Устройства, на которых кадр этого содержимого сейчас не считается: о серии ошибок предупреждаем один раз.
+        /// </summary>
+        public HashSet<string> FailingDevices { get; } = new();
+
+        /// <summary>
         /// Двигает время содержимого на seconds секунд с учётом его скорости, у сцены — время каждого её слоя,
         /// у экрана, музыки и игры — берёт последнюю картинку монитора, звук или состояние игры из источников.
         /// </summary>
@@ -479,9 +484,25 @@ public sealed class FrameLoop : IDisposable
             if (content.Screen != null || content.Music != null || content.Game != null)
                 return RenderSource(content, clock, device);
 
-            return content.Layers is { } layers
-                ? SceneRenderer.Render(layers, clock.Layers, device.ScenePoints)
-                : EffectRenderer.Render(content.Effect, content.Values, device.Geometry, clock.Time);
+            // Ошибка эффекта или сцены, как и у экрана, не останавливает поток кадров: устройство на этом кадре гаснет
+            try
+            {
+                var colors = content.Layers is { } layers
+                    ? SceneRenderer.Render(layers, clock.Layers, device.ScenePoints)
+                    : EffectRenderer.Render(content.Effect, content.Values, device.Geometry, clock.Time);
+
+                clock.FailingDevices.Remove(device.Id);
+
+                return colors;
+            }
+            catch (Exception e)
+            {
+                // Кадр повторяется десятки раз в секунду — предупреждение одно на всю серию ошибок
+                if (clock.FailingDevices.Add(device.Id))
+                    Trace.TraceWarning($"Light Space: не удалось посчитать кадр устройства {device.Id}: {e.Message}");
+
+                return new RgbColor[Math.Max(device.ScenePoints.Count, 1)];
+            }
         }
 
         /// <summary>
@@ -491,16 +512,24 @@ public sealed class FrameLoop : IDisposable
         {
             try
             {
-                if (content.Game is { } game)
-                    return clock.Game.Render(device.Id, game, device.Geometry, device.ScenePoints, SceneArea.Width, SceneArea.Height);
+                RgbColor[] colors;
 
-                return content.Screen is { } screen
-                    ? clock.Screen.Render(device.Id, screen, device.ScenePoints, SceneArea.Width, SceneArea.Height)
-                    : clock.Music.Render(content.Music!, device.Geometry);
+                if (content.Game is { } game)
+                    colors = clock.Game.Render(device.Id, game, device.Geometry, device.ScenePoints, SceneArea.Width, SceneArea.Height);
+                else
+                    colors = content.Screen is { } screen
+                        ? clock.Screen.Render(device.Id, screen, device.ScenePoints, SceneArea.Width, SceneArea.Height)
+                        : clock.Music.Render(content.Music!, device.Geometry);
+
+                clock.FailingDevices.Remove(device.Id);
+
+                return colors;
             }
             catch (Exception e)
             {
-                Trace.TraceWarning($"Light Space: не удалось посчитать кадр устройства {device.Id}: {e.Message}");
+                // Кадр повторяется десятки раз в секунду — предупреждение одно на всю серию ошибок
+                if (clock.FailingDevices.Add(device.Id))
+                    Trace.TraceWarning($"Light Space: не удалось посчитать кадр устройства {device.Id}: {e.Message}");
 
                 return new RgbColor[Math.Max(device.ScenePoints.Count, 1)];
             }
