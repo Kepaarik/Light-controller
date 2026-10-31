@@ -134,8 +134,6 @@
                                 </Style>
                             </ListBox.ItemContainerStyle>
                         </ListBox>
-                        <TextBlock Text="Встроенные эффекты устройств появятся в следующей версии."
-                                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
 
                         <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                             <Border Style="{StaticResource LivePreview}" Background="{Binding Editor.SelectedTile.Preview}"
@@ -161,6 +159,10 @@
                         <!-- Игра: живое превью, игра и её подключение, фон, полоски и события -->
                         <views:GameEditor DataContext="{Binding GameEditor}"
                                           Visibility="{Binding DataContext.IsGameContent, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+
+                        <!-- Встроенный эффект: подсказка вместо превью, эффект каждого устройства, скорость и цвет -->
+                        <views:BuiltinEditor DataContext="{Binding BuiltinEditor}"
+                                             Visibility="{Binding DataContext.IsBuiltinContent, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
 
                         <!-- Группы, где стоит сценарий -->
                         <TextBlock Text="Группы" Style="{StaticResource SectionLabel}"/>

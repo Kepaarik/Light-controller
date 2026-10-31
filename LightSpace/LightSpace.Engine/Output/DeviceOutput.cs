@@ -40,6 +40,10 @@ public sealed class DeviceOutput : IDisposable
     private DateTime? _lastErrorAt;
     private bool _isFailing;
 
+    // Встроенный эффект, который сейчас играет устройство, и его ещё не отправленный запуск; null — устройство показывает кадры
+    private BuiltinEffectStart? _builtin;
+    private BuiltinEffectStart? _pendingBuiltin;
+
     // Эти поля трогает только поток отправки
     private TimeSpan? _lastFrameAt;
     private RgbColor[]? _smoothed;
@@ -98,6 +102,10 @@ public sealed class DeviceOutput : IDisposable
         {
             _latest = frame;
 
+            // Кадр останавливает встроенный эффект: устройство снова показывает кадры
+            _builtin = null;
+            _pendingBuiltin = null;
+
             if (!_isEnabled)
                 return;
 
@@ -107,6 +115,30 @@ public sealed class DeviceOutput : IDisposable
 
             _pending = frame;
             _isPendingRepeat = false;
+            Signal();
+        }
+    }
+
+    /// <summary>
+    /// Запускает на устройстве встроенный эффект: устройство играет его само, пока не придёт следующий кадр.
+    /// Тот же запуск, что уже играет, повторно не отправляется. Устройство должно уметь встроенные эффекты.
+    /// </summary>
+    public void StartBuiltin(BuiltinEffectStart start)
+    {
+        lock (_sync)
+        {
+            if (start == _builtin)
+                return;
+
+            // Неотправленный кадр затёр бы эффект
+            _builtin = start;
+            _pending = null;
+            _isPendingRepeat = false;
+
+            if (!_isEnabled)
+                return;
+
+            _pendingBuiltin = start;
             Signal();
         }
     }
@@ -127,6 +159,13 @@ public sealed class DeviceOutput : IDisposable
             // Выключение отменяет неотправленный кадр, включение возвращает последний
             _pending = isEnabled ? _latest : null;
             _isPendingRepeat = true;
+
+            // Встроенный эффект после включения запускается заново вместо кадра; выключение отменяет его неотправленный запуск
+            _pendingBuiltin = isEnabled ? _builtin : null;
+
+            if (_builtin != null)
+                _pending = null;
+
             Signal();
         }
     }
@@ -185,17 +224,30 @@ public sealed class DeviceOutput : IDisposable
     {
         bool? power;
         bool hasFrame;
+        BuiltinEffectStart? builtin;
 
         lock (_sync)
         {
             power = _pendingPower;
             _pendingPower = null;
             hasFrame = _pending != null;
+
+            // Запуск встроенного эффекта уходит после включения, а не вместо него
+            builtin = power == null ? _pendingBuiltin : null;
+
+            if (builtin != null)
+                _pendingBuiltin = null;
         }
 
         if (power is { } isOn)
         {
             await RunCommandAsync(() => _device.SetPowerAsync(isOn, ct), isFrame: false, ct);
+            return true;
+        }
+
+        if (builtin != null)
+        {
+            await RunCommandAsync(() => StartBuiltinAsync(builtin, ct), isFrame: false, ct);
             return true;
         }
 
@@ -229,6 +281,17 @@ public sealed class DeviceOutput : IDisposable
         await RunCommandAsync(() => SendFrameAsync(frame, since, ct), isFrame: true, ct);
 
         return true;
+    }
+
+    private Task StartBuiltinAsync(BuiltinEffectStart start, CancellationToken ct)
+    {
+        if (_device is not IBuiltinEffectsDevice builtin)
+            return Task.CompletedTask;
+
+        // После эффекта клавиши сглаживаются заново, а не от кадра, который был до него
+        _smoothed = null;
+
+        return builtin.StartBuiltinEffectAsync(start.EffectId, start.Speed, start.Brightness, start.Color, ct);
     }
 
     private Task SendFrameAsync(OutputFrame frame, TimeSpan since, CancellationToken ct)
@@ -282,7 +345,7 @@ public sealed class DeviceOutput : IDisposable
         {
             lock (_sync)
             {
-                if (_isEnabled && _pending == null)
+                if (_isEnabled && _pending == null && _builtin == null)
                 {
                     _pending = frame;
                     _isPendingRepeat = true;

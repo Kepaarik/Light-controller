@@ -49,6 +49,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
         ScreenEditor = new ScreenEditorViewModel(sources, contentChanged);
         MusicEditor = new MusicEditorViewModel(sources, contentChanged);
         GameEditor = new GameEditorViewModel(sources, contentChanged);
+        BuiltinEditor = new BuiltinEditorViewModel(manager, contentChanged);
 
         foreach (var scenario in config.Scenarios)
             Items.Add(new ScenarioItemViewModel(scenario, contentChanged));
@@ -85,6 +86,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
             ScreenEditor.Edit(value?.Settings.Content);
             MusicEditor.Edit(value?.Settings.Content);
             GameEditor.Edit(value?.Settings.Content);
+            BuiltinEditor.Edit(value?.Settings.Content);
             BuildGroupChips();
         }
     }
@@ -119,18 +121,24 @@ public sealed partial class ScenariosViewModel : ObservableObject
     public GameEditorViewModel GameEditor { get; }
 
     /// <summary>
+    /// Встроенные эффекты устройств и их настройки, которые играют, пока сценарий активен, если его содержимое —
+    /// встроенный эффект.
+    /// </summary>
+    public BuiltinEditorViewModel BuiltinEditor { get; }
+
+    /// <summary>
     /// Режимы условия для сегментов «Когда».
     /// </summary>
     public IReadOnlyList<ConditionModeOption> Modes => ConditionModeOption.All;
 
     /// <summary>
-    /// Типы содержимого для сегментов «Что»; доступны эффект, сцена, экран, музыка и игра.
+    /// Типы содержимого для сегментов «Что»: эффект, сцена, экран, музыка, игра и встроенный эффект.
     /// </summary>
     public IReadOnlyList<ContentKindOption> ContentKinds => ContentKindOption.All;
 
     /// <summary>
-    /// Выбранный тип содержимого: эффект, сцена, экран, музыка или игра. Сцена без слоёв получает первый слой во всю сцену
-    /// с эффектом, который играл до этого.
+    /// Выбранный тип содержимого: эффект, сцена, экран, музыка, игра или встроенный эффект. Сцена без слоёв получает
+    /// первый слой во всю сцену с эффектом, который играл до этого.
     /// </summary>
     public ContentKindOption SelectedContentKind
     {
@@ -140,6 +148,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
             ContentKind.Screen => ContentKindOption.Screen,
             ContentKind.Music => ContentKindOption.Music,
             ContentKind.Game => ContentKindOption.Game,
+            ContentKind.Builtin => ContentKindOption.Builtin,
             _ => ContentKindOption.Effect
         };
         set
@@ -150,6 +159,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
                 : value == ContentKindOption.Screen ? ContentKind.Screen
                 : value == ContentKindOption.Music ? ContentKind.Music
                 : value == ContentKindOption.Game ? ContentKind.Game
+                : value == ContentKindOption.Builtin ? ContentKind.Builtin
                 : ContentKind.Effect;
 
             // Недоступные типы выбрать нельзя; сегменты сбрасывают выбор в null, когда пересобираются
@@ -194,6 +204,11 @@ public sealed partial class ScenariosViewModel : ObservableObject
     /// Содержимое открытого сценария — игра.
     /// </summary>
     public bool IsGameContent => _selectedItem?.Settings.Content.Kind == ContentKind.Game;
+
+    /// <summary>
+    /// Содержимое открытого сценария — встроенный эффект устройств.
+    /// </summary>
+    public bool IsBuiltinContent => _selectedItem?.Settings.Content.Kind == ContentKind.Builtin;
 
     /// <summary>
     /// Группы для чипов «Группы»: отмечены те, где стоит открытый сценарий.
@@ -429,7 +444,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
             MusicEditor.Advance(seconds);
         else if (IsGameContent)
             GameEditor.Advance(seconds);
-        else
+        else if (IsEffectContent)
             Editor.Advance(seconds);
     }
 
@@ -444,6 +459,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
         OnPropertyChanged(nameof(IsScreenContent));
         OnPropertyChanged(nameof(IsMusicContent));
         OnPropertyChanged(nameof(IsGameContent));
+        OnPropertyChanged(nameof(IsBuiltinContent));
 
         if (!IsScreenContent)
             ScreenEditor.StopPreview();

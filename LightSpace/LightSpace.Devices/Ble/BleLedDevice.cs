@@ -17,7 +17,7 @@ public enum BleVariant
 /// <summary>
 /// Лента с дешёвым Bluetooth LE контроллером.
 /// </summary>
-public sealed class BleLedDevice : LedDevice
+public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
 {
     public static readonly (BleVariant Variant, Guid Service, Guid Characteristic)[] Variants =
     {
@@ -48,6 +48,8 @@ public sealed class BleLedDevice : LedDevice
     public override string Protocol => _model != null
         ? $"BLE · {_model.Name}"
         : _variant == BleVariant.ElkBledom ? "BLE · ELK-BLEDOM" : "BLE · Triones";
+
+    public IReadOnlyList<BuiltinEffect> BuiltinEffects => _model?.Effects ?? Array.Empty<BuiltinEffect>();
 
     public override string Address => string.Join(":", Enumerable.Range(0, 6).Reverse().Select(i => ((_device.BluetoothAddress >> (i * 8)) & 0xFF).ToString("X2")));
 
@@ -81,6 +83,21 @@ public sealed class BleLedDevice : LedDevice
         }
 
         await SetScaledColorAsync(color, brightness, ct);
+    }
+
+    /// <summary>
+    /// Лента играет эффект своими цветами и со своей яркостью: цвет и яркость не меняются.
+    /// </summary>
+    public async Task StartBuiltinEffectAsync(int effectId, int speed, int brightness, RgbColor? color, CancellationToken ct = default)
+    {
+        if (_model == null)
+            throw new NotSupportedException("У этой модели нет известных встроенных эффектов");
+
+        await WriteAsync(ElkModel.EffectCommand(effectId), ct);
+
+        // Некоторые контроллеры ELK теряют команду, пришедшую сразу за предыдущей
+        await Task.Delay(150, ct);
+        await WriteAsync(ElkModel.EffectSpeedCommand(speed), ct);
     }
 
     /// <summary>
