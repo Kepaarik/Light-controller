@@ -94,7 +94,8 @@
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding SelectedItem}"
                               Visibility="{Binding DataContext.HasSelection, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                    <StackPanel d:DataContext="{d:DesignInstance vm:DeviceItemViewModel}">
+                    <StackPanel MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Stretch"
+                                d:DataContext="{d:DesignInstance vm:DeviceItemViewModel}">
                         <!-- Название, способ подключения и состояние связи -->
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Забыть" controls:Appearance.Icon="&#xE74D;"

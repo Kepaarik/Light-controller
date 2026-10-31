@@ -221,8 +221,8 @@
                                                 <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"
                                                            Visibility="{Binding IsPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                                                 <StackPanel VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding ConditionText}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding ConditionText}" Style="{StaticResource Caption}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                                                 </StackPanel>
                                             </DockPanel>
                                         </Border>
@@ -271,7 +271,7 @@
                                                             ToolTip="Убрать из группы" CommandParameter="{Binding}"
                                                             Command="{Binding DataContext.Scene.RemoveFromGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                                     <TextBlock Text="{Binding Name}" Style="{StaticResource Body}" VerticalAlignment="Center"
-                                                               TextTrimming="CharacterEllipsis"/>
+                                                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                                                 </DockPanel>
                                             </Border>
                                         </DataTemplate>

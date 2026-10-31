@@ -45,7 +45,7 @@
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" Text="{Binding ScenarioTitle, StringFormat='▶ {0}'}"
                                                        Style="{StaticResource PlayingMark}" Margin="{StaticResource GapLeft12}"/>
-                                            <TextBlock Text="{Binding GroupTitle}" Style="{StaticResource Body}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding GroupTitle}" Style="{StaticResource Body}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                                         </DockPanel>
                                         <TextBlock Text="{Binding Reason}" Style="{StaticResource Hint}"/>
                                     </StackPanel>

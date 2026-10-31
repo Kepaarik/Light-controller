@@ -9,7 +9,7 @@
         <DockPanel Margin="{StaticResource GapBottom4}">
             <TextBlock x:Name="ValueLabel" DockPanel.Dock="Right" Style="{StaticResource BodyStrong}"
                        Foreground="{DynamicResource TextSecondaryBrush}"/>
-            <TextBlock Text="{Binding Label, ElementName=Root}" Style="{StaticResource Body}" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="{Binding Label, ElementName=Root}" Style="{StaticResource Body}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
         </DockPanel>
         <Slider x:Name="Inner" IsSnapToTickEnabled="True" ValueChanged="OnInnerValueChanged"/>
     </StackPanel>

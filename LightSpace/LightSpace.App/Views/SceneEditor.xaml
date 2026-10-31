@@ -113,8 +113,8 @@
                                     Command="{Binding DataContext.RemoveLayerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                             <CheckBox DockPanel.Dock="Right" IsChecked="{Binding IsVisible}" ToolTip="Слой виден" Margin="{StaticResource GapRight8}"/>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding Caption}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Caption}" Style="{StaticResource Caption}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
