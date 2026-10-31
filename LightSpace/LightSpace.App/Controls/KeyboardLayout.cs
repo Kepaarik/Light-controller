@@ -18,6 +18,9 @@ public sealed class KeyboardLayout : Canvas
     public static readonly DependencyProperty ColorsProperty = DependencyProperty.Register(
         nameof(Colors), typeof(IReadOnlyList<RgbColor>), typeof(KeyboardLayout), new PropertyMetadata(null, OnColorsChanged));
 
+    // Яркость цвета клавиши (0–255), начиная с которой надпись на ней тёмная
+    private const double BrightLumaThreshold = 150;
+
     // Клавиши и их колпачки в том порядке, в каком они на холсте
     private readonly List<(KeyboardKey Key, Border Cap)> _caps = new();
 
@@ -51,6 +54,7 @@ public sealed class KeyboardLayout : Canvas
 
     /// <summary>
     /// Закрашивает клавиши цветами их светодиодов; без цветов — возвращает обычный цвет клавиш.
+    /// Надпись на закрашенной клавише тёмная или светлая по яркости цвета, чтобы читаться на любом цвете.
     /// </summary>
     private void Paint()
     {
@@ -58,9 +62,12 @@ public sealed class KeyboardLayout : Canvas
 
         foreach (var (key, cap) in _caps)
         {
+            var label = (TextBlock)cap.Child;
+
             if (colors == null || key.Led < 0 || key.Led >= colors.Count)
             {
                 cap.SetResourceReference(Border.BackgroundProperty, "ControlBrush");
+                label.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
                 continue;
             }
 
@@ -69,7 +76,18 @@ public sealed class KeyboardLayout : Canvas
             brush.Freeze();
 
             cap.Background = brush;
+            label.SetResourceReference(TextBlock.ForegroundProperty, IsBright(color) ? "KeyLabelOnBrightBrush" : "KeyLabelOnDarkBrush");
         }
+    }
+
+    /// <summary>
+    /// Цвет достаточно светлый, чтобы тёмная надпись на нём читалась лучше светлой.
+    /// </summary>
+    private static bool IsBright(RgbColor color)
+    {
+        var luma = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B;
+
+        return luma > BrightLumaThreshold;
     }
 
     /// <summary>
