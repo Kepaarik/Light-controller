@@ -118,6 +118,13 @@
                                                            Placeholder="Выберите запущенное приложение"/>
                                 </DockPanel>
 
+                                <!-- Фоновые процессы без окон: лаунчеры, службы, программы в трее -->
+                                <DockPanel Margin="{StaticResource GapTop8}">
+                                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding ShowsAllProcesses}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Показать все процессы, в том числе фоновые без окон" Style="{StaticResource Hint}"
+                                               VerticalAlignment="Center"/>
+                                </DockPanel>
+
                                 <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedItem.Mode}"
                                          Margin="{StaticResource GapTop16}"/>
 
