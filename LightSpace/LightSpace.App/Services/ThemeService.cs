@@ -1,23 +1,14 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using LightSpace.Core.Config;
 using Microsoft.Win32;
 using Windows.UI.ViewManagement;
 
 namespace LightSpace.App.Services;
 
 /// <summary>
-/// Какую тему показывать: как в Windows или принудительно светлую либо тёмную.
-/// </summary>
-public enum ThemePreference
-{
-    System,
-    Light,
-    Dark
-}
-
-/// <summary>
-/// Тема оформления приложения: светлая или тёмная по системной настройке Windows, акцентный цвет — системный.
+/// Тема оформления приложения: по умолчанию тёмная, по выбору — светлая или как в Windows; акцентный цвет — системный.
 /// При смене темы или акцента в Windows приложение перекрашивается на лету.
 /// </summary>
 public static class ThemeService
@@ -46,15 +37,16 @@ public static class ThemeService
     /// <summary>
     /// Выбранная тема: системная или принудительная.
     /// </summary>
-    public static ThemePreference Preference { get; private set; } = ThemePreference.System;
+    public static ThemePreference Preference { get; private set; } = ThemePreference.Dark;
 
     /// <summary>
     /// Тема или акцентный цвет сменились.
     /// </summary>
     public static event EventHandler? ThemeChanged;
 
-    public static void Initialize()
+    public static void Initialize(ThemePreference preference)
     {
+        Preference = preference;
         Apply();
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
     }
