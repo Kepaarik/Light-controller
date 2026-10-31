@@ -8,12 +8,22 @@ namespace LightSpace.App.ViewModels;
 public sealed record ContentKindOption(string Title, bool IsAvailable)
 {
     /// <summary>
-    /// Все типы содержимого по порядку; пока работает только эффект из галереи.
+    /// Эффект из галереи на всех устройствах группы.
+    /// </summary>
+    public static readonly ContentKindOption Effect = new("Эффект", true);
+
+    /// <summary>
+    /// Слои эффектов, разложенные по сцене.
+    /// </summary>
+    public static readonly ContentKindOption Scene = new("Сцена", true);
+
+    /// <summary>
+    /// Все типы содержимого по порядку; пока работают эффект из галереи и сцена.
     /// </summary>
     public static readonly IReadOnlyList<ContentKindOption> All = new ContentKindOption[]
     {
-        new("Эффект", true),
-        new("Сцена", false),
+        Effect,
+        Scene,
         new("Экран", false),
         new("Музыка", false),
         new("Игра", false),

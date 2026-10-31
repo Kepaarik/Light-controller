@@ -1,0 +1,141 @@
+<UserControl x:Class="LightSpace.App.Views.SceneEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             xmlns:views="clr-namespace:LightSpace.App.Views"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:SceneEditorViewModel}">
+
+    <!-- Содержимое-сцена: холст сцены с живым кадром и границами слоёв, список слоёв, настройки и эффект выбранного слоя -->
+    <UserControl.Resources>
+        <!-- Устройство на холсте: живые цвета сцены в том месте, где оно стоит -->
+        <DataTemplate x:Key="DeviceShapeTemplate" DataType="vm:SceneDeviceViewModel">
+            <Border Background="{Binding Preview}">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource SceneDevice}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPoint}" Value="True">
+                                <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Viewbox Stretch="Fill" Visibility="{Binding IsKeyboard, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                    <controls:KeyboardLayout Keys="{Binding Keys}" Colors="{Binding KeyColors}"/>
+                </Viewbox>
+            </Border>
+        </DataTemplate>
+
+        <!-- Границы слоя с ярлыком; у выбранного — ручка размера. Имя LayerHandle ищет мышь в SceneEditor.xaml.cs -->
+        <DataTemplate x:Key="LayerBoundsTemplate" DataType="vm:SceneLayerViewModel">
+            <Grid x:Name="LayerFrame">
+                <Rectangle Style="{StaticResource LayerBounds}" controls:Appearance.IsSelected="{Binding IsSelected}"/>
+                <Border Style="{StaticResource LayerTag}">
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource Caption}"/>
+                </Border>
+                <Border x:Name="LayerHandle" Style="{StaticResource LayerHandle}" Visibility="Collapsed"/>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter TargetName="LayerHandle" Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsVisible}" Value="False">
+                    <Setter TargetName="LayerFrame" Property="Opacity" Value="{StaticResource OpacityDisabled}"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <Style x:Key="MapDevice" TargetType="ContentPresenter">
+            <Setter Property="controls:SceneMap.Place" Value="{Binding Place}"/>
+            <Setter Property="controls:SceneMap.Angle" Value="{Binding Angle}"/>
+        </Style>
+
+        <!-- Верхний слой списка лежит поверх остальных -->
+        <Style x:Key="MapLayer" TargetType="ContentPresenter">
+            <Setter Property="controls:SceneMap.Place" Value="{Binding Place}"/>
+            <Setter Property="Panel.ZIndex" Value="{Binding ZIndex}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- Холст: кадр всей сцены, устройства на своих местах, границы слоёв. Все слои холста одного размера,
+             поэтому совпадают точка в точку -->
+        <Grid x:Name="LayerArea" Height="{StaticResource SceneEditorHeight}" Background="Transparent"
+              PreviewMouseLeftButtonDown="OnAreaMouseDown" MouseMove="OnAreaMouseMove"
+              MouseLeftButtonUp="OnAreaMouseUp" LostMouseCapture="OnAreaLostMouseCapture">
+            <controls:SceneMap>
+                <Border Style="{StaticResource SceneSurface}" controls:SceneMap.Place="{x:Static controls:SceneMap.WholeScene}"
+                        Background="{Binding Preview}"/>
+            </controls:SceneMap>
+
+            <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource DeviceShapeTemplate}"
+                          ItemContainerStyle="{StaticResource MapDevice}" IsHitTestVisible="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <controls:SceneMap/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+
+            <ItemsControl ItemsSource="{Binding Layers}" ItemTemplate="{StaticResource LayerBoundsTemplate}"
+                          ItemContainerStyle="{StaticResource MapLayer}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <controls:SceneMap/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </Grid>
+        <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
+                   Text="Живое превью сцены. Клик выбирает слой; выбранный слой тянется мышью, за уголок меняется размер. Протяните мышью по месту без слоя, чтобы заново нарисовать границы выбранного слоя."/>
+
+        <!-- Слои сверху вниз: строки перетаскиваются мышью, клик выбирает слой -->
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Слой" controls:Appearance.Icon="&#xE710;"
+                    VerticalAlignment="Bottom" Command="{Binding AddLayerCommand}"/>
+            <TextBlock Text="Слои" Style="{StaticResource SectionLabel}"/>
+        </DockPanel>
+        <ItemsControl ItemsSource="{Binding Layers}" controls:DragReorder.MoveCommand="{Binding MoveLayerCommand}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:SceneLayerViewModel">
+                    <Border Style="{StaticResource ReorderRow}" controls:Appearance.IsSelected="{Binding IsSelected}">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" CommandParameter="{Binding}"
+                                          Command="{Binding DataContext.SelectLayerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                        </Border.InputBindings>
+                        <DockPanel VerticalAlignment="Center">
+                            <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE74D;"
+                                    ToolTip="Удалить слой" CommandParameter="{Binding}"
+                                    Command="{Binding DataContext.RemoveLayerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                            <CheckBox DockPanel.Dock="Right" IsChecked="{Binding IsVisible}" ToolTip="Слой виден" Margin="{StaticResource GapRight8}"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Caption}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="Верхний слой ложится поверх нижних; за своими границами слой ничего не меняет."
+                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+
+        <!-- Выбранный слой: непрозрачность, смешивание, границы во всю сцену и его эффект -->
+        <StackPanel Visibility="{Binding HasSelectedLayer, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <TextBlock Text="{Binding SelectedLayer.Title}" Style="{StaticResource SectionLabel}"/>
+            <controls:ValueSlider Label="Непрозрачность" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                  Value="{Binding SelectedLayer.Opacity}" Margin="{StaticResource GapBottom16}"/>
+            <TextBlock Text="Смешивание" Style="{StaticResource Body}" Margin="{StaticResource GapBottom8}"/>
+            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Blends}" SelectedItem="{Binding SelectedLayer.Blend}"/>
+            <Button Style="{StaticResource GhostButton}" Content="На всю сцену" controls:Appearance.Icon="&#xE740;"
+                    HorizontalAlignment="Left" Command="{Binding FillSceneCommand}" Margin="{StaticResource GapTop8}"/>
+
+            <TextBlock Text="Эффект слоя" Style="{StaticResource SectionLabel}"/>
+            <views:EffectEditor DataContext="{Binding Effect}"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>
