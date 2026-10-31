@@ -35,7 +35,7 @@ public sealed partial class MainViewModel : ObservableObject
         _apps = new AppWatcher { FocusReleaseDelay = TimeSpan.FromSeconds(config.FocusReleaseDelaySeconds) };
         _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices, _apps), _sources);
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave);
-        Scenarios = new ScenariosViewModel(config, _deviceManager, _apps, OnContentChanged);
+        Scenarios = new ScenariosViewModel(config, _deviceManager, _apps, _sources, OnContentChanged);
         Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _apps, OnContentChanged, AddScenario, OpenScenario);
 
         Settings.PropertyChanged += OnSettingsChanged;

@@ -1,0 +1,46 @@
+<UserControl x:Class="LightSpace.App.Views.MusicEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:MusicEditorViewModel}">
+
+    <!-- Содержимое-музыка: живое превью, откуда звук, режим, цвета, чувствительность и сглаживание -->
+    <StackPanel>
+        <Border Style="{StaticResource LivePreview}" Background="{Binding Preview}" Margin="{StaticResource GapTop16}"/>
+        <TextBlock Text="Живое превью: так сценарий будет выглядеть, когда включится. На ленте спектр идёт вдоль неё, на клавиатуре — столбиками."
+                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+
+        <!-- Откуда звук: источник и устройство -->
+        <TextBlock Text="Звук" Style="{StaticResource SectionLabel}"/>
+        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedInput}"/>
+        <controls:SearchPicker ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
+                               OpenCommand="{Binding RefreshDevicesCommand}" Placeholder="Выберите устройство"
+                               Margin="{StaticResource GapTop16}"/>
+
+        <!-- Как свет следует за музыкой и какими цветами -->
+        <TextBlock Text="Режим" Style="{StaticResource SectionLabel}"/>
+        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedMode}"/>
+        <TextBlock Text="«Спектр» — басы, средние и высокие частоты по длине устройства. «Ритм» — вспышка на каждом ударе. «Пульс» — яркость за громкостью."
+                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
+
+        <TextBlock Text="Цвета" Style="{StaticResource SectionLabel}"/>
+        <DockPanel>
+            <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}" VerticalAlignment="Center"
+                                  Visibility="{Binding IsSingleColor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ColorOptions}" SelectedItem="{Binding SelectedColors}"
+                     HorizontalAlignment="Left"/>
+        </DockPanel>
+
+        <TextBlock Text="Отклик" Style="{StaticResource SectionLabel}"/>
+        <controls:ValueSlider Label="Чувствительность" Unit="%" Minimum="25" Maximum="400" Step="5"
+                              Value="{Binding Sensitivity}" Margin="{StaticResource GapBottom16}"/>
+        <controls:ValueSlider Label="Сглаживание" Unit="%" Minimum="0" Maximum="95" Step="5"
+                              Value="{Binding Smoothing}"/>
+        <TextBlock Text="Чувствительность выше — ярче на тихой музыке. Сглаживание выше — свет плавнее гаснет после громкого места."
+                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+    </StackPanel>
+</UserControl>
