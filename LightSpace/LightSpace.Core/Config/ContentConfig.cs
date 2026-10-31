@@ -15,7 +15,10 @@ public enum ContentKind
     Screen,
 
     /// <summary>Музыка: свет следует за звуком компьютера или микрофона.</summary>
-    Music
+    Music,
+
+    /// <summary>Игра: полоски здоровья и маны или брони и события матча Dota 2 и CS2; другие игры — картинка монитора.</summary>
+    Game
 }
 
 /// <summary>
@@ -24,7 +27,7 @@ public enum ContentKind
 public sealed class ContentConfig
 {
     /// <summary>
-    /// Что играет: эффект из галереи, сцена со слоями, экран или музыка.
+    /// Что играет: эффект из галереи, сцена со слоями, экран, музыка или игра.
     /// </summary>
     public ContentKind Kind { get; set; } = ContentKind.Effect;
 
@@ -56,6 +59,11 @@ public sealed class ContentConfig
     public MusicConfig Music { get; set; } = new();
 
     /// <summary>
+    /// Настройки игры. Играют, только когда содержимое — игра; остаются, когда выбирают другой тип.
+    /// </summary>
+    public GameConfig Game { get; set; } = new();
+
+    /// <summary>
     /// Независимая копия содержимого: правки копии не меняют оригинал.
     /// </summary>
     public ContentConfig Clone()
@@ -71,7 +79,8 @@ public sealed class ContentConfig
             }),
             Layers = Layers.Select(l => l.Clone()).ToList(),
             Screen = Screen.Clone(),
-            Music = Music.Clone()
+            Music = Music.Clone(),
+            Game = Game.Clone()
         };
     }
 
@@ -109,6 +118,10 @@ public sealed class ContentConfig
 
         Music ??= new MusicConfig();
         Music.Normalize();
+
+        // В файлах до игр этого раздела нет — тогда он получает настройки по умолчанию
+        Game ??= new GameConfig();
+        Game.Normalize();
     }
 }
 

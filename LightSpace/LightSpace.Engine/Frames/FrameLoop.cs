@@ -113,7 +113,7 @@ public sealed class FrameLoop : IDisposable
                 AdvanceClocks(playbacks, snapshot, (now - lastTick).TotalSeconds, _sources);
                 lastTick = now;
 
-                // Экран и звук снимаются, только пока их играет хоть одна группа, в том числе уходящим сценарием
+                // Экран и звук снимаются, а события игр принимаются, только пока их играет хоть одна группа, в том числе уходящим сценарием
                 _sources.Require(this, DemandOf(snapshot, playbacks));
 
                 var isLiveDue = _isLiveColorsWanted && now - lastLive >= LiveColorsInterval;
@@ -148,7 +148,8 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Какие мониторы и входы звука нужны группам, у которых есть устройства: для того, что играет, и того, что уходит.
+    /// Какие мониторы и входы звука и нужны ли события игр группам, у которых есть устройства: для того, что играет,
+    /// и того, что уходит.
     /// Выключенной подсветке не нужно ничего.
     /// </summary>
     private static SourceDemand DemandOf(FrameSnapshot snapshot, Dictionary<string, GroupPlayback> playbacks)
@@ -158,6 +159,7 @@ public sealed class FrameLoop : IDisposable
 
         var monitors = new HashSet<string>();
         var inputs = new HashSet<AudioInput>();
+        var wantsGameState = false;
 
         foreach (var group in snapshot.Groups)
         {
@@ -171,10 +173,18 @@ public sealed class FrameLoop : IDisposable
 
                 if (content.Music is { } music)
                     inputs.Add(music.Input);
+
+                if (content.Game is { } game)
+                {
+                    if (game.NeedsScreen)
+                        monitors.Add(game.Screen.MonitorKey);
+
+                    wantsGameState |= game.NeedsGameState;
+                }
             }
         }
 
-        return new SourceDemand(monitors, inputs);
+        return new SourceDemand(monitors, inputs, wantsGameState);
     }
 
     /// <summary>
@@ -296,8 +306,13 @@ public sealed class FrameLoop : IDisposable
         public MusicPlayback Music { get; } = new();
 
         /// <summary>
+        /// Урон, бомба и сглаженные цвета экрана, когда часы считают игру.
+        /// </summary>
+        public GamePlayback Game { get; } = new();
+
+        /// <summary>
         /// Двигает время содержимого на seconds секунд с учётом его скорости, у сцены — время каждого её слоя,
-        /// у экрана и музыки — берёт последнюю картинку монитора или звук из источников.
+        /// у экрана, музыки и игры — берёт последнюю картинку монитора, звук или состояние игры из источников.
         /// </summary>
         public void Advance(FrameContent content, double seconds, SourceHub sources)
         {
@@ -311,6 +326,9 @@ public sealed class FrameLoop : IDisposable
 
             if (content.Music is { } music)
                 Music.Advance(music, sources.LevelsOf(music.Input), seconds);
+
+            if (content.Game is { } game)
+                Game.Advance(game, sources.Games, sources.PictureOf(game.Screen.MonitorKey), seconds);
         }
     }
 
@@ -426,11 +444,12 @@ public sealed class FrameLoop : IDisposable
 
         /// <summary>
         /// Кадр содержимого на устройстве: эффект и музыка играют в пространстве самого устройства, сцена и экран — по местам его
-        /// светодиодов на сцене. У устройства одного цвета во всех случаях один цвет.
+        /// светодиодов на сцене, полоски игры — в пространстве устройства, а картинка экрана в игре — по местам на сцене.
+        /// У устройства одного цвета во всех случаях один цвет.
         /// </summary>
         private static RgbColor[] RenderContent(FrameContent content, EffectClock clock, FrameDevice device)
         {
-            if (content.Screen != null || content.Music != null)
+            if (content.Screen != null || content.Music != null || content.Game != null)
                 return RenderSource(content, clock, device);
 
             return content.Layers is { } layers
@@ -439,12 +458,15 @@ public sealed class FrameLoop : IDisposable
         }
 
         /// <summary>
-        /// Кадр экрана или музыки. Ошибка в нём не останавливает поток кадров: устройство на этом кадре гаснет.
+        /// Кадр экрана, музыки или игры. Ошибка в нём не останавливает поток кадров: устройство на этом кадре гаснет.
         /// </summary>
         private static RgbColor[] RenderSource(FrameContent content, EffectClock clock, FrameDevice device)
         {
             try
             {
+                if (content.Game is { } game)
+                    return clock.Game.Render(device.Id, game, device.Geometry, device.ScenePoints, SceneArea.Width, SceneArea.Height);
+
                 return content.Screen is { } screen
                     ? clock.Screen.Render(device.Id, screen, device.ScenePoints, SceneArea.Width, SceneArea.Height)
                     : clock.Music.Render(content.Music!, device.Geometry);
