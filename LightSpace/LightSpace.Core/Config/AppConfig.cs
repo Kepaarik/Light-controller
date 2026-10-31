@@ -178,6 +178,17 @@ public sealed class AppConfig
     }
 
     /// <summary>
+    /// Удаляет сценарий: он пропадает из списка сценариев и из всех групп, где стоял.
+    /// </summary>
+    public void RemoveScenario(ScenarioConfig scenario)
+    {
+        Scenarios.Remove(scenario);
+
+        foreach (var group in Groups)
+            group.ScenarioIds.Remove(scenario.Id);
+    }
+
+    /// <summary>
     /// Группа-одиночка с теми же содержимым, яркостью и сценариями, что у группы.
     /// </summary>
     private static GroupConfig SoloCopyOf(GroupConfig group, string deviceId)
@@ -203,8 +214,14 @@ public sealed class AppConfig
         foreach (var scenario in Scenarios)
         {
             scenario.Name ??= "";
+            scenario.Condition ??= new ScenarioCondition();
+            scenario.Condition.ExePath ??= "";
             scenario.Content ??= new ContentConfig();
             scenario.Content.Normalize();
+
+            // Режим, которого нет в этой сборке, мог попасть в файл из другой версии или из правки руками
+            if (!Enum.IsDefined(scenario.Condition.Mode))
+                scenario.Condition.Mode = ConditionMode.Focused;
         }
     }
 

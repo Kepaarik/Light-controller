@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using LightSpace.Core;
 using LightSpace.Engine.Effects;
 using LightSpace.Engine.Output;
+using LightSpace.Engine.Space;
 
 namespace LightSpace.Engine.Frames;
 
@@ -94,15 +95,16 @@ public sealed class FrameLoop : IDisposable
             var lastLive = -LiveColorsInterval;
             var next = clock.Elapsed;
 
-            // Время эффекта у каждой группы своё; часы живут только в потоке кадров
-            var clocks = new Dictionary<string, EffectClock>();
+            // Время эффекта у каждой группы своё; часы живут только в потоке кадров.
+            // Вместе с часами группа помнит, что играло до смены сценария, — для плавного перехода
+            var playbacks = new Dictionary<string, GroupPlayback>();
 
             while (true)
             {
                 var snapshot = Volatile.Read(ref _snapshot);
                 var now = clock.Elapsed;
 
-                AdvanceClocks(clocks, snapshot, (now - lastTick).TotalSeconds);
+                AdvanceClocks(playbacks, snapshot, (now - lastTick).TotalSeconds);
                 lastTick = now;
 
                 var isLiveDue = _isLiveColorsWanted && now - lastLive >= LiveColorsInterval;
@@ -110,7 +112,7 @@ public sealed class FrameLoop : IDisposable
                 if (isLiveDue)
                     lastLive = now;
 
-                RenderFrame(snapshot, clocks, isLiveDue);
+                RenderFrame(snapshot, playbacks, isLiveDue);
 
                 // Отставший поток не догоняет пачкой кадров, а продолжает с текущего момента
                 next += TimeSpan.FromSeconds(1.0 / Math.Max(snapshot.FrameRate, 1));
@@ -134,34 +136,34 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Двигает время эффекта каждой группы на seconds секунд с учётом его скорости.
+    /// Двигает время эффекта каждой группы на seconds секунд с учётом его скорости; если в группе сменился сценарий,
+    /// начинает плавный переход от прежнего содержимого к новому.
     /// </summary>
-    private static void AdvanceClocks(Dictionary<string, EffectClock> clocks, FrameSnapshot snapshot, double seconds)
+    private static void AdvanceClocks(Dictionary<string, GroupPlayback> playbacks, FrameSnapshot snapshot, double seconds)
     {
+        var transition = snapshot.TransitionMilliseconds / 1000.0;
+
         foreach (var group in snapshot.Groups)
         {
-            var effectId = group.Active.Effect.Id;
-
-            // Новый эффект начинается с начала; у текущего время копится по шагам, чтобы смена скорости не давала скачка
-            if (!clocks.TryGetValue(group.Id, out var clock) || clock.EffectId != effectId)
-                clocks[group.Id] = new EffectClock(effectId);
+            if (!playbacks.TryGetValue(group.Id, out var playback))
+                playbacks[group.Id] = new GroupPlayback(group.Active);
             else
-                clock.Time += seconds * group.Active.Speed;
+                playback.Advance(group.Active, seconds, transition);
         }
 
         // Часы распущенных и удалённых групп больше не нужны
-        if (clocks.Count > snapshot.Groups.Count)
+        if (playbacks.Count > snapshot.Groups.Count)
         {
-            foreach (var id in clocks.Keys.Except(snapshot.Groups.Select(g => g.Id)).ToList())
-                clocks.Remove(id);
+            foreach (var id in playbacks.Keys.Except(snapshot.Groups.Select(g => g.Id)).ToList())
+                playbacks.Remove(id);
         }
     }
 
     /// <summary>
-    /// Считает кадр для каждого устройства каждой группы её содержимым и отправляет его;
-    /// isLiveDue — заодно собрать снимок цветов для окна.
+    /// Считает кадр для каждого устройства каждой группы её содержимым и отправляет его; во время перехода — смесь
+    /// уходящего и нового содержимого. isLiveDue — заодно собрать снимок цветов для окна.
     /// </summary>
-    private void RenderFrame(FrameSnapshot snapshot, Dictionary<string, EffectClock> clocks, bool isLiveDue)
+    private void RenderFrame(FrameSnapshot snapshot, Dictionary<string, GroupPlayback> playbacks, bool isLiveDue)
     {
         var live = isLiveDue ? new Dictionary<string, LiveDeviceColors>() : null;
 
@@ -178,12 +180,11 @@ public sealed class FrameLoop : IDisposable
 
         foreach (var group in snapshot.Groups)
         {
-            var content = group.Active;
-            var time = clocks[group.Id].Time;
+            var playback = playbacks[group.Id];
 
             foreach (var device in group.Devices)
             {
-                var colors = EffectRenderer.Render(content.Effect, content.Values, device.Geometry, time);
+                var colors = playback.Render(device.Geometry);
 
                 var frame = device.Geometry.IsAddressable
                     ? OutputFrame.PerLed(colors, group.Brightness)
@@ -236,6 +237,103 @@ public sealed class FrameLoop : IDisposable
         public string EffectId { get; }
 
         public double Time { get; set; }
+    }
+
+    /// <summary>
+    /// Что играет в одной группе: содержимое и его часы, а во время плавного перехода — ещё уходящее содержимое
+    /// со своими часами, чтобы оно доигрывало, а не замирало.
+    /// </summary>
+    private sealed class GroupPlayback
+    {
+        // Уходящее содержимое; null — перехода сейчас нет
+        private (FrameContent Content, EffectClock Clock)? _leaving;
+
+        // Сколько секунд идёт переход и сколько он длится всего
+        private double _transitionTime;
+        private double _transitionLength;
+
+        public GroupPlayback(FrameContent content)
+        {
+            Content = content;
+            Clock = new EffectClock(content.Effect.Id);
+        }
+
+        /// <summary>
+        /// Содержимое, которое играет в группе сейчас или к которому идёт переход.
+        /// </summary>
+        public FrameContent Content { get; private set; }
+
+        public EffectClock Clock { get; private set; }
+
+        /// <summary>
+        /// Двигает время на seconds секунд. content — что должно играть по последнему снимку; если это другой сценарий,
+        /// начинается переход длиной transition секунд (0 — смена сразу).
+        /// </summary>
+        public void Advance(FrameContent content, double seconds, double transition)
+        {
+            if (_leaving is { } leaving)
+            {
+                leaving.Clock.Time += seconds * leaving.Content.Speed;
+                _transitionTime += seconds;
+
+                if (_transitionTime >= _transitionLength)
+                    _leaving = null;
+            }
+
+            if (content.ScenarioId != Content.ScenarioId)
+            {
+                StartTransition(content, transition);
+                return;
+            }
+
+            Content = content;
+
+            // Новый эффект начинается с начала; у текущего время копится по шагам, чтобы смена скорости не давала скачка
+            if (Clock.EffectId != content.Effect.Id)
+                Clock = new EffectClock(content.Effect.Id);
+            else
+                Clock.Time += seconds * content.Speed;
+        }
+
+        /// <summary>
+        /// Цвета светодиодов пространства: кадр содержимого, во время перехода — плавно смешанный с кадром уходящего.
+        /// </summary>
+        public RgbColor[] Render(DeviceGeometry space)
+        {
+            var colors = EffectRenderer.Render(Content.Effect, Content.Values, space, Clock.Time);
+
+            if (_leaving is not { } leaving)
+                return colors;
+
+            var previous = EffectRenderer.Render(leaving.Content.Effect, leaving.Content.Values, space, leaving.Clock.Time);
+            var progress = EffectMath.Smooth(_transitionTime / _transitionLength);
+
+            for (var i = 0; i < colors.Length; i++)
+                colors[i] = EffectMath.Mix(previous[i], colors[i], progress);
+
+            return colors;
+        }
+
+        private void StartTransition(FrameContent content, double transition)
+        {
+            // Сценарий вернулся, пока его ещё уводили: переход разворачивается с того же места, без скачка
+            if (_leaving is { } leaving && leaving.Content.ScenarioId == content.ScenarioId)
+            {
+                _leaving = (Content, Clock);
+                Content = content;
+                Clock = leaving.Clock;
+                _transitionTime = _transitionLength - _transitionTime;
+                return;
+            }
+
+            // Прежнее содержимое плавно уходит, новое начинается с начала
+            _leaving = transition > 0 ? (Content, Clock) : null;
+            _transitionTime = 0;
+            _transitionLength = transition;
+
+            Content = content;
+            Clock = new EffectClock(content.Effect.Id);
+        }
     }
 
     [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
