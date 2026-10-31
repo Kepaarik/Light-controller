@@ -31,6 +31,9 @@ public sealed class ScreenPlayback
 
     private readonly Dictionary<string, (double R, double G, double B)[]> _states = new();
 
+    // Чьи точки рисовались с прошлого Advance: прежние цвета остальных — устройств, которых больше нет, — забываются
+    private readonly HashSet<string> _rendered = new();
+
     private ScreenPicture _picture = ScreenPicture.Empty;
 
     // Доля нового цвета в этом кадре
@@ -41,6 +44,13 @@ public sealed class ScreenPlayback
     /// </summary>
     public void Advance(ScreenSettings settings, ScreenPicture picture, double seconds)
     {
+        if (_states.Count > _rendered.Count)
+        {
+            foreach (var key in _states.Keys.Where(k => !_rendered.Contains(k)).ToList())
+                _states.Remove(key);
+        }
+
+        _rendered.Clear();
         _picture = picture;
         _follow = 1 - Math.Pow(settings.Smoothing, seconds * SmoothingRate);
     }
@@ -53,6 +63,8 @@ public sealed class ScreenPlayback
     {
         var colors = new RgbColor[points.Count];
         var isNew = !_states.TryGetValue(key, out var states) || states.Length != points.Count;
+
+        _rendered.Add(key);
 
         if (isNew)
         {
