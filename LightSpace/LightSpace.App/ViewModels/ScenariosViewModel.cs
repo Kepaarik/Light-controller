@@ -8,6 +8,7 @@ using LightSpace.Core.Config;
 using LightSpace.Engine;
 using LightSpace.Engine.Apps;
 using LightSpace.Engine.Scenarios;
+using LightSpace.Engine.Sources;
 
 namespace LightSpace.App.ViewModels;
 
@@ -36,7 +37,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
     /// <summary>
     /// contentChanged вызывается после каждой правки сценариев: их состава, названия, условия, содержимого и групп.
     /// </summary>
-    public ScenariosViewModel(AppConfig config, DeviceManager manager, AppWatcher apps, Action contentChanged)
+    public ScenariosViewModel(AppConfig config, DeviceManager manager, AppWatcher apps, SourceHub sources, Action contentChanged)
     {
         _config = config;
         _manager = manager;
@@ -45,6 +46,8 @@ public sealed partial class ScenariosViewModel : ObservableObject
 
         Editor = new EffectEditorViewModel(contentChanged);
         SceneEditor = new SceneEditorViewModel(manager, contentChanged);
+        ScreenEditor = new ScreenEditorViewModel(sources, contentChanged);
+        MusicEditor = new MusicEditorViewModel(sources, contentChanged);
 
         foreach (var scenario in config.Scenarios)
             Items.Add(new ScenarioItemViewModel(scenario, contentChanged));
@@ -74,10 +77,12 @@ public sealed partial class ScenariosViewModel : ObservableObject
 
             OnPropertyChanged(nameof(HasSelection));
             OnPropertyChanged(nameof(SelectedContentKind));
-            OnPropertyChanged(nameof(IsSceneContent));
+            OnContentKindChanged();
 
             Editor.Edit(value?.Settings.Content);
             SceneEditor.Edit(value?.Settings.Content);
+            ScreenEditor.Edit(value?.Settings.Content);
+            MusicEditor.Edit(value?.Settings.Content);
             BuildGroupChips();
         }
     }
@@ -97,26 +102,46 @@ public sealed partial class ScenariosViewModel : ObservableObject
     public SceneEditorViewModel SceneEditor { get; }
 
     /// <summary>
+    /// Монитор и настройки картинки, которые играют, пока сценарий активен, если его содержимое — экран.
+    /// </summary>
+    public ScreenEditorViewModel ScreenEditor { get; }
+
+    /// <summary>
+    /// Звук и настройки музыки, которые играют, пока сценарий активен, если его содержимое — музыка.
+    /// </summary>
+    public MusicEditorViewModel MusicEditor { get; }
+
+    /// <summary>
     /// Режимы условия для сегментов «Когда».
     /// </summary>
     public IReadOnlyList<ConditionModeOption> Modes => ConditionModeOption.All;
 
     /// <summary>
-    /// Типы содержимого для сегментов «Что»; доступны эффект и сцена.
+    /// Типы содержимого для сегментов «Что»; доступны эффект, сцена, экран и музыка.
     /// </summary>
     public IReadOnlyList<ContentKindOption> ContentKinds => ContentKindOption.All;
 
     /// <summary>
-    /// Выбранный тип содержимого: эффект или сцена. Сцена без слоёв получает первый слой во всю сцену
+    /// Выбранный тип содержимого: эффект, сцена, экран или музыка. Сцена без слоёв получает первый слой во всю сцену
     /// с эффектом, который играл до этого.
     /// </summary>
     public ContentKindOption SelectedContentKind
     {
-        get => IsSceneContent ? ContentKindOption.Scene : ContentKindOption.Effect;
+        get => _selectedItem?.Settings.Content.Kind switch
+        {
+            ContentKind.Scene => ContentKindOption.Scene,
+            ContentKind.Screen => ContentKindOption.Screen,
+            ContentKind.Music => ContentKindOption.Music,
+            _ => ContentKindOption.Effect
+        };
         set
         {
             var content = _selectedItem?.Settings.Content;
-            var kind = value == ContentKindOption.Scene ? ContentKind.Scene : ContentKind.Effect;
+
+            var kind = value == ContentKindOption.Scene ? ContentKind.Scene
+                : value == ContentKindOption.Screen ? ContentKind.Screen
+                : value == ContentKindOption.Music ? ContentKind.Music
+                : ContentKind.Effect;
 
             // Недоступные типы выбрать нельзя; сегменты сбрасывают выбор в null, когда пересобираются
             if (content == null || value == null || !value.IsAvailable || kind == content.Kind)
@@ -131,15 +156,30 @@ public sealed partial class ScenariosViewModel : ObservableObject
             }
 
             OnPropertyChanged();
-            OnPropertyChanged(nameof(IsSceneContent));
+            OnContentKindChanged();
             _contentChanged();
         }
     }
 
     /// <summary>
+    /// Содержимое открытого сценария — эффект из галереи.
+    /// </summary>
+    public bool IsEffectContent => _selectedItem?.Settings.Content.Kind == ContentKind.Effect;
+
+    /// <summary>
     /// Содержимое открытого сценария — сцена со слоями.
     /// </summary>
     public bool IsSceneContent => _selectedItem?.Settings.Content.Kind == ContentKind.Scene;
+
+    /// <summary>
+    /// Содержимое открытого сценария — экран.
+    /// </summary>
+    public bool IsScreenContent => _selectedItem?.Settings.Content.Kind == ContentKind.Screen;
+
+    /// <summary>
+    /// Содержимое открытого сценария — музыка.
+    /// </summary>
+    public bool IsMusicContent => _selectedItem?.Settings.Content.Kind == ContentKind.Music;
 
     /// <summary>
     /// Группы для чипов «Группы»: отмечены те, где стоит открытый сценарий.
@@ -163,6 +203,10 @@ public sealed partial class ScenariosViewModel : ObservableObject
         {
             _liveTimer.Stop();
             _clock.Stop();
+
+            // Пока превью не видно, монитор и звук для него не снимаются
+            ScreenEditor.StopPreview();
+            MusicEditor.StopPreview();
             return;
         }
 
@@ -364,7 +408,29 @@ public sealed partial class ScenariosViewModel : ObservableObject
         // У сцены свой холст и своя галерея — эффекта выбранного слоя
         if (IsSceneContent)
             SceneEditor.Advance(seconds);
+        else if (IsScreenContent)
+            ScreenEditor.Advance(seconds);
+        else if (IsMusicContent)
+            MusicEditor.Advance(seconds);
         else
             Editor.Advance(seconds);
+    }
+
+    /// <summary>
+    /// Сменился тип содержимого открытого сценария или сам сценарий: показываются редактор и превью этого типа,
+    /// превью экрана и музыки, которых больше не видно, отпускают свои источники.
+    /// </summary>
+    private void OnContentKindChanged()
+    {
+        OnPropertyChanged(nameof(IsEffectContent));
+        OnPropertyChanged(nameof(IsSceneContent));
+        OnPropertyChanged(nameof(IsScreenContent));
+        OnPropertyChanged(nameof(IsMusicContent));
+
+        if (!IsScreenContent)
+            ScreenEditor.StopPreview();
+
+        if (!IsMusicContent)
+            MusicEditor.StopPreview();
     }
 }

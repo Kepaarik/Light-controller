@@ -18,14 +18,24 @@ public sealed record ContentKindOption(string Title, bool IsAvailable)
     public static readonly ContentKindOption Scene = new("Сцена", true);
 
     /// <summary>
-    /// Все типы содержимого по порядку; пока работают эффект из галереи и сцена.
+    /// Цвета картинки монитора под местами светодиодов на сцене.
+    /// </summary>
+    public static readonly ContentKindOption Screen = new("Экран", true);
+
+    /// <summary>
+    /// Свет, который следует за звуком компьютера или микрофона.
+    /// </summary>
+    public static readonly ContentKindOption Music = new("Музыка", true);
+
+    /// <summary>
+    /// Все типы содержимого по порядку; пока работают эффект из галереи, сцена, экран и музыка.
     /// </summary>
     public static readonly IReadOnlyList<ContentKindOption> All = new ContentKindOption[]
     {
         Effect,
         Scene,
-        new("Экран", false),
-        new("Музыка", false),
+        Screen,
+        Music,
         new("Игра", false),
         new("Встроенный", false)
     };

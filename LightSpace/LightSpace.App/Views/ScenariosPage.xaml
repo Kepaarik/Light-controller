@@ -134,10 +134,10 @@
                                 </Style>
                             </ListBox.ItemContainerStyle>
                         </ListBox>
-                        <TextBlock Text="Экран, музыка, игры и встроенные эффекты появятся в следующих версиях."
+                        <TextBlock Text="Игры и встроенные эффекты появятся в следующих версиях."
                                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
 
-                        <StackPanel Visibility="{Binding IsSceneContent, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                        <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                             <Border Style="{StaticResource LivePreview}" Background="{Binding Editor.SelectedTile.Preview}"
                                     Margin="{StaticResource GapTop16}"/>
                             <TextBlock Text="Живое превью: так сценарий будет выглядеть, когда включится." Style="{StaticResource Hint}"
@@ -149,6 +149,14 @@
                         <!-- Сцена: холст со слоями и их границами, список слоёв и эффект выбранного слоя -->
                         <views:SceneEditor DataContext="{Binding SceneEditor}" Margin="{StaticResource GapTop16}"
                                            Visibility="{Binding DataContext.IsSceneContent, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+
+                        <!-- Экран: живое превью картинки монитора, монитор и настройки цветов -->
+                        <views:ScreenEditor DataContext="{Binding ScreenEditor}"
+                                            Visibility="{Binding DataContext.IsScreenContent, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+
+                        <!-- Музыка: живое превью, источник звука, режим, цвета и отклик -->
+                        <views:MusicEditor DataContext="{Binding MusicEditor}"
+                                           Visibility="{Binding DataContext.IsMusicContent, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
 
                         <!-- Группы, где стоит сценарий -->
                         <TextBlock Text="Группы" Style="{StaticResource SectionLabel}"/>
