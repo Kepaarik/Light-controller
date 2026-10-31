@@ -325,6 +325,7 @@
                             </TextBlock>
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
                             <Border x:Name="Underline" Height="{StaticResource FieldUnderlineHeight}" VerticalAlignment="Bottom"
+                                    Margin="{StaticResource FieldUnderlineMargin}" CornerRadius="{StaticResource RadiusPill}"
                                     Background="{DynamicResource AccentBrush}" Visibility="Hidden"/>
                         </Grid>
                     </Border>
@@ -419,6 +420,7 @@
                                        IsHitTestVisible="False"/>
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
                             <Border x:Name="Underline" Height="{StaticResource FieldUnderlineHeight}" VerticalAlignment="Bottom"
+                                    Margin="{StaticResource FieldUnderlineMargin}" CornerRadius="{StaticResource RadiusPill}"
                                     Background="{DynamicResource AccentBrush}" Visibility="Hidden"/>
                         </Grid>
                     </Border>
@@ -429,7 +431,14 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
                         </Trigger>
+                        <Trigger Property="controls:Appearance.ForceHover" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+                        </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource FlyoutBrush}"/>
+                            <Setter TargetName="Underline" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="controls:Appearance.ForcePressed" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource FlyoutBrush}"/>
                             <Setter TargetName="Underline" Property="Visibility" Value="Visible"/>
                         </Trigger>

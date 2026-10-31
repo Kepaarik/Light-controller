@@ -94,6 +94,7 @@
                             </Grid>
                         </Border>
                         <Popup x:Name="PART_Popup" Placement="Right" AllowsTransparency="True" Focusable="False"
+                               HorizontalOffset="{StaticResource FlyoutOffsetX}" VerticalOffset="{StaticResource SubmenuOffsetY}"
                                IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                PopupAnimation="Fade">
                             <Border Background="{DynamicResource FlyoutBrush}" BorderBrush="{DynamicResource StrokeBrush}"
