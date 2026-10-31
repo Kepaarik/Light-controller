@@ -134,7 +134,7 @@
                                 </Style>
                             </ListBox.ItemContainerStyle>
                         </ListBox>
-                        <TextBlock Text="Игры и встроенные эффекты появятся в следующих версиях."
+                        <TextBlock Text="Встроенные эффекты устройств появятся в следующей версии."
                                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
 
                         <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
@@ -157,6 +157,10 @@
                         <!-- Музыка: живое превью, источник звука, режим, цвета и отклик -->
                         <views:MusicEditor DataContext="{Binding MusicEditor}"
                                            Visibility="{Binding DataContext.IsMusicContent, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+
+                        <!-- Игра: живое превью, игра и её подключение, фон, полоски и события -->
+                        <views:GameEditor DataContext="{Binding GameEditor}"
+                                          Visibility="{Binding DataContext.IsGameContent, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
 
                         <!-- Группы, где стоит сценарий -->
                         <TextBlock Text="Группы" Style="{StaticResource SectionLabel}"/>

@@ -28,7 +28,12 @@ public sealed record ContentKindOption(string Title, bool IsAvailable)
     public static readonly ContentKindOption Music = new("Музыка", true);
 
     /// <summary>
-    /// Все типы содержимого по порядку; пока работают эффект из галереи, сцена, экран и музыка.
+    /// Полоски здоровья и маны или брони и события Dota 2 и CS2; другие игры — картинка монитора.
+    /// </summary>
+    public static readonly ContentKindOption Game = new("Игра", true);
+
+    /// <summary>
+    /// Все типы содержимого по порядку; пока работают все, кроме встроенного эффекта устройства.
     /// </summary>
     public static readonly IReadOnlyList<ContentKindOption> All = new ContentKindOption[]
     {
@@ -36,7 +41,7 @@ public sealed record ContentKindOption(string Title, bool IsAvailable)
         Scene,
         Screen,
         Music,
-        new("Игра", false),
+        Game,
         new("Встроенный", false)
     };
 

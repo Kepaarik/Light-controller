@@ -1,0 +1,96 @@
+<UserControl x:Class="LightSpace.App.Views.GameEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:GameEditorViewModel}">
+
+    <!-- Содержимое-игра: живое превью, игра и её подключение, фон, полоски и события -->
+    <StackPanel>
+        <Border Style="{StaticResource LivePreview}" Background="{Binding Preview}" Margin="{StaticResource GapTop16}"/>
+        <TextBlock Text="Живое превью: так сценарий будет выглядеть, когда включится. Сверху — здоровье, снизу — мана или броня, как на клавиатуре."
+                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+
+        <!-- Какая игра и что свет в ней показывает -->
+        <TextBlock Text="Игра" Style="{StaticResource SectionLabel}"/>
+        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Games}" SelectedItem="{Binding SelectedGame}"/>
+        <TextBlock Text="{Binding GameHint}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
+
+        <!-- Подключение: файл в папке игры, по которому она шлёт события -->
+        <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}"
+                Visibility="{Binding HasIntegration, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <StackPanel>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Подключить игру" controls:Appearance.Icon="&#xE71B;"
+                            VerticalAlignment="Center" Margin="{StaticResource GapLeft12}" Command="{Binding ConnectCommand}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Подключение" Style="{StaticResource Body}"/>
+                        <TextBlock Text="{Binding ConnectionText}" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </DockPanel>
+                <TextBlock Text="{Binding GameNote}" Style="{StaticResource Warning}" Margin="{StaticResource GapTop8}"/>
+                <TextBlock Text="{Binding Problem}" Style="{StaticResource Warning}" Margin="{StaticResource GapTop8}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Фон под полосками и событиями -->
+        <StackPanel Visibility="{Binding HasIntegration, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <TextBlock Text="Фон" Style="{StaticResource SectionLabel}"/>
+            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Backgrounds}" SelectedItem="{Binding SelectedBackground}"/>
+            <controls:ValueSlider Label="Яркость фона" Unit="%" Minimum="0" Maximum="100" Step="5"
+                                  Value="{Binding BackgroundBrightness}" Margin="{StaticResource GapTop16}"/>
+            <TextBlock Text="Фон светится под полосками и там, где их нет; события вспыхивают поверх всего."
+                       Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+        </StackPanel>
+
+        <!-- Монитор для другой игры и для фона «Картинка экрана» -->
+        <StackPanel Visibility="{Binding ShowsMonitor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <TextBlock Text="Монитор" Style="{StaticResource SectionLabel}"/>
+            <controls:SearchPicker ItemsSource="{Binding Monitors}" SelectedItem="{Binding SelectedMonitor}"
+                                   OpenCommand="{Binding RefreshMonitorsCommand}" Placeholder="Выберите монитор"/>
+        </StackPanel>
+
+        <!-- Где показывать полоски и какие события -->
+        <StackPanel Visibility="{Binding HasIntegration, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <TextBlock Text="Полоски" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource SettingRow}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding KeyboardBars}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="На клавиатуре" Style="{StaticResource Body}"/>
+                        <TextBlock Text="Верхняя половина рядов — здоровье, нижняя — мана или броня; иначе клавиатура светится фоном" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+            <Border Style="{StaticResource SettingRow}">
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding StripBars}"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="На лентах и лампах" Style="{StaticResource Body}"/>
+                        <TextBlock Text="Первая половина ленты — здоровье, вторая — мана или броня, лампа — цвет здоровья; иначе они светятся фоном" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <TextBlock Text="События" Style="{StaticResource SectionLabel}"/>
+            <ItemsControl ItemsSource="{Binding Events}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:GameEventViewModel">
+                        <Border Style="{StaticResource SettingRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding IsEnabled}"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource Body}"/>
+                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Hint}"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </StackPanel>
+</UserControl>
