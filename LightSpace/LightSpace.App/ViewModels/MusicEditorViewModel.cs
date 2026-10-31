@@ -77,6 +77,9 @@ public sealed partial class MusicEditorViewModel : ObservableObject
     private readonly Action _changed;
     private readonly ColorBitmap _bitmap = new(PreviewColumns, PreviewRows);
 
+    // Устройства звука, прочитанные в последний раз, по источнику: выбор другого сценария не опрашивает Windows заново
+    private readonly Dictionary<AudioInputKind, IReadOnlyList<AudioDeviceInfo>> _knownDevices = new();
+
     private MusicConfig? _music;
     private MusicPlayback _playback = new();
     private IReadOnlyList<AudioDeviceOption> _devices = Array.Empty<AudioDeviceOption>();
@@ -117,7 +120,7 @@ public sealed partial class MusicEditorViewModel : ObservableObject
             _music.DeviceId = "";
 
             OnPropertyChanged();
-            RefreshDevices();
+            ShowDevices();
             _changed();
         }
     }
@@ -219,7 +222,7 @@ public sealed partial class MusicEditorViewModel : ObservableObject
         // Превью другого содержимого начинает сглаживание заново
         _playback = new MusicPlayback();
 
-        RefreshDevices();
+        ShowDevices();
         OnPropertyChanged(nameof(SelectedInput));
         OnPropertyChanged(nameof(SelectedMode));
         OnPropertyChanged(nameof(SelectedColors));
@@ -263,11 +266,26 @@ public sealed partial class MusicEditorViewModel : ObservableObject
     [RelayCommand]
     private void RefreshDevices()
     {
+        _knownDevices.Clear();
+        ShowDevices();
+    }
+
+    /// <summary>
+    /// Показывает устройства выбранного источника; Windows опрашивается, только если их ещё не читали.
+    /// </summary>
+    private void ShowDevices()
+    {
         var options = new List<AudioDeviceOption> { new("", "Устройство Windows по умолчанию") };
 
         if (_music != null)
         {
-            options.AddRange(AudioDevices.List(_music.Input).Select(d => new AudioDeviceOption(d.Id, d.Name)));
+            if (!_knownDevices.TryGetValue(_music.Input, out var devices))
+            {
+                devices = AudioDevices.List(_music.Input);
+                _knownDevices[_music.Input] = devices;
+            }
+
+            options.AddRange(devices.Select(d => new AudioDeviceOption(d.Id, d.Name)));
 
             // Выбранное устройство сейчас отключено: оно остаётся в списке, а звук пока берётся с устройства по умолчанию
             if (options.All(o => o.Id != _music.DeviceId))
