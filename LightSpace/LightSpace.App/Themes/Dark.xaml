@@ -35,6 +35,9 @@
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C5FFFFFF"/>
     <SolidColorBrush x:Key="TextTertiaryBrush" Color="#87FFFFFF"/>
     <SolidColorBrush x:Key="TextDisabledBrush" Color="#5DFFFFFF"/>
+    <!-- Надписи на клавишах, закрашенных живыми цветами: от темы не зависят, зависят от яркости цвета клавиши -->
+    <SolidColorBrush x:Key="KeyLabelOnBrightBrush" Color="#D9000000"/>
+    <SolidColorBrush x:Key="KeyLabelOnDarkBrush" Color="#E6FFFFFF"/>
 
     <!-- Акцент (запасной) -->
     <SolidColorBrush x:Key="AccentBrush" Color="#60CDFF"/>
