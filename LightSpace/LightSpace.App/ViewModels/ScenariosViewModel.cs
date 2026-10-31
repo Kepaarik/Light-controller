@@ -24,6 +24,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
     private readonly AppConfig _config;
     private readonly DeviceManager _manager;
     private readonly AppWatcher _apps;
+    private readonly SourceHub _sources;
     private readonly Action _contentChanged;
     private readonly DispatcherTimer _liveTimer;
     private readonly Stopwatch _clock = new();
@@ -35,6 +36,12 @@ public sealed partial class ScenariosViewModel : ObservableObject
     private IReadOnlyList<AppOptionViewModel> _runningApps = Array.Empty<AppOptionViewModel>();
 
     /// <summary>
+    /// Почему игры сейчас не могут присылать события, например порт занят; null — всё в порядке или события не нужны.
+    /// </summary>
+    [ObservableProperty]
+    private string? _gamesProblem;
+
+    /// <summary>
     /// contentChanged вызывается после каждой правки сценариев: их состава, названия, условия, содержимого и групп.
     /// </summary>
     public ScenariosViewModel(AppConfig config, DeviceManager manager, AppWatcher apps, SourceHub sources, Action contentChanged)
@@ -42,6 +49,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
         _config = config;
         _manager = manager;
         _apps = apps;
+        _sources = sources;
         _contentChanged = contentChanged;
 
         Editor = new EffectEditorViewModel(contentChanged);
@@ -446,6 +454,9 @@ public sealed partial class ScenariosViewModel : ObservableObject
         var now = _clock.Elapsed;
         var seconds = (now - _lastTick).TotalSeconds;
         _lastTick = now;
+
+        // Занятый порт игр видно в диагностике, даже когда редактор игры не открыт
+        GamesProblem = _sources.GamesProblem;
 
         // У сцены свой холст и своя галерея — эффекта выбранного слоя
         if (IsSceneContent)
