@@ -21,6 +21,9 @@ public partial class App : Application
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
+        // Журнал — первым: предупреждения при загрузке настроек и поиске устройств тоже попадут в файл
+        FileLog.Start();
+
         _config = ConfigStore.Load();
         ThemeService.Initialize();
 
