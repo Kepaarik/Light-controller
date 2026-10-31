@@ -71,6 +71,10 @@
             <Trigger Property="controls:Appearance.ForceHover" Value="True">
                 <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
             </Trigger>
+            <!-- Выбранная строка (Appearance.IsSelected) обведена акцентом -->
+            <Trigger Property="controls:Appearance.IsSelected" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+            </Trigger>
             <Trigger Property="controls:DragReorder.IsDragging" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
@@ -102,6 +106,107 @@
         <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
         <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}"/>
         <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+
+    <!-- Подложка карты сцены — стол, на котором стоят устройства. Ставится на карту SceneMap отдельным элементом
+         на место SceneMap.WholeScene; в редакторе слоёв её фон заменяет кадр всей сцены -->
+    <Style x:Key="SceneSurface" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
+    </Style>
+
+    <!-- Устройство на карте сцены: фон — его живые цвета. Под курсором обводка ярче, выбранное (Appearance.IsSelected)
+         обведено акцентом, перетаскиваемое (Appearance.IsMovable) показывает курсор перемещения -->
+    <Style x:Key="SceneDevice" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource TrackBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrongBrush}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
+            </Trigger>
+            <Trigger Property="controls:Appearance.ForceHover" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
+            </Trigger>
+            <Trigger Property="controls:Appearance.IsMovable" Value="True">
+                <Setter Property="Cursor" Value="SizeAll"/>
+            </Trigger>
+            <Trigger Property="controls:Appearance.IsSelected" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="BorderThickness" Value="{StaticResource StrokeThick}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Рамка группы на карте сцены вокруг её устройств: как рамка группы, но без внутренних отступов -->
+    <Style x:Key="MapGroupFrame" TargetType="Border" BasedOn="{StaticResource GroupFrame}">
+        <Setter Property="Padding" Value="{StaticResource SpaceNone}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}"/>
+    </Style>
+
+    <!-- Подпись над элементом карты сцены: название группы или устройства -->
+    <Style x:Key="MapLabel" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+        <Setter Property="Margin" Value="{StaticResource GapBottom4}"/>
+    </Style>
+
+    <!-- Границы слоя сцены на холсте: пунктир. Под курсором ярче, выбранный слой (Appearance.IsSelected) обведён
+         сплошной линией акцентом -->
+    <Style x:Key="LayerBounds" TargetType="Rectangle">
+        <Setter Property="Fill" Value="Transparent"/>
+        <Setter Property="Stroke" Value="{DynamicResource TextSecondaryBrush}"/>
+        <Setter Property="StrokeThickness" Value="{StaticResource StrokeWidthThick}"/>
+        <Setter Property="StrokeDashArray" Value="{StaticResource DashPattern}"/>
+        <Setter Property="Cursor" Value="SizeAll"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Stroke" Value="{DynamicResource TextBrush}"/>
+            </Trigger>
+            <Trigger Property="controls:Appearance.ForceHover" Value="True">
+                <Setter Property="Stroke" Value="{DynamicResource TextBrush}"/>
+            </Trigger>
+            <Trigger Property="controls:Appearance.IsSelected" Value="True">
+                <Setter Property="Stroke" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="StrokeDashArray" Value="{x:Null}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Ярлык слоя в левом верхнем углу его границ: читается поверх любых цветов сцены -->
+    <Style x:Key="LayerTag" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource FlyoutBrush}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}"/>
+        <Setter Property="Padding" Value="{StaticResource PaddingTooltip}"/>
+        <Setter Property="Margin" Value="{StaticResource Space4}"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+
+    <!-- Ручка в правом нижнем углу границ выбранного слоя: её тянут, чтобы изменить размер границ -->
+    <Style x:Key="LayerHandle" TargetType="Border">
+        <Setter Property="Width" Value="{StaticResource LayerHandleSize}"/>
+        <Setter Property="Height" Value="{StaticResource LayerHandleSize}"/>
+        <Setter Property="Margin" Value="{StaticResource LayerHandleMargin}"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Bottom"/>
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource KnobBrush}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}"/>
+        <Setter Property="Cursor" Value="SizeNWSE"/>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+            </Trigger>
+            <Trigger Property="controls:Appearance.ForceHover" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>

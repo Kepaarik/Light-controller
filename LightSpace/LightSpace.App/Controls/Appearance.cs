@@ -51,6 +51,12 @@ public static class Appearance
     public static readonly DependencyProperty IsSelectedProperty = DependencyProperty.RegisterAttached(
         "IsSelected", typeof(bool), typeof(Appearance), new FrameworkPropertyMetadata(false));
 
+    /// <summary>
+    /// Элемент можно перетащить мышью, например устройство на сцене в режиме редактирования расстановки.
+    /// </summary>
+    public static readonly DependencyProperty IsMovableProperty = DependencyProperty.RegisterAttached(
+        "IsMovable", typeof(bool), typeof(Appearance), new FrameworkPropertyMetadata(false));
+
     public static Brush? GetHoverBrush(DependencyObject element) => (Brush?)element.GetValue(HoverBrushProperty);
 
     public static void SetHoverBrush(DependencyObject element, Brush? value) => element.SetValue(HoverBrushProperty, value);
@@ -78,4 +84,8 @@ public static class Appearance
     public static bool GetIsSelected(DependencyObject element) => (bool)element.GetValue(IsSelectedProperty);
 
     public static void SetIsSelected(DependencyObject element, bool value) => element.SetValue(IsSelectedProperty, value);
+
+    public static bool GetIsMovable(DependencyObject element) => (bool)element.GetValue(IsMovableProperty);
+
+    public static void SetIsMovable(DependencyObject element, bool value) => element.SetValue(IsMovableProperty, value);
 }

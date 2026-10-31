@@ -125,6 +125,14 @@
     <!-- Раскладка клавиатуры: сторона стандартной клавиши и зазор между клавишами -->
     <sys:Double x:Key="KeyUnitSize">32</sys:Double>
     <sys:Double x:Key="KeyGap">4</sys:Double>
+    <!-- Карта сцены: место над картой под подписи групп и устройств, высота холста слоёв в редакторе сценария -->
+    <Thickness x:Key="SceneMapMargin">0,24,0,0</Thickness>
+    <sys:Double x:Key="SceneEditorHeight">320</sys:Double>
+    <!-- Ручка размера границ слоя: сторона и сдвиг, чтобы её середина стояла на углу границ -->
+    <sys:Double x:Key="LayerHandleSize">12</sys:Double>
+    <Thickness x:Key="LayerHandleMargin">0,0,-6,-6</Thickness>
+    <!-- Пунктир границ слоя: длина штриха и промежутка в толщинах линии -->
+    <DoubleCollection x:Key="DashPattern">4 3</DoubleCollection>
 
     <!-- Палитра обводок групп на сцене. Это не цвета темы, а цвета, которые выбирает пользователь и которые сохраняются
          в настройках, поэтому они одинаковы в обеих темах и подобраны так, чтобы читаться и на светлом, и на тёмном фоне -->
@@ -145,6 +153,7 @@
     <Thickness x:Key="StrokeBottom">0,0,0,1</Thickness>
     <Thickness x:Key="StrokeTopLeft">1,1,0,0</Thickness>
     <sys:Double x:Key="StrokeWidth">1</sys:Double>
+    <sys:Double x:Key="StrokeWidthThick">2</sys:Double>
 
     <!-- Прозрачность выключенного элемента -->
     <sys:Double x:Key="OpacityDisabled">0.4</sys:Double>
