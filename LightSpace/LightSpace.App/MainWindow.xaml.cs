@@ -87,6 +87,7 @@ public partial class MainWindow : Window
 
         page.SetBinding(VisibilityProperty, new System.Windows.Data.Binding(nameof(MainViewModel.SelectedPage))
         {
+            Source = _viewModel,
             Converter = Controls.EqualsToVisibilityConverter.Instance,
             ConverterParameter = nameof(AppPage.Showcase)
         });
