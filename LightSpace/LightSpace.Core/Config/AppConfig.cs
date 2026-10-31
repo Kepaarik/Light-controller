@@ -83,6 +83,9 @@ public sealed class AppConfig
             .Select(g => g.First())
             .ToList();
 
+        foreach (var device in Devices)
+            device.Placement?.Normalize();
+
         // Пустые разделы в файле дали бы null вместо содержимого и настроек эффектов
         NormalizeScenarios();
         NormalizeGroups();

@@ -136,4 +136,13 @@ public sealed class DeviceGeometry
 
         return new DeviceGeometry(false, 1, height, points, new EffectPixel(0.5, height / 2, 0));
     }
+
+    /// <summary>
+    /// Плоскость без своих светодиодов шириной width и высотой height — например, область слоя сцены, на которую
+    /// ложится эффект слоя.
+    /// </summary>
+    public static DeviceGeometry Plane(double width, double height)
+    {
+        return new DeviceGeometry(false, width, height, Array.Empty<EffectPixel?>(), new EffectPixel(width / 2, height / 2, 0));
+    }
 }

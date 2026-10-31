@@ -184,7 +184,7 @@ public sealed class FrameLoop : IDisposable
 
             foreach (var device in group.Devices)
             {
-                var colors = playback.Render(device.Geometry);
+                var colors = playback.Render(device);
 
                 var frame = device.Geometry.IsAddressable
                     ? OutputFrame.PerLed(colors, group.Brightness)
@@ -237,6 +237,22 @@ public sealed class FrameLoop : IDisposable
         public string EffectId { get; }
 
         public double Time { get; set; }
+
+        /// <summary>
+        /// Время слоёв, когда часы считают сцену.
+        /// </summary>
+        public SceneClock Layers { get; } = new();
+
+        /// <summary>
+        /// Двигает время содержимого на seconds секунд с учётом его скорости, у сцены — время каждого её слоя.
+        /// </summary>
+        public void Advance(FrameContent content, double seconds)
+        {
+            Time += seconds * content.Speed;
+
+            if (content.Layers != null)
+                Layers.Advance(content.Layers, seconds);
+        }
     }
 
     /// <summary>
@@ -255,7 +271,7 @@ public sealed class FrameLoop : IDisposable
         public GroupPlayback(FrameContent content)
         {
             Content = content;
-            Clock = new EffectClock(content.Effect.Id);
+            Clock = new EffectClock(content.ClockId);
         }
 
         /// <summary>
@@ -273,7 +289,7 @@ public sealed class FrameLoop : IDisposable
         {
             if (_leaving is { } leaving)
             {
-                leaving.Clock.Time += seconds * leaving.Content.Speed;
+                leaving.Clock.Advance(leaving.Content, seconds);
                 _transitionTime += seconds;
 
                 if (_transitionTime >= _transitionLength)
@@ -289,23 +305,23 @@ public sealed class FrameLoop : IDisposable
             Content = content;
 
             // Новый эффект начинается с начала; у текущего время копится по шагам, чтобы смена скорости не давала скачка
-            if (Clock.EffectId != content.Effect.Id)
-                Clock = new EffectClock(content.Effect.Id);
+            if (Clock.EffectId != content.ClockId)
+                Clock = new EffectClock(content.ClockId);
             else
-                Clock.Time += seconds * content.Speed;
+                Clock.Advance(content, seconds);
         }
 
         /// <summary>
         /// Цвета светодиодов пространства: кадр содержимого, во время перехода — плавно смешанный с кадром уходящего.
         /// </summary>
-        public RgbColor[] Render(DeviceGeometry space)
+        public RgbColor[] Render(FrameDevice device)
         {
-            var colors = EffectRenderer.Render(Content.Effect, Content.Values, space, Clock.Time);
+            var colors = RenderContent(Content, Clock, device);
 
             if (_leaving is not { } leaving)
                 return colors;
 
-            var previous = EffectRenderer.Render(leaving.Content.Effect, leaving.Content.Values, space, leaving.Clock.Time);
+            var previous = RenderContent(leaving.Content, leaving.Clock, device);
             var progress = EffectMath.Smooth(_transitionTime / _transitionLength);
 
             for (var i = 0; i < colors.Length; i++)
@@ -332,7 +348,18 @@ public sealed class FrameLoop : IDisposable
             _transitionLength = transition;
 
             Content = content;
-            Clock = new EffectClock(content.Effect.Id);
+            Clock = new EffectClock(content.ClockId);
+        }
+
+        /// <summary>
+        /// Кадр содержимого на устройстве: эффект играет в пространстве самого устройства, сцена — по местам его
+        /// светодиодов на сцене. У устройства одного цвета в обоих случаях один цвет.
+        /// </summary>
+        private static RgbColor[] RenderContent(FrameContent content, EffectClock clock, FrameDevice device)
+        {
+            return content.Layers is { } layers
+                ? SceneRenderer.Render(layers, clock.Layers, device.ScenePoints)
+                : EffectRenderer.Render(content.Effect, content.Values, device.Geometry, clock.Time);
         }
     }
 

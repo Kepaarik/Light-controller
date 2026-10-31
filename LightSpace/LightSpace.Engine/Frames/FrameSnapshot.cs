@@ -10,18 +10,29 @@ namespace LightSpace.Engine.Frames;
 /// <summary>
 /// Устройство в снимке: куда отправлять его кадры и где находятся его светодиоды.
 /// </summary>
-public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry Geometry);
+/// <param name="ScenePoints">Места светодиодов на сцене в единицах сцены, с теми же номерами, что в Geometry;
+/// у устройства одного цвета — одна точка в его середине.</param>
+public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry Geometry, IReadOnlyList<EffectPixel?> ScenePoints);
 
 /// <summary>
 /// Содержимое, которое играет в группе: эффект с его настройками.
 /// </summary>
 /// <param name="ScenarioId">Сценарий, которому принадлежит содержимое; null — «По умолчанию» группы.</param>
-public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, EffectValues Values)
+/// <param name="Layers">Видимые слои сцены снизу вверх; null — содержимое-эффект.</param>
+public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, EffectValues Values, IReadOnlyList<SceneLayer>? Layers)
 {
+    // Часы сцены считают время каждого её слоя отдельно, поэтому у всей сцены свой постоянный «эффект» для часов
+    private const string SceneClockId = "scene";
+
     /// <summary>
     /// Скорость эффекта: во сколько раз быстрее обычного идёт его время.
     /// </summary>
-    public double Speed => Effect.Number(Values, "speed");
+    public double Speed => Layers == null ? Effect.Number(Values, "speed") : 1;
+
+    /// <summary>
+    /// Что считают часы содержимого: эффект или сцену. Когда это меняется, время начинается заново.
+    /// </summary>
+    public string ClockId => Layers == null ? Effect.Id : SceneClockId;
 
     /// <summary>
     /// Неизменяемая копия сохранённого содержимого.
@@ -29,8 +40,9 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
     public static FrameContent From(string? scenarioId, ContentConfig content)
     {
         var effect = EffectLibrary.FindOrSolid(content.EffectId);
+        var layers = content.Kind == ContentKind.Scene ? SceneLayer.ListOf(content) : null;
 
-        return new FrameContent(scenarioId, effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)));
+        return new FrameContent(scenarioId, effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)), layers);
     }
 }
 
@@ -68,7 +80,12 @@ public sealed record FrameSnapshot(
             if (device.Output is not { Device.IsReady: true } output)
                 continue;
 
-            ready[device.Id] = new FrameDevice(device.Id, output, DeviceGeometry.For(device.Id, output.Device.Capabilities));
+            var geometry = DeviceGeometry.For(device.Id, output.Device.Capabilities);
+
+            // Устройство, которое ещё не расставили, стоит в середине сцены
+            var points = SceneProjection.Project(geometry, device.Settings.Placement ?? new DevicePlacement());
+
+            ready[device.Id] = new FrameDevice(device.Id, output, geometry, points);
         }
 
         foreach (var group in config.Groups)
