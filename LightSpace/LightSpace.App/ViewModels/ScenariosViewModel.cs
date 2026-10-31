@@ -53,7 +53,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
         _contentChanged = contentChanged;
 
         Editor = new EffectEditorViewModel(contentChanged);
-        SceneEditor = new SceneEditorViewModel(manager, contentChanged);
+        SceneEditor = new SceneEditorViewModel(config, manager, contentChanged);
         ScreenEditor = new ScreenEditorViewModel(sources, contentChanged);
         MusicEditor = new MusicEditorViewModel(sources, contentChanged);
         GameEditor = new GameEditorViewModel(sources, contentChanged);
