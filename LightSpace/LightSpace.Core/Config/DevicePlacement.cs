@@ -32,6 +32,14 @@ public sealed class DevicePlacement
     public double Rotation { get; set; }
 
     /// <summary>
+    /// Независимая копия места: правки копии не меняют оригинал.
+    /// </summary>
+    public DevicePlacement Clone()
+    {
+        return new DevicePlacement { X = X, Y = Y, Size = Size, Rotation = Rotation };
+    }
+
+    /// <summary>
     /// Приводит место к допустимому: середина внутри сцены, размер в разумных пределах, поворот от 0 до 360.
     /// </summary>
     public void Normalize()
