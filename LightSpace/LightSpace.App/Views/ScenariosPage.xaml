@@ -5,9 +5,164 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
              xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             xmlns:views="clr-namespace:LightSpace.App.Views"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
-    <!-- Пустое состояние; список сценариев и редактор появятся вместе со сценариями -->
-    <controls:EmptyState Icon="&#xE8FD;" Title="Сценариев пока нет" Hint="Сценарий сам включает нужную подсветку, когда приложение запущено или в фокусе. Сначала подключите устройства."/>
+    <Grid DataContext="{Binding Scenarios}">
+        <!-- Пустое состояние; список сценариев и редактор появятся вместе со сценариями -->
+        <controls:EmptyState Icon="&#xE8FD;" Title="Сценариев пока нет" Hint="Сценарий сам включает нужную подсветку, когда приложение запущено или в фокусе. Создайте сценарий и отметьте группы, где он будет играть."
+                             ActionText="Создать сценарий" ActionIcon="&#xE710;" Command="{Binding CreateScenarioCommand}"
+                             Visibility="{Binding HasScenarios, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+        <Grid Margin="{StaticResource PaddingPage}" d:DataContext="{d:DesignInstance vm:ScenariosViewModel}"
+              Visibility="{Binding HasScenarios, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource ListPaneWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Заголовок и создание сценария -->
+            <DockPanel Grid.ColumnSpan="2">
+                <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Новый сценарий" controls:Appearance.Icon="&#xE710;"
+                        VerticalAlignment="Top" Command="{Binding CreateScenarioCommand}"/>
+                <TextBlock Text="Сценарии" Style="{StaticResource PageTitle}"/>
+            </DockPanel>
+
+            <!-- Слева все сценарии: значок приложения, название, условие, где играет сейчас; ниже — что играет в каждой группе и почему -->
+            <DockPanel Grid.Row="1">
+                <Border DockPanel.Dock="Bottom" Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
+                    <StackPanel>
+                        <TextBlock Text="Сейчас играет" Style="{StaticResource CardTitle}"/>
+                        <ItemsControl ItemsSource="{Binding Playing}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:GroupPlayingViewModel">
+                                    <StackPanel Margin="{StaticResource GapBottom8}">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding ScenarioTitle, StringFormat='▶ {0}'}"
+                                                       Style="{StaticResource PlayingMark}" Margin="{StaticResource GapLeft12}"/>
+                                            <TextBlock Text="{Binding GroupTitle}" Style="{StaticResource Body}" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding Reason}" Style="{StaticResource Hint}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="vm:ScenarioItemViewModel">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Left" Width="{StaticResource AppIconSize}" Height="{StaticResource AppIconSize}"
+                                      Margin="{StaticResource GapRight12}" VerticalAlignment="Top">
+                                    <!-- Без значка — общий значок сценария -->
+                                    <TextBlock Text="&#xE8FD;" Style="{StaticResource Icon}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                               HorizontalAlignment="Center"
+                                               Visibility="{Binding Icon, Converter={x:Static controls:NullToVisibilityConverter.Instance}}"/>
+                                    <Image Source="{Binding Icon}"/>
+                                </Grid>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource BodyStrong}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding ConditionText}" Style="{StaticResource Caption}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding PlayingText}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <!-- Справа редактор выбранного сценария -->
+            <Grid Grid.Row="1" Grid.Column="1" Margin="{StaticResource GapLeft24}">
+                <controls:EmptyState Icon="&#xE8FD;" Title="Выберите сценарий" Hint="Здесь появятся его условие, содержимое и группы."
+                                     Visibility="{Binding HasSelection, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding HasSelection, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                    <StackPanel MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Stretch">
+                        <!-- Название и удаление -->
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Удалить" controls:Appearance.Icon="&#xE74D;"
+                                    VerticalAlignment="Center" Margin="{StaticResource GapLeft12}" Command="{Binding DeleteCommand}"/>
+                            <TextBox Tag="Название сценария" Text="{Binding SelectedItem.Name, UpdateSourceTrigger=PropertyChanged}"/>
+                        </DockPanel>
+
+                        <!-- Когда: приложение из запущенных или exe-файл, и режим -->
+                        <TextBlock Text="Когда" Style="{StaticResource SectionLabel}"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Обзор…" controls:Appearance.Icon="&#xE8E5;" VerticalAlignment="Center"
+                                            Margin="{StaticResource GapLeft12}" Command="{Binding BrowseAppCommand}"/>
+                                    <controls:SearchPicker ItemsSource="{Binding RunningApps}" SelectedItem="{Binding SelectedItem.App}"
+                                                           ItemTemplate="{StaticResource AppOptionTemplate}" OpenCommand="{Binding RefreshRunningAppsCommand}"
+                                                           Placeholder="Выберите запущенное приложение"/>
+                                </DockPanel>
+
+                                <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Modes}" SelectedItem="{Binding SelectedItem.Mode}"
+                                         Margin="{StaticResource GapTop16}"/>
+
+                                <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
+                                           Text="«В фокусе» — пока окно приложения на переднем плане; после переключения на другое окно сценарий снимается с задержкой из настроек. «Запущен» — пока приложение открыто."/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Что: тип содержимого, живое превью, галерея и настройки эффекта -->
+                        <TextBlock Text="Что" Style="{StaticResource SectionLabel}"/>
+                        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ContentKinds}"
+                                 SelectedItem="{Binding SelectedContentKind, Mode=OneWay}">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource SegmentItem}">
+                                    <Setter Property="IsEnabled" Value="{Binding IsAvailable}"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                        <TextBlock Text="Сцена, экран, музыка, игры и встроенные эффекты появятся в следующих версиях."
+                                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
+
+                        <Border Style="{StaticResource LivePreview}" Background="{Binding Editor.SelectedTile.Preview}"
+                                Margin="{StaticResource GapTop16}"/>
+                        <TextBlock Text="Живое превью: так сценарий будет выглядеть, когда включится." Style="{StaticResource Hint}"
+                                   Margin="{StaticResource GapTop4}"/>
+
+                        <views:EffectEditor DataContext="{Binding Editor}" Margin="{StaticResource GapTop16}"/>
+
+                        <!-- Группы, где стоит сценарий -->
+                        <TextBlock Text="Группы" Style="{StaticResource SectionLabel}"/>
+                        <ItemsControl ItemsSource="{Binding GroupChips}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:ScenarioGroupChipViewModel">
+                                    <CheckBox Style="{StaticResource Chip}" Content="{Binding Title}" IsChecked="{Binding IsChecked}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="В отмеченной группе сценарий встаёт над «По умолчанию», ниже остальных её сценариев. Порядок меняется перетаскиванием в панели группы на сцене."/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Grid>
 </UserControl>

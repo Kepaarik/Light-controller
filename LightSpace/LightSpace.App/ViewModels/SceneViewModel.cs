@@ -5,12 +5,14 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LightSpace.App.Controls;
 using LightSpace.App.Services;
 using LightSpace.Core;
 using LightSpace.Core.Config;
 using LightSpace.Engine;
-using LightSpace.Engine.Effects;
+using LightSpace.Engine.Apps;
 using LightSpace.Engine.Frames;
+using LightSpace.Engine.Scenarios;
 
 namespace LightSpace.App.ViewModels;
 
@@ -27,30 +29,33 @@ public sealed partial class SceneViewModel : ObservableObject
     private readonly AppConfig _config;
     private readonly DeviceManager _manager;
     private readonly FrameLoop _loop;
+    private readonly AppWatcher _apps;
     private readonly Action _contentChanged;
+    private readonly Action<GroupConfig> _addScenario;
+    private readonly Action<string> _openScenario;
     private readonly DispatcherTimer _liveTimer;
     private readonly Stopwatch _clock = new();
 
-    private EffectTileViewModel _selectedTile;
     private SceneGroupViewModel? _selectedGroup;
     private TimeSpan _lastTick;
 
     /// <summary>
-    /// contentChanged вызывается после каждого изменения групп: их состава, названия, цвета, яркости, эффекта и его настроек.
+    /// contentChanged вызывается после каждого изменения групп: их состава, названия, цвета, яркости, эффекта и его настроек,
+    /// порядка сценариев. addScenario создаёт новый сценарий в группе и открывает его, openScenario открывает сценарий
+    /// по идентификатору — оба на вкладке «Сценарии».
     /// </summary>
-    public SceneViewModel(AppConfig config, DeviceManager manager, FrameLoop loop, Action contentChanged)
+    public SceneViewModel(AppConfig config, DeviceManager manager, FrameLoop loop, AppWatcher apps, Action contentChanged,
+        Action<GroupConfig> addScenario, Action<string> openScenario)
     {
         _config = config;
         _manager = manager;
         _loop = loop;
+        _apps = apps;
         _contentChanged = contentChanged;
+        _addScenario = addScenario;
+        _openScenario = openScenario;
 
-        // Настройки плиток и выбранный эффект берутся у группы, когда её выбирают
-        Tiles = EffectLibrary.All
-            .Select(e => new EffectTileViewModel(e, EffectValues.Empty))
-            .ToList();
-
-        _selectedTile = Tiles[0];
+        Editor = new EffectEditorViewModel(contentChanged);
 
         _manager.DevicesChanged += (_, _) => SyncDevices();
         SyncDevices();
@@ -60,32 +65,9 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Плитки галереи по разделам: цвета, движение, природа.
+    /// Галерея и настройки эффекта, который играет в выбранной группе «По умолчанию».
     /// </summary>
-    public IReadOnlyList<EffectTileViewModel> Tiles { get; }
-
-    /// <summary>
-    /// Эффект, который играет в выбранной группе «По умолчанию».
-    /// </summary>
-    public EffectTileViewModel? SelectedTile
-    {
-        get => _selectedTile;
-        set
-        {
-            // Галерея сбрасывает выбор в null, когда пересобирает плитки, — играющий эффект от этого не меняется
-            if (value == null || _selectedGroup == null || !SetProperty(ref _selectedTile, value))
-                return;
-
-            _selectedGroup.Content.EffectId = value.Definition.Id;
-            BuildParameters();
-            _contentChanged();
-        }
-    }
-
-    /// <summary>
-    /// Настройки выбранного эффекта.
-    /// </summary>
-    public ObservableCollection<EffectParameterViewModel> Parameters { get; } = new();
+    public EffectEditorViewModel Editor { get; }
 
     public ObservableCollection<SceneDeviceViewModel> Devices { get; } = new();
 
@@ -208,15 +190,55 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Возвращает все настройки выбранного эффекта к значениям по умолчанию.
+    /// Обновляет списки сценариев групп: их названия, условия и какой сценарий сейчас играет.
+    /// </summary>
+    public void RefreshScenarios()
+    {
+        foreach (var group in Groups)
+            group.SetScenarios(ScenariosOf(group.Settings));
+    }
+
+    /// <summary>
+    /// Перетаскивание в списке сценариев выбранной группы: сценарий встаёт на новое место, важность меняется сразу.
     /// </summary>
     [RelayCommand]
-    private void ResetParameters()
+    private void MoveScenario(ReorderMove? move)
     {
-        foreach (var parameter in Parameters)
-            parameter.Reset();
+        var group = _selectedGroup;
 
-        OnParameterChanged();
+        if (move == null || group == null || move.From >= group.Scenarios.Count || move.To >= group.Scenarios.Count)
+            return;
+
+        var moved = group.Scenarios[move.From].Id;
+        var target = group.Scenarios[move.To].Id;
+        var ids = group.Settings.ScenarioIds;
+
+        // Вниз сценарий встаёт после того, на чьё место его протащили, вверх — перед ним
+        ids.Remove(moved);
+        ids.Insert(ids.IndexOf(target) + (move.To > move.From ? 1 : 0), moved);
+
+        group.Scenarios.Move(move.From, move.To);
+        _contentChanged();
+    }
+
+    /// <summary>
+    /// Новый сценарий в выбранной группе: встаёт над «По умолчанию» и открывается на вкладке «Сценарии».
+    /// </summary>
+    [RelayCommand]
+    private void AddScenario()
+    {
+        if (_selectedGroup != null)
+            _addScenario(_selectedGroup.Settings);
+    }
+
+    /// <summary>
+    /// Открывает сценарий на вкладке «Сценарии».
+    /// </summary>
+    [RelayCommand]
+    private void OpenScenario(ScenarioRowViewModel? row)
+    {
+        if (row != null)
+            _openScenario(row.Id);
     }
 
     /// <summary>
@@ -337,22 +359,14 @@ public sealed partial class SceneViewModel : ObservableObject
 
         if (group == null)
         {
-            Parameters.Clear();
+            Editor.Edit(null);
             return;
         }
 
         group.IsSelected = true;
 
         // Превью плиток рисуются с настройками эффектов этой группы
-        foreach (var tile in Tiles)
-        {
-            tile.Values = EffectValues.From(group.Content.Effects.GetValueOrDefault(tile.Definition.Id));
-            tile.Advance(0);
-        }
-
-        _selectedTile = Tiles.FirstOrDefault(t => t.Definition.Id == group.Content.EffectId) ?? Tiles[0];
-        OnPropertyChanged(nameof(SelectedTile));
-        BuildParameters();
+        Editor.Edit(group.Content);
     }
 
     /// <summary>
@@ -403,56 +417,6 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Пересобирает настройки под выбранный эффект; правки пишутся в его сохранённые настройки.
-    /// </summary>
-    private void BuildParameters()
-    {
-        Parameters.Clear();
-
-        if (_selectedGroup == null)
-            return;
-
-        var values = ValuesConfigOf(_selectedTile.Definition);
-
-        foreach (var parameter in _selectedTile.Definition.Parameters)
-        {
-            EffectParameterViewModel item = parameter.Kind switch
-            {
-                EffectParameterKind.Color => new ColorParameterViewModel(parameter, values, OnParameterChanged),
-                EffectParameterKind.Choice => new ChoiceParameterViewModel(parameter, values, OnParameterChanged),
-                EffectParameterKind.Toggle => new ToggleParameterViewModel(parameter, values, OnParameterChanged),
-                _ => new NumberParameterViewModel(parameter, values, OnParameterChanged)
-            };
-
-            Parameters.Add(item);
-        }
-    }
-
-    private void OnParameterChanged()
-    {
-        // Превью плитки рисуется с теми же настройками, что и эффект на устройствах
-        _selectedTile.Values = EffectValues.From(ValuesConfigOf(_selectedTile.Definition));
-
-        _contentChanged();
-    }
-
-    /// <summary>
-    /// Сохранённые настройки эффекта; заводятся пустыми, если эффект ещё не настраивали.
-    /// </summary>
-    private EffectValuesConfig ValuesConfigOf(EffectDefinition effect)
-    {
-        var effects = _selectedGroup!.Content.Effects;
-
-        if (!effects.TryGetValue(effect.Id, out var values))
-        {
-            values = new EffectValuesConfig();
-            effects[effect.Id] = values;
-        }
-
-        return values;
-    }
-
-    /// <summary>
     /// Приводит устройства и группы сцены к списку менеджера и настройкам групп: после поиска у устройств могли смениться
     /// возможности, после правок групп — их состав. Выделение и выбранная группа сохраняются, если они ещё есть.
     /// </summary>
@@ -495,20 +459,18 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Строки списка сценариев группы: её сценарии по важности и внизу «По умолчанию».
-    /// Условий у сценариев пока нет, поэтому играет всегда «По умолчанию».
+    /// Строки списка сценариев группы по важности, с отметкой того, который сейчас играет; «По умолчанию» в список не входит.
     /// </summary>
     private IReadOnlyList<ScenarioRowViewModel> ScenariosOf(GroupConfig group)
     {
-        var rows = group.ScenarioIds
+        var playing = ScenarioSelector.Choose(_config, group, _apps).Scenario;
+
+        return group.ScenarioIds
             .Select(id => _config.Scenarios.FirstOrDefault(s => s.Id == id))
             .OfType<ScenarioConfig>()
-            .Select(s => new ScenarioRowViewModel(s.Name, false))
+            .Select(s => new ScenarioRowViewModel(s.Id, ScenarioItemViewModel.TitleOf(s), ScenarioSelector.Describe(s.Condition),
+                s == playing))
             .ToList();
-
-        rows.Add(new ScenarioRowViewModel("По умолчанию", true));
-
-        return rows;
     }
 
     /// <summary>
@@ -520,8 +482,7 @@ public sealed partial class SceneViewModel : ObservableObject
         var seconds = (now - _lastTick).TotalSeconds;
         _lastTick = now;
 
-        foreach (var tile in Tiles)
-            tile.Advance(seconds);
+        Editor.Advance(seconds);
 
         var live = _loop.LiveColors;
 

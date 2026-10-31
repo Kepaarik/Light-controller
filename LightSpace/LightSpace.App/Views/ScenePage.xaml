@@ -5,44 +5,12 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
              xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             xmlns:views="clr-namespace:LightSpace.App.Views"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
     <UserControl.Resources>
-        <!-- Настройки эффекта: число — ползунок с подписью значения -->
-        <DataTemplate DataType="{x:Type vm:NumberParameterViewModel}">
-            <controls:ValueSlider Label="{Binding Title}" Unit="{Binding Unit}" Decimals="{Binding Decimals}"
-                                  Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
-                                  Value="{Binding Value}" Margin="{StaticResource GapBottom16}"/>
-        </DataTemplate>
-
-        <!-- Цвет: подпись слева, кнопка с образцом справа открывает круг цветов -->
-        <DataTemplate DataType="{x:Type vm:ColorParameterViewModel}">
-            <DockPanel Margin="{StaticResource GapBottom16}">
-                <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}"/>
-                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" VerticalAlignment="Center"/>
-            </DockPanel>
-        </DataTemplate>
-
-        <!-- Выбор из вариантов: сегменты, которые переносятся на новую строку, если не помещаются -->
-        <DataTemplate DataType="{x:Type vm:ChoiceParameterViewModel}">
-            <StackPanel Margin="{StaticResource GapBottom16}">
-                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" Margin="{StaticResource GapBottom8}"/>
-                <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Choices}" SelectedItem="{Binding SelectedChoice}"
-                         DisplayMemberPath="Title">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel/>
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                </ListBox>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Переключатель -->
-        <DataTemplate DataType="{x:Type vm:ToggleParameterViewModel}">
-            <CheckBox Content="{Binding Title}" IsChecked="{Binding IsOn}" Margin="{StaticResource GapBottom16}"/>
-        </DataTemplate>
+        <!-- Настройки эффекта — в общем редакторе EffectEditor -->
 
         <!-- Карточка устройства с живыми цветами. Имя DeviceCard ищет выделение мышью в ScenePage.xaml.cs -->
         <DataTemplate x:Key="DeviceCardTemplate" DataType="vm:SceneDeviceViewModel">
@@ -183,36 +151,49 @@
                                            Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                             </StackPanel>
 
+                            <!-- Сценарии группы по важности: строки перетаскиваются мышью, внизу всегда «По умолчанию» -->
                             <TextBlock Text="Сценарии" Style="{StaticResource SectionLabel}"/>
-                            <ItemsControl ItemsSource="{Binding SelectedGroup.Scenarios}">
+                            <ItemsControl ItemsSource="{Binding SelectedGroup.Scenarios}"
+                                          controls:DragReorder.MoveCommand="{Binding MoveScenarioCommand}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:ScenarioRowViewModel">
-                                        <Border Style="{StaticResource SettingRow}">
+                                        <Border Style="{StaticResource ReorderRow}">
                                             <DockPanel VerticalAlignment="Center">
+                                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE70F;"
+                                                        ToolTip="Открыть сценарий" CommandParameter="{Binding}" Margin="{StaticResource GapLeft8}"
+                                                        Command="{Binding DataContext.Scene.OpenScenarioCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                                 <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"
                                                            Visibility="{Binding IsPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-                                                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" VerticalAlignment="Center"/>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding ConditionText}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
                                             </DockPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
+                            <Border Style="{StaticResource SettingRow}">
+                                <DockPanel VerticalAlignment="Center">
+                                    <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"
+                                               Visibility="{Binding SelectedGroup.IsDefaultPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                                    <TextBlock Text="По умолчанию" Style="{StaticResource Body}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                            </Border>
+
+                            <Button Style="{StaticResource GhostButton}" Content="Сценарий" controls:Appearance.Icon="&#xE710;"
+                                    HorizontalAlignment="Left" Command="{Binding AddScenarioCommand}"/>
+                            <TextBlock Text="Играет верхний сценарий, у которого выполнено условие; перетащите строку, чтобы поменять важность."
+                                       Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+
                             <controls:ValueSlider Label="Яркость группы" Unit="%" Minimum="0" Maximum="100" Step="1"
                                                   Value="{Binding SelectedGroup.Brightness}" Margin="{StaticResource GapTop16}"/>
 
                             <!-- Содержимое «По умолчанию»: галерея, ниже настройки выбранного эффекта -->
                             <TextBlock Text="По умолчанию" Style="{StaticResource SectionLabel}"/>
-                            <TextBlock Text="{Binding SelectedTile.Description}" Style="{StaticResource Hint}"/>
-
-                            <ListBox Style="{StaticResource TileGallery}" ItemsSource="{Binding Tiles}" SelectedItem="{Binding SelectedTile}"
-                                     Margin="{StaticResource GapTop16}"/>
-
-                            <TextBlock Text="{Binding SelectedTile.Title}" Style="{StaticResource SectionLabel}"/>
-                            <ItemsControl ItemsSource="{Binding Parameters}"/>
-
-                            <Button Style="{StaticResource GhostButton}" Content="Сбросить настройки эффекта" controls:Appearance.Icon="&#xE72C;"
-                                    HorizontalAlignment="Left" Command="{Binding ResetParametersCommand}"/>
+                            <views:EffectEditor DataContext="{Binding Editor}"/>
 
                             <!-- Устройства группы и действия с ней -->
                             <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">

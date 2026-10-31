@@ -45,6 +45,7 @@ public static class DragReorder
             return;
 
         list.PreviewMouseLeftButtonDown -= OnPressed;
+        list.PreviewMouseLeftButtonUp -= OnReleased;
         list.PreviewMouseMove -= OnMouseMove;
         list.DragOver -= OnDragOver;
         list.Drop -= OnDrop;
@@ -55,6 +56,7 @@ public static class DragReorder
             return;
 
         list.PreviewMouseLeftButtonDown += OnPressed;
+        list.PreviewMouseLeftButtonUp += OnReleased;
         list.PreviewMouseMove += OnMouseMove;
         list.DragOver += OnDragOver;
         list.Drop += OnDrop;
@@ -70,6 +72,15 @@ public static class DragReorder
         _pressedList = list;
         _pressedItem = ItemUnder(list, e.OriginalSource as DependencyObject);
         _pressPoint = e.GetPosition(list);
+    }
+
+    /// <summary>
+    /// Кнопку отпустили, не сдвинув мышь, — это был клик, тянуть нечего.
+    /// </summary>
+    private static void OnReleased(object sender, MouseButtonEventArgs e)
+    {
+        _pressedList = null;
+        _pressedItem = null;
     }
 
     /// <summary>

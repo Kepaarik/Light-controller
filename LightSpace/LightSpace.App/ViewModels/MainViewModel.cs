@@ -33,7 +33,8 @@ public sealed partial class MainViewModel : ObservableObject
         _apps = new AppWatcher { FocusReleaseDelay = TimeSpan.FromSeconds(config.FocusReleaseDelaySeconds) };
         _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices, _apps));
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave);
-        Scene = new SceneViewModel(config, _deviceManager, _frameLoop, OnContentChanged);
+        Scenarios = new ScenariosViewModel(config, _deviceManager, _apps, OnContentChanged);
+        Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _apps, OnContentChanged, AddScenario, OpenScenario);
 
         Settings.PropertyChanged += OnSettingsChanged;
         _deviceManager.DevicesChanged += OnDevicesChanged;
@@ -57,6 +58,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     public SceneViewModel Scene { get; }
 
+    public ScenariosViewModel Scenarios { get; }
+
     /// <summary>
     /// Сообщает, видно ли окно: живые цвета и превью считаются, только пока на них можно посмотреть.
     /// </summary>
@@ -76,6 +79,7 @@ public sealed partial class MainViewModel : ObservableObject
         _apps.Changed -= OnAppsChanged;
         _apps.Dispose();
         Scene.SetLive(false);
+        Scenarios.SetLive(false);
 
         // Сначала поток кадров: иначе он клал бы кадры в уже закрытые выводы устройств
         _frameLoop.Dispose();
@@ -121,6 +125,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnDevicesChanged(object? sender, EventArgs e)
     {
         UpdateFrames();
+        Scenarios.Refresh();
     }
 
     /// <summary>
@@ -129,15 +134,45 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnAppsChanged(object? sender, EventArgs e)
     {
         UpdateFrames();
+        RefreshScenarios();
     }
 
     /// <summary>
-    /// Группы, их эффект, настройки эффекта или яркость изменились: движку — новый снимок, в файл — с задержкой.
+    /// Группы, их эффект, настройки эффекта или яркость, сценарии или их порядок изменились: движку — новый снимок,
+    /// в файл — с задержкой, спискам сценариев — новые названия и отметки «играет».
     /// </summary>
     private void OnContentChanged()
     {
         UpdateFrames();
         Settings.ScheduleSave();
+        RefreshScenarios();
+    }
+
+    /// <summary>
+    /// Обновляет, какой сценарий где играет, на сцене и на вкладке «Сценарии».
+    /// </summary>
+    private void RefreshScenarios()
+    {
+        Scene.RefreshScenarios();
+        Scenarios.Refresh();
+    }
+
+    /// <summary>
+    /// «+ сценарий» в панели группы: новый сценарий в этой группе открывается на вкладке «Сценарии».
+    /// </summary>
+    private void AddScenario(GroupConfig group)
+    {
+        SelectedPage = AppPage.Scenarios;
+        Scenarios.Create(group);
+    }
+
+    /// <summary>
+    /// Открывает сценарий на вкладке «Сценарии».
+    /// </summary>
+    private void OpenScenario(string scenarioId)
+    {
+        SelectedPage = AppPage.Scenarios;
+        Scenarios.Open(scenarioId);
     }
 
     /// <summary>
@@ -154,10 +189,12 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Живая сцена работает, только пока окно видно и открыта вкладка «Сцена».
+    /// Живая сцена работает, только пока окно видно и открыта вкладка «Сцена»; живое превью сценария — пока открыта
+    /// вкладка «Сценарии».
     /// </summary>
     private void UpdateLive()
     {
         Scene.SetLive(_isWindowShown && SelectedPage == AppPage.Scene);
+        Scenarios.SetLive(_isWindowShown && SelectedPage == AppPage.Scenarios);
     }
 }

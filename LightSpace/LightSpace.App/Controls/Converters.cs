@@ -62,6 +62,24 @@ public sealed class BooleanToVisibilityConverter : IValueConverter
 }
 
 /// <summary>
+/// Показывает элемент, когда значения нет (null); иначе убирает его из раскладки. Например, общий значок, пока своего нет.
+/// </summary>
+public sealed class NullToVisibilityConverter : IValueConverter
+{
+    public static readonly NullToVisibilityConverter Instance = new();
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is null ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return Binding.DoNothing;
+    }
+}
+
+/// <summary>
 /// Показывает элемент, когда значение false; иначе убирает его из раскладки. Например, пустое состояние, пока список пуст.
 /// </summary>
 public sealed class InverseBooleanToVisibilityConverter : IValueConverter
