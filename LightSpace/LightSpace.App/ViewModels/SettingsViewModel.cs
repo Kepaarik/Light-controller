@@ -1,5 +1,6 @@
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using LightSpace.App.Services;
 using LightSpace.Core.Config;
 
@@ -16,9 +17,10 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly AppConfig _config;
     private readonly DispatcherTimer _saveTimer;
 
-    public SettingsViewModel(AppConfig config)
+    public SettingsViewModel(AppConfig config, Func<Task> import)
     {
         _config = config;
+        ImportCommand = new AsyncRelayCommand(import);
 
         _saveTimer = new DispatcherTimer { Interval = SaveDelay };
         _saveTimer.Tick += (_, _) => SaveNow();
@@ -68,6 +70,11 @@ public sealed class SettingsViewModel : ObservableObject
         get => _config.MinimizeToTrayOnClose;
         set => Update(_config.MinimizeToTrayOnClose, value, (c, v) => c.MinimizeToTrayOnClose = v);
     }
+
+    /// <summary>
+    /// Переносит настройки из старого приложения LedHub.
+    /// </summary>
+    public IAsyncRelayCommand ImportCommand { get; }
 
     /// <summary>
     /// Сохраняет отложенные изменения сразу, например перед выходом.
