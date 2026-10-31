@@ -17,7 +17,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ToolTip">
                     <Border Background="{DynamicResource FlyoutBrush}" BorderBrush="{DynamicResource StrokeBrush}"
-                            BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusSmall}"
+                            BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusInner}"
                             Padding="{StaticResource PaddingTooltip}" Margin="{StaticResource ShadowRoom}"
                             Effect="{DynamicResource ShadowFlyout}">
                         <ContentPresenter/>
@@ -39,7 +39,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
                     <Border Background="{DynamicResource FlyoutBrush}" BorderBrush="{DynamicResource StrokeBrush}"
-                            BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusControl}"
+                            BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusCard}"
                             Padding="{StaticResource PaddingFlyout}" Margin="{StaticResource ShadowRoom}"
                             MinWidth="{StaticResource FlyoutMinWidth}" Effect="{DynamicResource ShadowFlyout}">
                         <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
@@ -70,7 +70,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
                     <Grid>
-                        <Border x:Name="Root" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}"
+                        <Border x:Name="Root" Background="Transparent" CornerRadius="{StaticResource RadiusControl}"
                                 Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -98,7 +98,7 @@
                                IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                PopupAnimation="Fade">
                             <Border Background="{DynamicResource FlyoutBrush}" BorderBrush="{DynamicResource StrokeBrush}"
-                                    BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusControl}"
+                                    BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusCard}"
                                     Padding="{StaticResource PaddingFlyout}" Margin="{StaticResource ShadowRoom}"
                                     MinWidth="{StaticResource FlyoutMinWidth}" Effect="{DynamicResource ShadowFlyout}"
                                     Grid.IsSharedSizeScope="True">

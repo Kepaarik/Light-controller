@@ -10,13 +10,13 @@ namespace LightSpace.App.Controls;
 public static class Appearance
 {
     /// <summary>
-    /// Фон элемента под курсором.
+    /// Слой поверх фона элемента под курсором.
     /// </summary>
     public static readonly DependencyProperty HoverBrushProperty = DependencyProperty.RegisterAttached(
         "HoverBrush", typeof(Brush), typeof(Appearance), new FrameworkPropertyMetadata(null));
 
     /// <summary>
-    /// Фон нажатого элемента.
+    /// Слой поверх фона нажатого элемента.
     /// </summary>
     public static readonly DependencyProperty PressedBrushProperty = DependencyProperty.RegisterAttached(
         "PressedBrush", typeof(Brush), typeof(Appearance), new FrameworkPropertyMetadata(null));

@@ -8,6 +8,8 @@
     <CornerRadius x:Key="RadiusNone">0</CornerRadius>
     <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
     <CornerRadius x:Key="RadiusControl">8</CornerRadius>
+    <!-- Элемент внутри скруглённого контейнера с узким отступом, например вариант в сегментах или подсказка -->
+    <CornerRadius x:Key="RadiusInner">6</CornerRadius>
     <CornerRadius x:Key="RadiusCard">12</CornerRadius>
     <CornerRadius x:Key="RadiusOverlay">16</CornerRadius>
     <CornerRadius x:Key="RadiusPill">999</CornerRadius>
@@ -35,11 +37,11 @@
     <Thickness x:Key="GapTop8">0,8,0,0</Thickness>
     <Thickness x:Key="GapTop16">0,16,0,0</Thickness>
     <Thickness x:Key="GapTile">0,0,8,8</Thickness>
-    <Thickness x:Key="PaddingControl">12,6</Thickness>
+    <Thickness x:Key="PaddingControl">14,6</Thickness>
     <Thickness x:Key="PaddingCompact">8,4</Thickness>
     <Thickness x:Key="PaddingChip">12,4</Thickness>
     <Thickness x:Key="PaddingField">12,20,12,6</Thickness>
-    <Thickness x:Key="PaddingCard">16</Thickness>
+    <Thickness x:Key="PaddingCard">20</Thickness>
     <Thickness x:Key="PaddingOverlay">24</Thickness>
     <Thickness x:Key="PaddingFlyout">4</Thickness>
     <Thickness x:Key="PaddingSegments">2</Thickness>
@@ -47,7 +49,7 @@
     <Thickness x:Key="PaddingTab">12,0</Thickness>
     <Thickness x:Key="PaddingTile">4</Thickness>
     <Thickness x:Key="TileTitleMargin">4,8,4,4</Thickness>
-    <Thickness x:Key="PaddingPage">32,24,32,32</Thickness>
+    <Thickness x:Key="PaddingPage">40,32,40,40</Thickness>
     <Thickness x:Key="PaddingTooltip">8,4</Thickness>
     <Thickness x:Key="PaddingMenuItem">12,8</Thickness>
     <!-- Место вокруг всплывающей карточки, чтобы тень не обрезалась краем окна-попапа -->
@@ -57,9 +59,9 @@
     <sys:Double x:Key="FlyoutOffsetX">-12</sys:Double>
     <sys:Double x:Key="FlyoutOffsetY">-8</sys:Double>
     <sys:Double x:Key="SubmenuOffsetY">-17</sys:Double>
-    <Thickness x:Key="SectionLabelMargin">0,24,0,8</Thickness>
+    <Thickness x:Key="SectionLabelMargin">0,28,0,12</Thickness>
     <!-- Заголовок рамки группы на сцене: вровень с текстом карточек устройств внутри рамки -->
-    <Thickness x:Key="GroupHeaderMargin">8,4,8,8</Thickness>
+    <Thickness x:Key="GroupHeaderMargin">12,4,12,8</Thickness>
 
     <!-- Шрифты -->
     <FontFamily x:Key="FontText">Segoe UI Variable Text, Segoe UI</FontFamily>
@@ -78,18 +80,18 @@
     <sys:Double x:Key="FontSizeFieldLabel">12</sys:Double>
 
     <!-- Размеры элементов -->
-    <sys:Double x:Key="ControlHeight">32</sys:Double>
+    <sys:Double x:Key="ControlHeight">36</sys:Double>
     <sys:Double x:Key="FieldHeight">48</sys:Double>
     <sys:Double x:Key="CaptionHeight">48</sys:Double>
     <GridLength x:Key="CaptionRowHeight">48</GridLength>
     <sys:Double x:Key="CaptionButtonWidth">46</sys:Double>
-    <sys:Double x:Key="IconButtonSize">32</sys:Double>
+    <sys:Double x:Key="IconButtonSize">36</sys:Double>
     <sys:Double x:Key="ToggleWidth">40</sys:Double>
     <sys:Double x:Key="ToggleHeight">20</sys:Double>
     <sys:Double x:Key="ToggleKnobSize">12</sys:Double>
     <sys:Double x:Key="ToggleKnobTravel">20</sys:Double>
     <sys:Double x:Key="ToggleKnobHoverScale">1.17</sys:Double>
-    <Thickness x:Key="ToggleKnobMargin">3,0</Thickness>
+    <Thickness x:Key="ToggleKnobMargin">4,0</Thickness>
     <sys:Double x:Key="SliderTrackHeight">4</sys:Double>
     <sys:Double x:Key="SliderThumbSize">20</sys:Double>
     <sys:Double x:Key="SliderThumbInnerSize">10</sys:Double>
@@ -107,8 +109,10 @@
     <sys:Double x:Key="ScrollThumbThick">6</sys:Double>
     <sys:Double x:Key="TileWidth">132</sys:Double>
     <sys:Double x:Key="TilePreviewHeight">56</sys:Double>
-    <sys:Double x:Key="TabIndicatorWidth">16</sys:Double>
+    <sys:Double x:Key="TabIndicatorWidth">20</sys:Double>
     <sys:Double x:Key="TabIndicatorHeight">3</sys:Double>
+    <!-- Ширина черты вкладки в начале появления, доля полной ширины -->
+    <sys:Double x:Key="TabIndicatorRestScale">0.3</sys:Double>
     <sys:Double x:Key="FlyoutMinWidth">200</sys:Double>
     <sys:Double x:Key="PickerMinWidth">240</sys:Double>
     <sys:Double x:Key="PickerListMaxHeight">280</sys:Double>

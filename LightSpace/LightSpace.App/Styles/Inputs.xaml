@@ -5,6 +5,7 @@
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
+        <ResourceDictionary Source="/LightSpace;component/Styles/States.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
     <!-- Тумблер вкл/выкл: подпись слева, переключатель справа. Заменяет CheckBox во всём приложении -->
@@ -18,13 +19,16 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
                     <DockPanel x:Name="Root" Background="Transparent">
-                        <Border x:Name="Track" DockPanel.Dock="Right"
-                                Width="{StaticResource ToggleWidth}" Height="{StaticResource ToggleHeight}"
-                                CornerRadius="{StaticResource RadiusPill}" VerticalAlignment="Center"
-                                Background="{DynamicResource ControlBrush}"
-                                BorderBrush="{DynamicResource StrokeStrongBrush}" BorderThickness="{StaticResource StrokeThin}">
+                        <!-- Дорожка: выключенная — обводка, включённая — акцентная заливка, которая плавно проявляется поверх -->
+                        <Grid DockPanel.Dock="Right" Width="{StaticResource ToggleWidth}" Height="{StaticResource ToggleHeight}"
+                              VerticalAlignment="Center">
+                            <Border x:Name="Track" CornerRadius="{StaticResource RadiusPill}"
+                                    Background="{DynamicResource ControlBrush}"
+                                    BorderBrush="{DynamicResource StrokeStrongBrush}" BorderThickness="{StaticResource StrokeThin}"/>
+                            <Border x:Name="TrackOn" CornerRadius="{StaticResource RadiusPill}" Opacity="0"
+                                    Background="{DynamicResource AccentBrush}" Effect="{DynamicResource ShadowAccentGlow}"/>
                             <Ellipse x:Name="Knob" Width="{StaticResource ToggleKnobSize}" Height="{StaticResource ToggleKnobSize}"
-                                     Fill="{DynamicResource ControlStrongBrush}" HorizontalAlignment="Left"
+                                     Fill="{DynamicResource ControlStrongBrush}" HorizontalAlignment="Left" VerticalAlignment="Center"
                                      Margin="{StaticResource ToggleKnobMargin}" RenderTransformOrigin="0.5,0.5">
                                 <Ellipse.RenderTransform>
                                     <TransformGroup>
@@ -33,7 +37,7 @@
                                     </TransformGroup>
                                 </Ellipse.RenderTransform>
                             </Ellipse>
-                        </Border>
+                        </Grid>
                         <ContentPresenter x:Name="Content" VerticalAlignment="Center" Margin="{StaticResource GapRight12}"
                                           RecognizesAccessKey="True"/>
                     </DockPanel>
@@ -76,7 +80,6 @@
                             <Setter TargetName="Track" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBrush}"/>
                             <Setter TargetName="Track" Property="BorderBrush" Value="Transparent"/>
                             <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource OnAccentBrush}"/>
                             <Trigger.EnterActions>
@@ -86,6 +89,8 @@
                                                          Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)"
                                                          To="{StaticResource ToggleKnobTravel}" Duration="{StaticResource MotionNormal}"
                                                          EasingFunction="{StaticResource EaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="{StaticResource MotionNormal}" EasingFunction="{StaticResource EaseOut}"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.EnterActions>
@@ -96,6 +101,8 @@
                                                          Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.X)"
                                                          To="0" Duration="{StaticResource MotionNormal}"
                                                          EasingFunction="{StaticResource EaseOut}"/>
+                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="{StaticResource MotionNormal}" EasingFunction="{StaticResource EaseOut}"/>
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.ExitActions>
@@ -105,7 +112,7 @@
                                 <Condition Property="IsChecked" Value="True"/>
                                 <Condition Property="IsMouseOver" Value="True"/>
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                            <Setter TargetName="TrackOn" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                         </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="{StaticResource OpacityDisabled}"/>
@@ -133,21 +140,18 @@
                 <ControlTemplate TargetType="CheckBox">
                     <Border x:Name="Root" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusPill}"
-                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="{StaticResource FontIcon}"
-                                       FontSize="{StaticResource FontSizeIconSmall}" VerticalAlignment="Center"
-                                       Margin="{StaticResource GapRight4}" Visibility="Collapsed"/>
-                            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
-                        </StackPanel>
+                            SnapsToDevicePixels="True">
+                        <Grid>
+                            <Border Style="{StaticResource HoverLayer}" CornerRadius="{StaticResource RadiusPill}"/>
+                            <StackPanel Orientation="Horizontal" Margin="{TemplateBinding Padding}">
+                                <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="{StaticResource FontIcon}"
+                                           FontSize="{StaticResource FontSizeIconSmall}" VerticalAlignment="Center"
+                                           Margin="{StaticResource GapRight4}" Visibility="Collapsed"/>
+                                <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="controls:Appearance.ForceHover" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
                         </Trigger>
@@ -183,16 +187,14 @@
                 <ControlTemplate TargetType="RadioButton">
                     <Border x:Name="Root" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusControl}"
-                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                            SnapsToDevicePixels="True">
+                        <Grid>
+                            <Border Style="{StaticResource HoverLayer}" CornerRadius="{StaticResource RadiusControl}"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="controls:Appearance.ForceHover" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
                         </Trigger>
@@ -202,6 +204,7 @@
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource AccentBrush}"/>
                             <Setter TargetName="Root" Property="BorderBrush" Value="Transparent"/>
+                            <Setter TargetName="Root" Property="Effect" Value="{DynamicResource ShadowAccentGlow}"/>
                             <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
@@ -326,7 +329,11 @@
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
                             <Border x:Name="Underline" Height="{StaticResource FieldUnderlineHeight}" VerticalAlignment="Bottom"
                                     Margin="{StaticResource FieldUnderlineMargin}" CornerRadius="{StaticResource RadiusPill}"
-                                    Background="{DynamicResource AccentBrush}" Visibility="Hidden"/>
+                                    Background="{DynamicResource AccentBrush}" Visibility="Hidden" RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform/>
+                                </Border.RenderTransform>
+                            </Border>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -379,6 +386,17 @@
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource FlyoutBrush}"/>
                             <Setter TargetName="Underline" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+                            <!-- Черта фокуса вырастает из середины поля -->
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Underline"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                         From="0" To="1" Duration="{StaticResource MotionNormal}"
+                                                         EasingFunction="{StaticResource EaseOut}" FillBehavior="Stop"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
                         </Trigger>
                         <Trigger Property="controls:Appearance.ForcePressed" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource FlyoutBrush}"/>
@@ -421,7 +439,11 @@
                             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
                             <Border x:Name="Underline" Height="{StaticResource FieldUnderlineHeight}" VerticalAlignment="Bottom"
                                     Margin="{StaticResource FieldUnderlineMargin}" CornerRadius="{StaticResource RadiusPill}"
-                                    Background="{DynamicResource AccentBrush}" Visibility="Hidden"/>
+                                    Background="{DynamicResource AccentBrush}" Visibility="Hidden" RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform/>
+                                </Border.RenderTransform>
+                            </Border>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -437,6 +459,17 @@
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource FlyoutBrush}"/>
                             <Setter TargetName="Underline" Property="Visibility" Value="Visible"/>
+                            <!-- Черта фокуса вырастает из середины поля -->
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Underline"
+                                                         Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                         From="0" To="1" Duration="{StaticResource MotionNormal}"
+                                                         EasingFunction="{StaticResource EaseOut}" FillBehavior="Stop"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
                         </Trigger>
                         <Trigger Property="controls:Appearance.ForcePressed" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource FlyoutBrush}"/>
@@ -467,21 +500,18 @@
                 <ControlTemplate TargetType="ToggleButton">
                     <Border x:Name="Root" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusControl}"
-                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                        <DockPanel>
-                            <TextBlock DockPanel.Dock="Right" Text="&#xE70D;" FontFamily="{StaticResource FontIcon}"
-                                       FontSize="{StaticResource FontSizeIconSmall}" Foreground="{DynamicResource TextSecondaryBrush}"
-                                       VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
-                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
-                        </DockPanel>
+                            SnapsToDevicePixels="True">
+                        <Grid>
+                            <Border Style="{StaticResource HoverLayer}" CornerRadius="{StaticResource RadiusControl}"/>
+                            <DockPanel Margin="{TemplateBinding Padding}">
+                                <TextBlock DockPanel.Dock="Right" Text="&#xE70D;" FontFamily="{StaticResource FontIcon}"
+                                           FontSize="{StaticResource FontSizeIconSmall}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
+                                <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                            </DockPanel>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="controls:Appearance.ForceHover" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
                         </Trigger>
