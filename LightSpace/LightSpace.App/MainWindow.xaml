@@ -23,7 +23,8 @@
                       ResizeBorderThickness="6" CornerRadius="0"/>
     </WindowChrome.WindowChrome>
 
-    <Grid x:Name="Root">
+    <!-- Тонировка поверх Mica: в тёмной теме окно глубже и холоднее системного фона -->
+    <Grid x:Name="Root" Background="{DynamicResource BackdropTintBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="{StaticResource CaptionRowHeight}"/>
             <RowDefinition Height="*"/>

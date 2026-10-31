@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using Microsoft.Win32;
 using Windows.UI.ViewManagement;
 
@@ -25,6 +26,12 @@ public static class ThemeService
 
     private static readonly Uri LightUri = new("/LightSpace;component/Themes/Light.xaml", UriKind.Relative);
     private static readonly Uri DarkUri = new("/LightSpace;component/Themes/Dark.xaml", UriKind.Relative);
+
+    // Свечение акцентом вокруг активных элементов: размытие и непрозрачность в тёмной и светлой теме
+    private const double DarkGlowBlur = 16;
+    private const double DarkGlowOpacity = 0.55;
+    private const double LightGlowBlur = 12;
+    private const double LightGlowOpacity = 0.35;
 
     // Акцентный цвет на случай, если Windows его не отдала
     private static readonly Color FallbackAccent = Color.FromRgb(0x00, 0x78, 0xD4);
@@ -112,6 +119,15 @@ public static class ThemeService
         resources["AccentSoftBrush"] = Freeze(new SolidColorBrush(WithAlpha(accent, 0x33)));
         resources["AccentTextBrush"] = Freeze(new SolidColorBrush(accentText));
         resources["OnAccentBrush"] = Freeze(new SolidColorBrush(dark ? Colors.Black : Colors.White));
+
+        // Свечение акцентом: в тёмной теме заметнее, в светлой — едва видно
+        resources["ShadowAccentGlow"] = Freeze(new DropShadowEffect
+        {
+            Color = accent,
+            ShadowDepth = 0,
+            BlurRadius = dark ? DarkGlowBlur : LightGlowBlur,
+            Opacity = dark ? DarkGlowOpacity : LightGlowOpacity
+        });
     }
 
     private static Color ReadAccent(UIColorType type)

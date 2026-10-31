@@ -8,6 +8,8 @@
 
     <!-- Фон -->
     <SolidColorBrush x:Key="WindowBrush" Color="#F3F3F3"/>
+    <!-- В светлой теме Mica не тонируется -->
+    <SolidColorBrush x:Key="BackdropTintBrush" Color="#00F3F3F3"/>
     <SolidColorBrush x:Key="LayerBrush" Color="#80FFFFFF"/>
 
     <!-- Поверхности -->
@@ -24,6 +26,12 @@
     <SolidColorBrush x:Key="TrackBrush" Color="#29000000"/>
     <SolidColorBrush x:Key="ScrollThumbBrush" Color="#72000000"/>
     <SolidColorBrush x:Key="KnobBrush" Color="#FFFFFF"/>
+    <!-- Слой состояния поверх заливки элемента: под курсором и при нажатии темнее.
+         У акцентных и опасных кнопок под курсором слой светлее, чтобы был заметен на яркой заливке -->
+    <SolidColorBrush x:Key="StateHoverBrush" Color="#0A000000"/>
+    <SolidColorBrush x:Key="StatePressedBrush" Color="#14000000"/>
+    <SolidColorBrush x:Key="AccentStateHoverBrush" Color="#24FFFFFF"/>
+    <SolidColorBrush x:Key="AccentStatePressedBrush" Color="#26000000"/>
 
     <!-- Обводки -->
     <SolidColorBrush x:Key="StrokeBrush" Color="#0F000000"/>
@@ -62,5 +70,7 @@
     <DropShadowEffect x:Key="ShadowFlyout" po:Freeze="True" BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.14" Color="#000000"/>
     <DropShadowEffect x:Key="ShadowDialog" po:Freeze="True" BlurRadius="32" ShadowDepth="8" Direction="270" Opacity="0.22" Color="#000000"/>
     <DropShadowEffect x:Key="ShadowKnob" po:Freeze="True" BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.25" Color="#000000"/>
+    <!-- Мягкое свечение акцентом вокруг активных элементов (запасное: при запуске цвет заменяет системный акцент) -->
+    <DropShadowEffect x:Key="ShadowAccentGlow" po:Freeze="True" BlurRadius="12" ShadowDepth="0" Opacity="0.35" Color="#005FB8"/>
 
 </ResourceDictionary>

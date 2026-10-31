@@ -6,61 +6,72 @@
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                     mc:Ignorable="po">
 
-    <!-- Фон -->
-    <SolidColorBrush x:Key="WindowBrush" Color="#202020"/>
-    <SolidColorBrush x:Key="LayerBrush" Color="#4C3A3A3A"/>
+    <!-- Фон: глубокий нейтральный с холодным оттенком. Тонировка лежит поверх Mica на всём окне, Mica лишь слегка
+         просвечивает; слой страниц чуть светлее заголовка окна -->
+    <SolidColorBrush x:Key="WindowBrush" Color="#0C0E13"/>
+    <SolidColorBrush x:Key="BackdropTintBrush" Color="#E00C0E13"/>
+    <SolidColorBrush x:Key="LayerBrush" Color="#66161A24"/>
 
-    <!-- Поверхности -->
-    <SolidColorBrush x:Key="SurfaceBrush" Color="#0DFFFFFF"/>
-    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#14FFFFFF"/>
-    <SolidColorBrush x:Key="FlyoutBrush" Color="#2C2C2C"/>
-    <SolidColorBrush x:Key="OverlayBrush" Color="#66000000"/>
+    <!-- Поверхности: страница → карточка → всплывающая карточка, каждый уровень светлее предыдущего.
+         Полупрозрачные холодные оттенки ложатся на фон, а не закрывают его -->
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#0FB4C3FF"/>
+    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#18B4C3FF"/>
+    <SolidColorBrush x:Key="FlyoutBrush" Color="#1F2230"/>
+    <SolidColorBrush x:Key="OverlayBrush" Color="#A6050609"/>
 
     <!-- Элементы управления -->
-    <SolidColorBrush x:Key="ControlBrush" Color="#0FFFFFFF"/>
-    <SolidColorBrush x:Key="ControlHoverBrush" Color="#15FFFFFF"/>
-    <SolidColorBrush x:Key="ControlPressedBrush" Color="#08FFFFFF"/>
-    <SolidColorBrush x:Key="ControlStrongBrush" Color="#8BFFFFFF"/>
-    <SolidColorBrush x:Key="TrackBrush" Color="#29FFFFFF"/>
-    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#8BFFFFFF"/>
+    <SolidColorBrush x:Key="ControlBrush" Color="#12B4C3FF"/>
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="#1FB4C3FF"/>
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="#0CB4C3FF"/>
+    <SolidColorBrush x:Key="ControlStrongBrush" Color="#A6C9D1E8"/>
+    <SolidColorBrush x:Key="TrackBrush" Color="#29B4C3FF"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="#73C9D1E8"/>
     <SolidColorBrush x:Key="KnobBrush" Color="#FFFFFF"/>
+    <!-- Слой состояния поверх заливки элемента: под курсором светлее, при нажатии темнее.
+         У акцентных и опасных кнопок слой сильнее, чтобы был заметен на яркой заливке -->
+    <SolidColorBrush x:Key="StateHoverBrush" Color="#12FFFFFF"/>
+    <SolidColorBrush x:Key="StatePressedBrush" Color="#1F000000"/>
+    <SolidColorBrush x:Key="AccentStateHoverBrush" Color="#2EFFFFFF"/>
+    <SolidColorBrush x:Key="AccentStatePressedBrush" Color="#29000000"/>
 
     <!-- Обводки -->
-    <SolidColorBrush x:Key="StrokeBrush" Color="#12FFFFFF"/>
-    <SolidColorBrush x:Key="StrokeStrongBrush" Color="#8BFFFFFF"/>
-    <SolidColorBrush x:Key="DividerBrush" Color="#15FFFFFF"/>
+    <SolidColorBrush x:Key="StrokeBrush" Color="#17C8D2FF"/>
+    <SolidColorBrush x:Key="StrokeStrongBrush" Color="#73C9D1E8"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#14C8D2FF"/>
 
     <!-- Текст -->
-    <SolidColorBrush x:Key="TextBrush" Color="#FFFFFF"/>
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C5FFFFFF"/>
-    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#87FFFFFF"/>
-    <SolidColorBrush x:Key="TextDisabledBrush" Color="#5DFFFFFF"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#EEF1F8"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#AEB5C7"/>
+    <SolidColorBrush x:Key="TextTertiaryBrush" Color="#7C8498"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="#4F5668"/>
     <!-- Надписи на клавишах, закрашенных живыми цветами: от темы не зависят, зависят от яркости цвета клавиши -->
     <SolidColorBrush x:Key="KeyLabelOnBrightBrush" Color="#D9000000"/>
     <SolidColorBrush x:Key="KeyLabelOnDarkBrush" Color="#E6FFFFFF"/>
 
     <!-- Акцент (запасной) -->
-    <SolidColorBrush x:Key="AccentBrush" Color="#60CDFF"/>
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="#E660CDFF"/>
-    <SolidColorBrush x:Key="AccentPressedBrush" Color="#CC60CDFF"/>
-    <SolidColorBrush x:Key="AccentSoftBrush" Color="#3360CDFF"/>
-    <SolidColorBrush x:Key="AccentTextBrush" Color="#99EBFF"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#8B7CFF"/>
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#E68B7CFF"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#CC8B7CFF"/>
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#338B7CFF"/>
+    <SolidColorBrush x:Key="AccentTextBrush" Color="#BDB4FF"/>
     <SolidColorBrush x:Key="OnAccentBrush" Color="#000000"/>
 
     <!-- Состояния -->
-    <SolidColorBrush x:Key="SuccessBrush" Color="#6CCB5F"/>
-    <SolidColorBrush x:Key="WarningBrush" Color="#FCE100"/>
-    <SolidColorBrush x:Key="InfoBrush" Color="#60CDFF"/>
-    <SolidColorBrush x:Key="DangerBrush" Color="#FF99A4"/>
-    <SolidColorBrush x:Key="DangerHoverBrush" Color="#E6FF99A4"/>
-    <SolidColorBrush x:Key="DangerPressedBrush" Color="#CCFF99A4"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="#4FD18B"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#F2C14E"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="#5AB8FF"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#FF7A86"/>
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#E6FF7A86"/>
+    <SolidColorBrush x:Key="DangerPressedBrush" Color="#CCFF7A86"/>
     <SolidColorBrush x:Key="OnDangerBrush" Color="#000000"/>
     <SolidColorBrush x:Key="CloseHoverBrush" Color="#C42B1C"/>
     <SolidColorBrush x:Key="OnCloseHoverBrush" Color="#FFFFFF"/>
 
     <!-- Тени -->
-    <DropShadowEffect x:Key="ShadowFlyout" po:Freeze="True" BlurRadius="16" ShadowDepth="4" Direction="270" Opacity="0.5" Color="#000000"/>
-    <DropShadowEffect x:Key="ShadowDialog" po:Freeze="True" BlurRadius="32" ShadowDepth="8" Direction="270" Opacity="0.55" Color="#000000"/>
-    <DropShadowEffect x:Key="ShadowKnob" po:Freeze="True" BlurRadius="4" ShadowDepth="1" Direction="270" Opacity="0.4" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowFlyout" po:Freeze="True" BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.6" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowDialog" po:Freeze="True" BlurRadius="48" ShadowDepth="12" Direction="270" Opacity="0.65" Color="#000000"/>
+    <DropShadowEffect x:Key="ShadowKnob" po:Freeze="True" BlurRadius="6" ShadowDepth="1" Direction="270" Opacity="0.45" Color="#000000"/>
+    <!-- Мягкое свечение акцентом вокруг активных элементов (запасное: при запуске цвет заменяет системный акцент) -->
+    <DropShadowEffect x:Key="ShadowAccentGlow" po:Freeze="True" BlurRadius="16" ShadowDepth="0" Opacity="0.55" Color="#8B7CFF"/>
 
 </ResourceDictionary>
