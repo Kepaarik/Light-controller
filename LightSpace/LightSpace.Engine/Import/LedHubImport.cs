@@ -117,13 +117,25 @@ public static class LedHubImport
 
         var unknown = known.Count(id => !IsSupported(id));
         var added = 0;
+        var named = 0;
 
         foreach (var id in known.Where(IsSupported))
         {
-            if (config.Devices.Any(d => d.Id == id))
-                continue;
+            var name = names.GetValueOrDefault(id);
 
-            config.Devices.Add(new DeviceConfig { Id = id, Name = names.GetValueOrDefault(id) ?? id, Address = AddressOf(id) });
+            if (config.Devices.FirstOrDefault(d => d.Id == id) is { } device)
+            {
+                // Своё имя из LedHub получает и уже известное устройство, если своего имени у него ещё нет
+                if (name != null && string.IsNullOrWhiteSpace(device.CustomName))
+                {
+                    device.CustomName = name;
+                    named++;
+                }
+
+                continue;
+            }
+
+            config.Devices.Add(new DeviceConfig { Id = id, Name = name ?? id, CustomName = name, Address = AddressOf(id) });
             config.EnsureGroup(id);
             added++;
         }
@@ -139,8 +151,8 @@ public static class LedHubImport
         if (unknown > 0)
             result.Skipped.Add($"Устройства неизвестного вида: {unknown}.");
 
-        if (names.Count > 0)
-            result.Skipped.Add("Свои имена устройств из LedHub видны только до первого подключения: в Light Space устройство называется так, как сообщает его драйвер.");
+        if (named > 0)
+            result.Imported.Add($"Свои имена уже известных устройств: {named}.");
     }
 
     /// <summary>
