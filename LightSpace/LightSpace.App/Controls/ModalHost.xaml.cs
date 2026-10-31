@@ -6,7 +6,7 @@ using System.Windows.Media.Animation;
 namespace LightSpace.App.Controls;
 
 /// <summary>
-/// Слой модальной карточки поверх содержимого окна: вопрос, пояснение и две кнопки.
+/// Слой модальной карточки поверх содержимого окна: вопрос, пояснение, необязательный переключатель и две кнопки.
 /// Карточки показываются через <see cref="Services.Dialogs"/>.
 /// </summary>
 public partial class ModalHost : UserControl
@@ -19,16 +19,26 @@ public partial class ModalHost : UserControl
     }
 
     /// <summary>
+    /// Включён ли переключатель последней показанной карточки.
+    /// </summary>
+    public bool IsOptionChecked => OptionBox.IsChecked == true;
+
+    /// <summary>
     /// Показывает карточку и ждёт ответа: true — подтверждение, false — отмена или Esc.
     /// Если карточка уже открыта, прежний вопрос считается отменённым.
+    /// optionText — подпись переключателя под пояснением; он показывается выключенным. null — переключателя нет.
     /// </summary>
-    public Task<bool> ShowAsync(string title, string message, string confirmText, string? cancelText, bool isDanger)
+    public Task<bool> ShowAsync(string title, string message, string confirmText, string? cancelText, bool isDanger,
+        string? optionText = null)
     {
         _pending?.TrySetResult(false);
         _pending = new TaskCompletionSource<bool>();
 
         TitleText.Text = title;
         MessageText.Text = message;
+        OptionBox.Content = optionText;
+        OptionBox.IsChecked = false;
+        OptionBox.Visibility = optionText is null ? Visibility.Collapsed : Visibility.Visible;
         ConfirmButton.Content = confirmText;
         ConfirmButton.SetResourceReference(StyleProperty, isDanger ? "DangerButton" : "AccentButton");
         CancelButton.Content = cancelText;

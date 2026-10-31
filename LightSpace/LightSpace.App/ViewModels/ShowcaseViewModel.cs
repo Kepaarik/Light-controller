@@ -182,6 +182,17 @@ public sealed partial class ShowcaseViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ShowOptionDialog()
+    {
+        var (isConfirmed, isOptionChecked) = await Dialogs.ConfirmWithOptionAsync("Импортировать настройки LedHub?",
+            "Устройства, группы и настройки эффектов добавятся к текущим.", "Заменить расстановку устройств на сцене", "Импортировать");
+
+        Status = !isConfirmed ? "Карточка с опцией: отменено"
+            : isOptionChecked ? "Карточка с опцией: подтверждено, опция включена"
+            : "Карточка с опцией: подтверждено, опция выключена";
+    }
+
+    [RelayCommand]
     private void MoveSample(ReorderMove move)
     {
         ReorderSamples.Move(move.From, move.To);

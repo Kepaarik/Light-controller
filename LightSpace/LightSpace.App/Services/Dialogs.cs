@@ -22,6 +22,20 @@ public static class Dialogs
     }
 
     /// <summary>
+    /// Спрашивает подтверждение с переключателем optionText, который изначально выключен. Без окна ответ всегда «нет».
+    /// </summary>
+    public static async Task<(bool IsConfirmed, bool IsOptionChecked)> ConfirmWithOptionAsync(string title, string message,
+        string optionText, string confirmText = "ОК", string? cancelText = "Отмена")
+    {
+        if (Host == null)
+            return (false, false);
+
+        var isConfirmed = await Host.ShowAsync(title, message, confirmText, cancelText, false, optionText);
+
+        return (isConfirmed, isConfirmed && Host.IsOptionChecked);
+    }
+
+    /// <summary>
     /// Показывает сообщение с одной кнопкой.
     /// </summary>
     public static Task ShowAsync(string title, string message)

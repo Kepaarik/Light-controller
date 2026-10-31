@@ -123,14 +123,16 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
-        var confirmed = await Dialogs.ConfirmAsync("Импортировать настройки LedHub?",
-            "Устройства, группы, расстановка, настройки эффектов и игровые режимы добавятся к текущим. То, что уже настроено в Light Space, не изменится.",
-            "Импортировать");
+        // Свою расстановку от расставленной автоматически Light Space не отличает, поэтому заменить её можно только явно
+        var (confirmed, replacesPlacements) = await Dialogs.ConfirmWithOptionAsync("Импортировать настройки LedHub?",
+            "Устройства, группы, расстановка, настройки эффектов и игровые режимы добавятся к текущим. То, что уже настроено в Light Space, не изменится. " +
+            "Расстановка из LedHub переносится, только пока устройства на сцене не расставлены, — или если включить замену ниже.",
+            "Заменить расстановку устройств на сцене", "Импортировать");
 
         if (!confirmed)
             return;
 
-        var result = LedHubImport.Run(_config, Scene.NextGroupName, Scene.NextGroupColor);
+        var result = LedHubImport.Run(_config, Scene.NextGroupName, Scene.NextGroupColor, replacesPlacements);
 
         Scenarios.AddMissing();
         _deviceManager.SyncWithSettings();
