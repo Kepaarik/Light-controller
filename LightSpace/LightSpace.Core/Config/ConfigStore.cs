@@ -27,7 +27,10 @@ public static class ConfigStore
         _ => { },
 
         // 1 → 2: появился список известных устройств Devices; в старых файлах его нет, он начинается пустым
-        _ => { }
+        _ => { },
+
+        // 2 → 3: появились общая яркость Brightness и содержимое DefaultContent; ручной цвет устройств переезжает в них
+        MoveDeviceColorToContent
     };
 
     public static AppConfig Load()
@@ -79,5 +82,36 @@ public static class ConfigStore
             Migrations[step](root);
 
         root[nameof(AppConfig.Version)] = AppConfig.CurrentVersion;
+    }
+
+    /// <summary>
+    /// Раньше у каждого устройства был свой ручной цвет, теперь на всех устройствах играет один эффект.
+    /// Цвет первого устройства, которому его задавали, становится эффектом «Сплошной цвет», его яркость — общей яркостью.
+    /// </summary>
+    private static void MoveDeviceColorToContent(JsonObject root)
+    {
+        var device = (root["Devices"] as JsonArray)?
+            .OfType<JsonObject>()
+            .FirstOrDefault(d => d["Color"] is JsonValue color && color.TryGetValue<string>(out _));
+
+        if (device == null)
+            return;
+
+        var hex = device["Color"]!.GetValue<string>();
+
+        if (device["Brightness"] is JsonValue brightness && brightness.TryGetValue<int>(out var value))
+            root[nameof(AppConfig.Brightness)] = value;
+
+        root[nameof(AppConfig.DefaultContent)] = new JsonObject
+        {
+            [nameof(ContentConfig.EffectId)] = "solid",
+            [nameof(ContentConfig.Effects)] = new JsonObject
+            {
+                ["solid"] = new JsonObject
+                {
+                    [nameof(EffectValuesConfig.Colors)] = new JsonObject { ["color"] = hex }
+                }
+            }
+        };
     }
 }
