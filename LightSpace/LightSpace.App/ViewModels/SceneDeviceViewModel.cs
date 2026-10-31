@@ -153,6 +153,15 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Поворачивает устройство на угол degrees по часовой стрелке от исходного положения; угол приводится к 0–360.
+    /// </summary>
+    public void SetRotation(double degrees)
+    {
+        EditablePlacement.Rotation = (degrees % 360 + 360) % 360;
+        OnPlacementChanged();
+    }
+
+    /// <summary>
     /// Место устройства в настройках поменяли целиком, например автокомпоновкой, — показывает новое.
     /// </summary>
     public void OnPlacementChanged()
