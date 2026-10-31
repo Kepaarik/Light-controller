@@ -131,6 +131,17 @@
                                   Value="{Binding SelectedLayer.Opacity}" Margin="{StaticResource GapBottom16}"/>
             <TextBlock Text="Смешивание" Style="{StaticResource Body}" Margin="{StaticResource GapBottom8}"/>
             <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Blends}" SelectedItem="{Binding SelectedLayer.Blend}"/>
+
+            <!-- Точные границы слоя числами, в единицах сцены -->
+            <TextBlock Text="Границы" Style="{StaticResource Body}" Margin="{StaticResource GapTop16}"/>
+            <UniformGrid Columns="4" Margin="{StaticResource GapTop8}">
+                <TextBox Tag="Слева" Text="{Binding SelectedLayer.LeftText}" Margin="{StaticResource GapRight8}"/>
+                <TextBox Tag="Сверху" Text="{Binding SelectedLayer.TopText}" Margin="{StaticResource GapRight8}"/>
+                <TextBox Tag="Ширина" Text="{Binding SelectedLayer.WidthText}" Margin="{StaticResource GapRight8}"/>
+                <TextBox Tag="Высота" Text="{Binding SelectedLayer.HeightText}"/>
+            </UniformGrid>
+            <TextBlock Text="{Binding SceneSizeText}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+
             <Button Style="{StaticResource GhostButton}" Content="На всю сцену" controls:Appearance.Icon="&#xE740;"
                     HorizontalAlignment="Left" Command="{Binding FillSceneCommand}" Margin="{StaticResource GapTop8}"/>
 

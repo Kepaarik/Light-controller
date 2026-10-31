@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LightSpace.Core;
@@ -67,6 +68,42 @@ public sealed partial class SceneLayerViewModel : ObservableObject
     public Rect Place => new(Settings.X, Settings.Y, Settings.Width, Settings.Height);
 
     /// <summary>
+    /// Левый край границ слоя в единицах сцены, как он вводится в поле.
+    /// </summary>
+    public string LeftText
+    {
+        get => NumberText.Format(Settings.X);
+        set => SetBoundsText(value, (bounds, number) => bounds with { X = number });
+    }
+
+    /// <summary>
+    /// Верхний край границ слоя в единицах сцены, как он вводится в поле.
+    /// </summary>
+    public string TopText
+    {
+        get => NumberText.Format(Settings.Y);
+        set => SetBoundsText(value, (bounds, number) => bounds with { Y = number });
+    }
+
+    /// <summary>
+    /// Ширина границ слоя в единицах сцены, как она вводится в поле.
+    /// </summary>
+    public string WidthText
+    {
+        get => NumberText.Format(Settings.Width);
+        set => SetBoundsText(value, (bounds, number) => bounds with { Width = number });
+    }
+
+    /// <summary>
+    /// Высота границ слоя в единицах сцены, как она вводится в поле.
+    /// </summary>
+    public string HeightText
+    {
+        get => NumberText.Format(Settings.Height);
+        set => SetBoundsText(value, (bounds, number) => bounds with { Height = number });
+    }
+
+    /// <summary>
     /// Слой виден; скрытый слой ничего не меняет.
     /// </summary>
     public bool IsVisible
@@ -128,6 +165,10 @@ public sealed partial class SceneLayerViewModel : ObservableObject
     {
         Settings.SetBounds(bounds);
         OnPropertyChanged(nameof(Place));
+        OnPropertyChanged(nameof(LeftText));
+        OnPropertyChanged(nameof(TopText));
+        OnPropertyChanged(nameof(WidthText));
+        OnPropertyChanged(nameof(HeightText));
     }
 
     /// <summary>
@@ -136,5 +177,20 @@ public sealed partial class SceneLayerViewModel : ObservableObject
     public void OnEffectChanged()
     {
         OnPropertyChanged(nameof(Title));
+    }
+
+    /// <summary>
+    /// Границы ввели числом в поле: они сразу уходят движку. Не число — поле возвращает прежнее значение.
+    /// </summary>
+    private void SetBoundsText(string value, Func<SceneRect, double, SceneRect> change, [CallerMemberName] string? name = null)
+    {
+        if (!NumberText.TryParse(value, out var number))
+        {
+            OnPropertyChanged(name);
+            return;
+        }
+
+        SetBounds(change(Settings.Bounds, number));
+        _changed();
     }
 }

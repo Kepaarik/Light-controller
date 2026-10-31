@@ -102,6 +102,11 @@ public sealed partial class SceneEditorViewModel : ObservableObject
     public bool HasSelectedLayer => _selectedLayer != null;
 
     /// <summary>
+    /// Подсказка к полям границ слоя: размер всей сцены в тех же единицах.
+    /// </summary>
+    public string SceneSizeText => $"Вся сцена — {SceneArea.Width:0} × {SceneArea.Height:0}. Число применяется, когда поле теряет фокус.";
+
+    /// <summary>
     /// Открывает содержимое для правки; null — ничего не открыто.
     /// </summary>
     public void Edit(ContentConfig? content)
