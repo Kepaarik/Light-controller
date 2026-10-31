@@ -1,14 +1,12 @@
-using LightSpace.Core;
 using LightSpace.Core.Config;
 using LightSpace.Devices;
 using LightSpace.Devices.Tuya;
-using LightSpace.Engine.Output;
 
 namespace LightSpace.Engine;
 
 /// <summary>
-/// Все известные устройства: поиск и подключение, включение и выключение подсветки, ручной цвет, ключи устройств.
-/// Методы вызываются из одного потока (потока окна); кадры в выводы устройств можно класть из любого.
+/// Все известные устройства: поиск и подключение, включение и выключение подсветки, ключи устройств.
+/// Методы вызываются из одного потока (потока окна); кадры в выводы устройств кладёт поток кадров.
 /// </summary>
 public sealed class DeviceManager : IDisposable
 {
@@ -83,18 +81,7 @@ public sealed class DeviceManager : IDisposable
     }
 
     /// <summary>
-    /// Задаёт устройству один цвет и запоминает его; не подключённое устройство получит цвет при следующем подключении.
-    /// </summary>
-    public void SetColor(ManagedDevice device, RgbColor color, int brightness)
-    {
-        device.Settings.Color = color.ToHex();
-        device.Settings.Brightness = Math.Clamp(brightness, 0, 100);
-
-        SendSavedColor(device);
-    }
-
-    /// <summary>
-    /// Задаёт сетевой ключ устройства и набор его точек данных (нужно Tuya), затем повторяет сохранённый цвет.
+    /// Задаёт сетевой ключ устройства и набор его точек данных (нужно Tuya).
     /// </summary>
     public void SetNetworkKey(ManagedDevice device, string? localKey, TuyaDpScheme dataPoints)
     {
@@ -102,7 +89,6 @@ public sealed class DeviceManager : IDisposable
         device.Settings.DataPoints = dataPoints.ToString();
 
         ApplySettings(device);
-        SendSavedColor(device);
         DevicesChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -153,8 +139,8 @@ public sealed class DeviceManager : IDisposable
 
         managed.Connect(device, _isLightingEnabled);
 
+        // Кадры подключённое устройство получает от потока кадров, как только окно отдаст ему новый снимок
         ApplySettings(managed);
-        SendSavedColor(managed);
     }
 
     /// <summary>
@@ -166,33 +152,6 @@ public sealed class DeviceManager : IDisposable
         {
             tuya.LocalKey = device.Settings.LocalKey;
             tuya.DpScheme = DataPointsOf(device);
-        }
-    }
-
-    private static void SendSavedColor(ManagedDevice device)
-    {
-        if (device.Output == null || !device.Output.Device.IsReady || !TryParseColor(device.Settings.Color, out var color))
-            return;
-
-        device.Output.Submit(OutputFrame.Solid(color, device.Settings.Brightness));
-    }
-
-    private static bool TryParseColor(string? hex, out RgbColor color)
-    {
-        color = RgbColor.White;
-
-        if (string.IsNullOrWhiteSpace(hex))
-            return false;
-
-        try
-        {
-            color = RgbColor.Parse(hex);
-            return true;
-        }
-        catch (Exception e) when (e is FormatException or ArgumentException or OverflowException)
-        {
-            // Цвет в файле настроек могли испортить руками — такое устройство просто не получает сохранённый цвет
-            return false;
         }
     }
 }

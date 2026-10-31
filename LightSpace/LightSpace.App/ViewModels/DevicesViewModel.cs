@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LightSpace.App.Services;
 using LightSpace.Engine;
+using LightSpace.Engine.Frames;
 
 namespace LightSpace.App.ViewModels;
 
@@ -16,6 +17,7 @@ public sealed partial class DevicesViewModel : ObservableObject
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(500);
 
     private readonly DeviceManager _manager;
+    private readonly FrameLoop _frameLoop;
     private readonly Action _settingsChanged;
     private readonly DispatcherTimer _refreshTimer;
 
@@ -24,9 +26,10 @@ public sealed partial class DevicesViewModel : ObservableObject
     [ObservableProperty]
     private string _searchProblems = "";
 
-    public DevicesViewModel(DeviceManager manager, Action settingsChanged)
+    public DevicesViewModel(DeviceManager manager, FrameLoop frameLoop, Action settingsChanged)
     {
         _manager = manager;
+        _frameLoop = frameLoop;
         _settingsChanged = settingsChanged;
 
         _manager.DevicesChanged += (_, _) => Sync();
@@ -61,7 +64,14 @@ public sealed partial class DevicesViewModel : ObservableObject
     public string EmptyTitle => IsSearching ? "Идёт поиск…" : "Устройства не найдены";
 
     /// <summary>
-    /// Ищет устройства всеми способами подключения; найденные сразу получают свои сохранённые цвета.
+    /// Время расчёта кадра для всех устройств: последнего и в среднем.
+    /// </summary>
+    public string FrameTimeText => _frameLoop.Timing is { Frames: > 0 } timing
+        ? $"{timing.Last.TotalMilliseconds:0.00} мс, в среднем {timing.Average.TotalMilliseconds:0.00} мс"
+        : "Ещё не считался";
+
+    /// <summary>
+    /// Ищет устройства всеми способами подключения; найденные сразу начинают показывать текущий эффект.
     /// </summary>
     [RelayCommand]
     private async Task FindAsync()
@@ -80,7 +90,7 @@ public sealed partial class DevicesViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Убирает устройство из списка вместе с его цветом и ключом.
+    /// Убирает устройство из списка вместе с его ключом.
     /// </summary>
     [RelayCommand]
     private async Task ForgetAsync(DeviceItemViewModel? item)
@@ -89,7 +99,7 @@ public sealed partial class DevicesViewModel : ObservableObject
             return;
 
         var confirmed = await Dialogs.ConfirmAsync($"Забыть «{item.Name}»?",
-            "Устройство пропадёт из списка вместе с цветом и ключом. Если оно включено, следующий поиск найдёт его снова.", "Забыть",
+            "Устройство пропадёт из списка вместе с ключом. Если оно включено, следующий поиск найдёт его снова.", "Забыть",
             isDanger: true);
 
         if (!confirmed)
@@ -129,5 +139,7 @@ public sealed partial class DevicesViewModel : ObservableObject
     {
         foreach (var item in Items)
             item.Refresh();
+
+        OnPropertyChanged(nameof(FrameTimeText));
     }
 }

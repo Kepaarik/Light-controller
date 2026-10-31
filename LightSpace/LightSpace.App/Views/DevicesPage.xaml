@@ -110,24 +110,11 @@
                             </StackPanel>
                         </DockPanel>
 
-                        <!-- Один цвет на всё устройство -->
+                        <!-- Цвет устройства задаёт эффект на вкладке «Сцена» -->
                         <TextBlock Text="Цвет" Style="{StaticResource SectionLabel}"/>
                         <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <controls:ColorWheel Width="{StaticResource ColorWheelSize}" Height="{StaticResource ColorWheelSize}"
-                                                         SelectedColor="{Binding Color}"/>
-                                    <StackPanel VerticalAlignment="Center" Margin="{StaticResource Space24}">
-                                        <Border Width="{StaticResource FieldHeight}" Height="{StaticResource FieldHeight}" CornerRadius="{StaticResource RadiusControl}"
-                                                Background="{Binding ColorBrush}" BorderBrush="{DynamicResource StrokeBrush}"
-                                                BorderThickness="{StaticResource StrokeThin}" HorizontalAlignment="Left"/>
-                                        <TextBlock Text="{Binding ColorHex}" Style="{StaticResource BodyStrong}" Margin="{StaticResource GapTop8}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                                <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                                      Value="{Binding Brightness}" Margin="{StaticResource GapTop16}"/>
-                                <TextBlock Text="{Binding ColorHint}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
-                            </StackPanel>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="На всех устройствах играет эффект, выбранный на вкладке «Сцена»: там же его цвета, настройки и яркость. Сплошной цвет — первый эффект в галерее."/>
                         </Border>
 
                         <!-- Сетевой ключ Tuya -->
@@ -195,6 +182,11 @@
                                 <DockPanel Style="{StaticResource FactRow}">
                                     <TextBlock Text="{Binding LastErrorText}" Style="{StaticResource FactValue}" TextWrapping="Wrap"/>
                                     <TextBlock Text="Последняя ошибка" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding DataContext.FrameTimeText, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                               Style="{StaticResource FactValue}"/>
+                                    <TextBlock Text="Расчёт кадра, все устройства" Style="{StaticResource FactLabel}"/>
                                 </DockPanel>
                                 <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
                                            Text="Кадр, который не успел уйти, заменяется более свежим: медленное устройство пропускает кадры, а не задерживает остальные."/>

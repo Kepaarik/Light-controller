@@ -107,6 +107,12 @@
     <sys:Double x:Key="ContentMaxWidth">880</sys:Double>
     <sys:Double x:Key="ColorWheelSize">200</sys:Double>
     <sys:Double x:Key="SwatchSize">28</sys:Double>
+    <!-- Образец цвета внутри кнопки выбора цвета -->
+    <sys:Double x:Key="SwatchSmallSize">16</sys:Double>
+    <!-- Полоса живых цветов ленты на сцене -->
+    <sys:Double x:Key="LedBarHeight">20</sys:Double>
+    <!-- Панель эффекта справа на сцене: три плитки галереи в ряд -->
+    <GridLength x:Key="ScenePanelWidth">500</GridLength>
     <sys:Double x:Key="EmptyStateMaxWidth">360</sys:Double>
     <!-- Колонка списка слева от панели выбранного элемента -->
     <GridLength x:Key="ListPaneWidth">300</GridLength>
