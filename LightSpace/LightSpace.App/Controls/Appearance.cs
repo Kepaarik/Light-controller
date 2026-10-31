@@ -45,6 +45,12 @@ public static class Appearance
     public static readonly DependencyProperty ForcePressedProperty = DependencyProperty.RegisterAttached(
         "ForcePressed", typeof(bool), typeof(Appearance), new FrameworkPropertyMetadata(false));
 
+    /// <summary>
+    /// Элемент выбран, например устройство или группа на сцене.
+    /// </summary>
+    public static readonly DependencyProperty IsSelectedProperty = DependencyProperty.RegisterAttached(
+        "IsSelected", typeof(bool), typeof(Appearance), new FrameworkPropertyMetadata(false));
+
     public static Brush? GetHoverBrush(DependencyObject element) => (Brush?)element.GetValue(HoverBrushProperty);
 
     public static void SetHoverBrush(DependencyObject element, Brush? value) => element.SetValue(HoverBrushProperty, value);
@@ -68,4 +74,8 @@ public static class Appearance
     public static bool GetForcePressed(DependencyObject element) => (bool)element.GetValue(ForcePressedProperty);
 
     public static void SetForcePressed(DependencyObject element, bool value) => element.SetValue(ForcePressedProperty, value);
+
+    public static bool GetIsSelected(DependencyObject element) => (bool)element.GetValue(IsSelectedProperty);
+
+    public static void SetIsSelected(DependencyObject element, bool value) => element.SetValue(IsSelectedProperty, value);
 }

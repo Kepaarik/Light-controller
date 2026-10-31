@@ -213,6 +213,72 @@
         </Setter>
     </Style>
 
+    <!-- Палитра: круглые образцы цветов в ряд, выбранный обведён кольцом. Варианты — цвета (Color) в ItemsSource,
+         выбор — SelectedItem. Например, цвет обводки группы из GroupPalette -->
+    <Style x:Key="SwatchPalette" TargetType="ListBox">
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBox">
+                    <ItemsPresenter x:Name="Root"/>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="{StaticResource OpacityDisabled}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <WrapPanel/>
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Ellipse Width="{StaticResource SwatchSize}" Height="{StaticResource SwatchSize}">
+                        <Ellipse.Fill>
+                            <SolidColorBrush Color="{Binding}"/>
+                        </Ellipse.Fill>
+                    </Ellipse>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemContainerStyle">
+            <Setter.Value>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Margin" Value="{StaticResource GapRight4}"/>
+                    <Setter Property="Cursor" Value="Hand"/>
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="Ring" CornerRadius="{StaticResource RadiusPill}" Padding="{StaticResource Space4}"
+                                        BorderBrush="Transparent" BorderThickness="{StaticResource StrokeThick}" Background="Transparent">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource StrokeStrongBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="controls:Appearance.ForceHover" Value="True">
+                                        <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource StrokeStrongBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Вкладки в заголовке окна: текст, у выбранной — акцентная черта снизу -->
     <Style x:Key="TitleTabs" TargetType="ListBox">
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>

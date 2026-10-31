@@ -382,6 +382,14 @@
                     <ListBox Style="{StaticResource TileGallery}" ItemsSource="{Binding Tiles}" SelectedItem="{Binding SelectedTile}"
                              Margin="{StaticResource GapBottom16}"/>
 
+                    <TextBlock Text="Палитра цветов групп" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <ListBox Style="{StaticResource SwatchPalette}" ItemsSource="{StaticResource GroupPalette}" SelectedIndex="1"
+                                 Margin="{StaticResource GapRight12}"/>
+                        <ListBox Style="{StaticResource SwatchPalette}" ItemsSource="{StaticResource GroupPalette}" SelectedIndex="1"
+                                 IsEnabled="False"/>
+                    </WrapPanel>
+
                     <TextBlock Text="Список" Style="{StaticResource CardTitle}"/>
                     <ListBox ItemsSource="{Binding Apps}" SelectedIndex="1" MaxHeight="160" Width="320" HorizontalAlignment="Left"
                              Margin="{StaticResource GapBottom16}"/>
@@ -465,6 +473,112 @@
                     <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
                         <controls:KeyboardLayout Keys="{x:Static rk:RkS98Layout.Keys}" Colors="{Binding KeyboardColors}"/>
                     </Viewbox>
+                </StackPanel>
+            </Border>
+
+            <!-- Сцена: карточки устройств, рамки групп, сценарии группы, действие с выделением и рамка выделения мышью -->
+            <TextBlock Text="Сцена: группы и выделение" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Карточка устройства" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource DeviceCard}">
+                                <StackPanel>
+                                    <TextBlock Text="Полка" Style="{StaticResource BodyStrong}"/>
+                                    <Border Height="{StaticResource LedBarHeight}" CornerRadius="{StaticResource RadiusSmall}"
+                                            Background="{Binding StripColors}" Margin="{StaticResource GapTop8}"/>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource DeviceCard}" controls:Appearance.ForceHover="True">
+                                <StackPanel>
+                                    <TextBlock Text="Полка" Style="{StaticResource BodyStrong}"/>
+                                    <Border Height="{StaticResource LedBarHeight}" CornerRadius="{StaticResource RadiusSmall}"
+                                            Background="{Binding StripColors}" Margin="{StaticResource GapTop8}"/>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource DeviceCard}" controls:Appearance.IsSelected="True">
+                                <StackPanel>
+                                    <TextBlock Text="Полка" Style="{StaticResource BodyStrong}"/>
+                                    <Border Height="{StaticResource LedBarHeight}" CornerRadius="{StaticResource RadiusSmall}"
+                                            Background="{Binding StripColors}" Margin="{StaticResource GapTop8}"/>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="Выделено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Группа" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource GroupFrame}">
+                                <Border.BorderBrush>
+                                    <SolidColorBrush Color="{Binding [0], Source={StaticResource GroupPalette}}"/>
+                                </Border.BorderBrush>
+                                <StackPanel>
+                                    <DockPanel Style="{StaticResource GroupFrameHeader}">
+                                        <TextBlock DockPanel.Dock="Right" Text="▶ По умолчанию" Style="{StaticResource PlayingMark}"/>
+                                        <TextBlock Text="Стол" Style="{StaticResource BodyStrong}"/>
+                                    </DockPanel>
+                                    <Border Style="{StaticResource DeviceCard}">
+                                        <TextBlock Text="Лента за монитором" Style="{StaticResource BodyStrong}"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource GroupFrame}" controls:Appearance.IsSelected="True">
+                                <Border.BorderBrush>
+                                    <SolidColorBrush Color="{Binding [1], Source={StaticResource GroupPalette}}"/>
+                                </Border.BorderBrush>
+                                <StackPanel>
+                                    <DockPanel Style="{StaticResource GroupFrameHeader}">
+                                        <TextBlock DockPanel.Dock="Right" Text="▶ По умолчанию" Style="{StaticResource PlayingMark}"/>
+                                        <TextBlock Text="Полки" Style="{StaticResource BodyStrong}"/>
+                                    </DockPanel>
+                                    <Border Style="{StaticResource DeviceCard}">
+                                        <TextBlock Text="Верхняя полка" Style="{StaticResource BodyStrong}"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="Выбрано" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <TextBlock Text="Сценарии группы" Style="{StaticResource CardTitle}"/>
+                    <StackPanel Width="{StaticResource PickerMinWidth}" HorizontalAlignment="Left" Margin="{StaticResource GapBottom16}">
+                        <Border Style="{StaticResource SettingRow}">
+                            <TextBlock Text="Игры" Style="{StaticResource Body}" VerticalAlignment="Center"/>
+                        </Border>
+                        <Border Style="{StaticResource SettingRow}">
+                            <DockPanel VerticalAlignment="Center">
+                                <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"/>
+                                <TextBlock Text="По умолчанию" Style="{StaticResource Body}" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock Text="Действие с выделением и рамка выделения" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel>
+                        <Border Style="{StaticResource FlyoutCard}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Выбрано 2 устройства" Style="{StaticResource Body}" VerticalAlignment="Center"
+                                           Margin="{StaticResource PaddingMenuItem}"/>
+                                <Button Style="{StaticResource AccentButton}" Content="Сделать группой" controls:Appearance.Icon="&#xE902;"
+                                        Margin="{StaticResource GapRight4}"/>
+                                <Button Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE711;" ToolTip="Снять выделение"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource SelectionBand}" Width="{StaticResource TileWidth}" Height="{StaticResource TilePreviewHeight}"
+                                Margin="{StaticResource ShadowRoom}"/>
+                    </WrapPanel>
                 </StackPanel>
             </Border>
 

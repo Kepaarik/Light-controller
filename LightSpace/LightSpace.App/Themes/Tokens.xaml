@@ -53,6 +53,8 @@
     <!-- Место вокруг всплывающей карточки, чтобы тень не обрезалась краем окна-попапа -->
     <Thickness x:Key="ShadowRoom">12</Thickness>
     <Thickness x:Key="SectionLabelMargin">0,24,0,8</Thickness>
+    <!-- Заголовок рамки группы на сцене: вровень с текстом карточек устройств внутри рамки -->
+    <Thickness x:Key="GroupHeaderMargin">8,4,8,8</Thickness>
 
     <!-- Шрифты -->
     <FontFamily x:Key="FontText">Segoe UI Variable Text, Segoe UI</FontFamily>
@@ -119,6 +121,19 @@
     <!-- Раскладка клавиатуры: сторона стандартной клавиши и зазор между клавишами -->
     <sys:Double x:Key="KeyUnitSize">32</sys:Double>
     <sys:Double x:Key="KeyGap">4</sys:Double>
+
+    <!-- Палитра обводок групп на сцене. Это не цвета темы, а цвета, которые выбирает пользователь и которые сохраняются
+         в настройках, поэтому они одинаковы в обеих темах и подобраны так, чтобы читаться и на светлом, и на тёмном фоне -->
+    <x:Array x:Key="GroupPalette" Type="{x:Type Color}">
+        <Color>#0090FF</Color>
+        <Color>#46A758</Color>
+        <Color>#F76B15</Color>
+        <Color>#8E4EC6</Color>
+        <Color>#12A594</Color>
+        <Color>#E5484D</Color>
+        <Color>#FFC53D</Color>
+        <Color>#D6409F</Color>
+    </x:Array>
 
     <!-- Обводки -->
     <Thickness x:Key="StrokeThin">1</Thickness>
