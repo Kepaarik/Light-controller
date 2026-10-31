@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Захват звука компьютера и микрофона через WASAPI -->
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\LightSpace.Core\LightSpace.Core.csproj" />
     <ProjectReference Include="..\LightSpace.Devices\LightSpace.Devices.csproj" />
   </ItemGroup>

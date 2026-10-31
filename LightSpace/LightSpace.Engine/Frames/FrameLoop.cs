@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using LightSpace.Core;
 using LightSpace.Engine.Effects;
 using LightSpace.Engine.Output;
+using LightSpace.Engine.Sources;
 using LightSpace.Engine.Space;
 
 namespace LightSpace.Engine.Frames;
@@ -26,6 +27,7 @@ public sealed class FrameLoop : IDisposable
 
     private readonly ManualResetEventSlim _stop = new();
     private readonly Thread _thread;
+    private readonly SourceHub _sources;
 
     // Снимки заменяются целиком атомарной записью ссылки
     private FrameSnapshot _snapshot;
@@ -33,9 +35,13 @@ public sealed class FrameLoop : IDisposable
     private FrameTiming _timing = FrameTiming.None;
     private volatile bool _isLiveColorsWanted;
 
-    public FrameLoop(FrameSnapshot snapshot)
+    /// <summary>
+    /// sources — откуда экран и музыка берут картинку монитора и звук; поток кадров сам говорит, какие источники ему нужны.
+    /// </summary>
+    public FrameLoop(FrameSnapshot snapshot, SourceHub sources)
     {
         _snapshot = snapshot;
+        _sources = sources;
 
         _thread = new Thread(Run) { IsBackground = true, Name = "Light Space: кадры" };
         _thread.Start();
@@ -104,8 +110,11 @@ public sealed class FrameLoop : IDisposable
                 var snapshot = Volatile.Read(ref _snapshot);
                 var now = clock.Elapsed;
 
-                AdvanceClocks(playbacks, snapshot, (now - lastTick).TotalSeconds);
+                AdvanceClocks(playbacks, snapshot, (now - lastTick).TotalSeconds, _sources);
                 lastTick = now;
+
+                // Экран и звук снимаются, только пока их играет хоть одна группа, в том числе уходящим сценарием
+                _sources.Require(this, DemandOf(snapshot, playbacks));
 
                 var isLiveDue = _isLiveColorsWanted && now - lastLive >= LiveColorsInterval;
 
@@ -132,14 +141,47 @@ public sealed class FrameLoop : IDisposable
         finally
         {
             TimeEndPeriod(1);
+
+            // Остановленному потоку кадров источники больше не нужны
+            _sources.Require(this, SourceDemand.None);
         }
+    }
+
+    /// <summary>
+    /// Какие мониторы и входы звука нужны группам, у которых есть устройства: для того, что играет, и того, что уходит.
+    /// Выключенной подсветке не нужно ничего.
+    /// </summary>
+    private static SourceDemand DemandOf(FrameSnapshot snapshot, Dictionary<string, GroupPlayback> playbacks)
+    {
+        if (!snapshot.IsLightingEnabled)
+            return SourceDemand.None;
+
+        var monitors = new HashSet<string>();
+        var inputs = new HashSet<AudioInput>();
+
+        foreach (var group in snapshot.Groups)
+        {
+            if (group.Devices.Count == 0)
+                continue;
+
+            foreach (var content in playbacks[group.Id].Playing)
+            {
+                if (content.Screen is { } screen)
+                    monitors.Add(screen.MonitorKey);
+
+                if (content.Music is { } music)
+                    inputs.Add(music.Input);
+            }
+        }
+
+        return new SourceDemand(monitors, inputs);
     }
 
     /// <summary>
     /// Двигает время эффекта каждой группы на seconds секунд с учётом его скорости; если в группе сменился сценарий,
     /// начинает плавный переход от прежнего содержимого к новому.
     /// </summary>
-    private static void AdvanceClocks(Dictionary<string, GroupPlayback> playbacks, FrameSnapshot snapshot, double seconds)
+    private static void AdvanceClocks(Dictionary<string, GroupPlayback> playbacks, FrameSnapshot snapshot, double seconds, SourceHub sources)
     {
         var transition = snapshot.TransitionMilliseconds / 1000.0;
 
@@ -148,7 +190,7 @@ public sealed class FrameLoop : IDisposable
             if (!playbacks.TryGetValue(group.Id, out var playback))
                 playbacks[group.Id] = new GroupPlayback(group.Active);
             else
-                playback.Advance(group.Active, seconds, transition);
+                playback.Advance(group.Active, seconds, transition, sources);
         }
 
         // Часы распущенных и удалённых групп больше не нужны
@@ -244,14 +286,31 @@ public sealed class FrameLoop : IDisposable
         public SceneClock Layers { get; } = new();
 
         /// <summary>
-        /// Двигает время содержимого на seconds секунд с учётом его скорости, у сцены — время каждого её слоя.
+        /// Сглаженные цвета, когда часы считают экран.
         /// </summary>
-        public void Advance(FrameContent content, double seconds)
+        public ScreenPlayback Screen { get; } = new();
+
+        /// <summary>
+        /// Сглаженный звук, когда часы считают музыку.
+        /// </summary>
+        public MusicPlayback Music { get; } = new();
+
+        /// <summary>
+        /// Двигает время содержимого на seconds секунд с учётом его скорости, у сцены — время каждого её слоя,
+        /// у экрана и музыки — берёт последнюю картинку монитора или звук из источников.
+        /// </summary>
+        public void Advance(FrameContent content, double seconds, SourceHub sources)
         {
             Time += seconds * content.Speed;
 
             if (content.Layers != null)
                 Layers.Advance(content.Layers, seconds);
+
+            if (content.Screen is { } screen)
+                Screen.Advance(screen, sources.PictureOf(screen.MonitorKey), seconds);
+
+            if (content.Music is { } music)
+                Music.Advance(music, sources.LevelsOf(music.Input), seconds);
         }
     }
 
@@ -282,14 +341,28 @@ public sealed class FrameLoop : IDisposable
         public EffectClock Clock { get; private set; }
 
         /// <summary>
+        /// Всё, что сейчас звучит в группе: содержимое и, во время перехода, уходящее содержимое.
+        /// </summary>
+        public IEnumerable<FrameContent> Playing
+        {
+            get
+            {
+                yield return Content;
+
+                if (_leaving is { } leaving)
+                    yield return leaving.Content;
+            }
+        }
+
+        /// <summary>
         /// Двигает время на seconds секунд. content — что должно играть по последнему снимку; если это другой сценарий,
         /// начинается переход длиной transition секунд (0 — смена сразу).
         /// </summary>
-        public void Advance(FrameContent content, double seconds, double transition)
+        public void Advance(FrameContent content, double seconds, double transition, SourceHub sources)
         {
             if (_leaving is { } leaving)
             {
-                leaving.Clock.Advance(leaving.Content, seconds);
+                leaving.Clock.Advance(leaving.Content, seconds, sources);
                 _transitionTime += seconds;
 
                 if (_transitionTime >= _transitionLength)
@@ -308,7 +381,7 @@ public sealed class FrameLoop : IDisposable
             if (Clock.EffectId != content.ClockId)
                 Clock = new EffectClock(content.ClockId);
             else
-                Clock.Advance(content, seconds);
+                Clock.Advance(content, seconds, sources);
         }
 
         /// <summary>
@@ -352,14 +425,36 @@ public sealed class FrameLoop : IDisposable
         }
 
         /// <summary>
-        /// Кадр содержимого на устройстве: эффект играет в пространстве самого устройства, сцена — по местам его
-        /// светодиодов на сцене. У устройства одного цвета в обоих случаях один цвет.
+        /// Кадр содержимого на устройстве: эффект и музыка играют в пространстве самого устройства, сцена и экран — по местам его
+        /// светодиодов на сцене. У устройства одного цвета во всех случаях один цвет.
         /// </summary>
         private static RgbColor[] RenderContent(FrameContent content, EffectClock clock, FrameDevice device)
         {
+            if (content.Screen != null || content.Music != null)
+                return RenderSource(content, clock, device);
+
             return content.Layers is { } layers
                 ? SceneRenderer.Render(layers, clock.Layers, device.ScenePoints)
                 : EffectRenderer.Render(content.Effect, content.Values, device.Geometry, clock.Time);
+        }
+
+        /// <summary>
+        /// Кадр экрана или музыки. Ошибка в нём не останавливает поток кадров: устройство на этом кадре гаснет.
+        /// </summary>
+        private static RgbColor[] RenderSource(FrameContent content, EffectClock clock, FrameDevice device)
+        {
+            try
+            {
+                return content.Screen is { } screen
+                    ? clock.Screen.Render(device.Id, screen, device.ScenePoints, SceneArea.Width, SceneArea.Height)
+                    : clock.Music.Render(content.Music!, device.Geometry);
+            }
+            catch (Exception e)
+            {
+                Trace.TraceWarning($"Light Space: не удалось посчитать кадр устройства {device.Id}: {e.Message}");
+
+                return new RgbColor[Math.Max(device.ScenePoints.Count, 1)];
+            }
         }
     }
 

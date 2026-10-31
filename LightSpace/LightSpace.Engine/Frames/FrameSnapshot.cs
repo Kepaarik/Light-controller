@@ -3,6 +3,7 @@ using LightSpace.Engine.Apps;
 using LightSpace.Engine.Effects;
 using LightSpace.Engine.Output;
 using LightSpace.Engine.Scenarios;
+using LightSpace.Engine.Sources;
 using LightSpace.Engine.Space;
 
 namespace LightSpace.Engine.Frames;
@@ -24,6 +25,20 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
     // Часы сцены считают время каждого её слоя отдельно, поэтому у всей сцены свой постоянный «эффект» для часов
     private const string SceneClockId = "scene";
 
+    // Экран и музыка помнят в часах сглаженные цвета и звук; когда тип меняется, это начинается заново
+    private const string ScreenClockId = "screen";
+    private const string MusicClockId = "music";
+
+    /// <summary>
+    /// Настройки экрана, если содержимое — экран; иначе null.
+    /// </summary>
+    public ScreenSettings? Screen { get; init; }
+
+    /// <summary>
+    /// Настройки музыки, если содержимое — музыка; иначе null.
+    /// </summary>
+    public MusicSettings? Music { get; init; }
+
     /// <summary>
     /// Скорость эффекта: во сколько раз быстрее обычного идёт его время.
     /// </summary>
@@ -32,7 +47,9 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
     /// <summary>
     /// Что считают часы содержимого: эффект или сцену. Когда это меняется, время начинается заново.
     /// </summary>
-    public string ClockId => Layers == null ? Effect.Id : SceneClockId;
+    public string ClockId => Screen != null ? ScreenClockId
+        : Music != null ? MusicClockId
+        : Layers == null ? Effect.Id : SceneClockId;
 
     /// <summary>
     /// Неизменяемая копия сохранённого содержимого.
@@ -42,7 +59,11 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
         var effect = EffectLibrary.FindOrSolid(content.EffectId);
         var layers = content.Kind == ContentKind.Scene ? SceneLayer.ListOf(content) : null;
 
-        return new FrameContent(scenarioId, effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)), layers);
+        return new FrameContent(scenarioId, effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)), layers)
+        {
+            Screen = content.Kind == ContentKind.Screen ? ScreenSettings.From(content.Screen) : null,
+            Music = content.Kind == ContentKind.Music ? MusicSettings.From(content.Music) : null
+        };
     }
 }
 

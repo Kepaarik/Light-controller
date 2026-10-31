@@ -5,6 +5,7 @@ using LightSpace.Core.Config;
 using LightSpace.Engine;
 using LightSpace.Engine.Apps;
 using LightSpace.Engine.Frames;
+using LightSpace.Engine.Sources;
 
 namespace LightSpace.App.ViewModels;
 
@@ -17,6 +18,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly DeviceManager _deviceManager;
     private readonly AppWatcher _apps;
     private readonly FrameLoop _frameLoop;
+    private readonly SourceHub _sources = new();
 
     // Окно открыто и не свёрнуто
     private bool _isWindowShown;
@@ -31,7 +33,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         _deviceManager = new DeviceManager(config);
         _apps = new AppWatcher { FocusReleaseDelay = TimeSpan.FromSeconds(config.FocusReleaseDelaySeconds) };
-        _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices, _apps));
+        _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices, _apps), _sources);
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave);
         Scenarios = new ScenariosViewModel(config, _deviceManager, _apps, OnContentChanged);
         Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _apps, OnContentChanged, AddScenario, OpenScenario);
@@ -83,6 +85,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         // Сначала поток кадров: иначе он клал бы кадры в уже закрытые выводы устройств
         _frameLoop.Dispose();
+        _sources.Dispose();
         _deviceManager.Dispose();
     }
 
