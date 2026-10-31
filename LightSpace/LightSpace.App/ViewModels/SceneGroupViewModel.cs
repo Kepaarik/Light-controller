@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LightSpace.Core;
@@ -22,6 +24,9 @@ public sealed record ScenarioRowViewModel(string Id, string Title, string Condit
 /// </summary>
 public sealed partial class SceneGroupViewModel : ObservableObject
 {
+    // Поля рамки группы вокруг её устройств, в единицах сцены
+    private const double FramePadding = 3;
+
     private readonly Action _changed;
 
     // Группа выбрана на сцене, справа открыта её панель
@@ -38,6 +43,10 @@ public sealed partial class SceneGroupViewModel : ObservableObject
         Devices = devices;
         Scenarios = new ObservableCollection<ScenarioRowViewModel>(scenarios);
         _changed = changed;
+
+        // Рамка группы следует за её устройствами, когда их двигают
+        foreach (var device in devices)
+            device.PropertyChanged += OnDevicePropertyChanged;
     }
 
     /// <summary>
@@ -186,4 +195,26 @@ public sealed partial class SceneGroupViewModel : ObservableObject
     /// Содержимое «По умолчанию» группы: эффект и настройки эффектов.
     /// </summary>
     public ContentConfig Content => Settings.DefaultContent;
+
+    /// <summary>
+    /// Место рамки группы на сцене: вокруг всех её устройств с полями; у группы-одиночки — ровно вокруг устройства.
+    /// </summary>
+    public Rect Place
+    {
+        get
+        {
+            var bounds = Devices.Select(d => d.Bounds).Aggregate((a, b) => a.Union(b));
+
+            if (!IsSolo)
+                bounds = bounds.Inflate(FramePadding);
+
+            return new Rect(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+        }
+    }
+
+    private void OnDevicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SceneDeviceViewModel.Place))
+            OnPropertyChanged(nameof(Place));
+    }
 }

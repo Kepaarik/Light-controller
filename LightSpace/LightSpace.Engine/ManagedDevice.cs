@@ -1,6 +1,7 @@
 using LightSpace.Core.Config;
 using LightSpace.Devices;
 using LightSpace.Engine.Output;
+using LightSpace.Engine.Space;
 
 namespace LightSpace.Engine;
 
@@ -59,6 +60,11 @@ public sealed class ManagedDevice
     /// Возможности подключённого устройства; null, пока устройство не подключено.
     /// </summary>
     public DeviceCapabilities? Capabilities => Device?.Capabilities;
+
+    /// <summary>
+    /// Пространство устройства по его возможностям; пока устройство не подключено и возможности неизвестны, оно — одна точка.
+    /// </summary>
+    public DeviceGeometry Geometry => Capabilities is { } capabilities ? DeviceGeometry.For(Id, capabilities) : DeviceGeometry.Single(Id);
 
     public DeviceStatus Status
     {

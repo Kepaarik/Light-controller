@@ -13,6 +13,7 @@ using LightSpace.Engine;
 using LightSpace.Engine.Apps;
 using LightSpace.Engine.Frames;
 using LightSpace.Engine.Scenarios;
+using LightSpace.Engine.Space;
 
 namespace LightSpace.App.ViewModels;
 
@@ -38,6 +39,10 @@ public sealed partial class SceneViewModel : ObservableObject
 
     private SceneGroupViewModel? _selectedGroup;
     private TimeSpan _lastTick;
+
+    // Режим «Редактировать расстановку»: только в нём устройства двигаются мышью
+    [ObservableProperty]
+    private bool _isEditingLayout;
 
     /// <summary>
     /// contentChanged вызывается после каждого изменения групп: их состава, названия, цвета, яркости, эффекта и его настроек,
@@ -107,7 +112,68 @@ public sealed partial class SceneViewModel : ObservableObject
         ? "Соберите их в группу кнопкой «Сделать группой» внизу сцены — на всех устройствах группы будет играть одно и то же."
         : "Выберите группу или устройство на сцене, чтобы настроить, что на нём играет. Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой.";
 
+    /// <summary>
+    /// Показать карточку «Сделать группой»: выделено несколько устройств и расстановку сейчас не редактируют.
+    /// </summary>
+    public bool IsGroupActionShown => CanMakeGroup && !IsEditingLayout;
+
+    /// <summary>
+    /// Подсказка над сценой: что можно сделать мышью сейчас.
+    /// </summary>
+    public string SceneHint => IsEditingLayout
+        ? "Перетаскивайте устройства мышью. Выделите одно устройство, чтобы повернуть его или поменять размер."
+        : "Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой.";
+
+    /// <summary>
+    /// Устройство, которое поворачивают и меняют в размере: единственное выделенное в режиме редактирования расстановки.
+    /// </summary>
+    public SceneDeviceViewModel? EditedDevice => IsEditingLayout && SelectedDevices.Count == 1 ? SelectedDevices[0] : null;
+
+    public bool HasEditedDevice => EditedDevice != null;
+
+    /// <summary>
+    /// Размер выбранного в режиме редактирования устройства на сцене.
+    /// </summary>
+    public double EditedSize
+    {
+        get => EditedDevice?.SceneSize ?? 0;
+        set
+        {
+            if (EditedDevice is not { } device)
+                return;
+
+            device.SceneSize = value;
+            OnPropertyChanged();
+            _contentChanged();
+        }
+    }
+
     private IReadOnlyList<SceneDeviceViewModel> SelectedDevices => Devices.Where(d => d.IsSelected).ToList();
+
+    /// <summary>
+    /// Устройства, которые поедут, если потянуть мышью за device: всё выделение, если device в нём, иначе только device.
+    /// </summary>
+    public IReadOnlyList<SceneDeviceViewModel> DevicesToMove(SceneDeviceViewModel device)
+    {
+        return device.IsSelected ? SelectedDevices : new[] { device };
+    }
+
+    /// <summary>
+    /// Сдвигает устройства на dx, dy единиц сцены, пока их тянут мышью; в настройки и движку уходит в <see cref="FinishMove"/>.
+    /// </summary>
+    public void MoveDevices(IReadOnlyList<SceneDeviceViewModel> devices, double dx, double dy)
+    {
+        foreach (var device in devices)
+            device.MoveBy(dx, dy);
+    }
+
+    /// <summary>
+    /// Устройства отпустили: новые места сохраняются, и эффекты сцены ложатся на них по-новому.
+    /// </summary>
+    public void FinishMove()
+    {
+        _contentChanged();
+    }
 
     /// <summary>
     /// Клик по устройству: без Ctrl выделяет только его и открывает его группу, с Ctrl — добавляет к выделению или убирает из него.
@@ -264,6 +330,53 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Автокомпоновка: расставляет все устройства заново так, как они обычно стоят на столе; их размеры сохраняются.
+    /// </summary>
+    [RelayCommand]
+    private void AutoArrange()
+    {
+        var placements = SceneLayout.Arrange(_manager.Devices
+            .Select(d => (d.Id, d.Geometry, d.Settings.Placement?.Size ?? 0))
+            .ToList());
+
+        foreach (var device in _manager.Devices)
+            device.Settings.Placement = placements[device.Id];
+
+        foreach (var device in Devices)
+            device.OnPlacementChanged();
+
+        _contentChanged();
+    }
+
+    /// <summary>
+    /// Поворачивает выбранное в режиме редактирования устройство на четверть оборота.
+    /// </summary>
+    [RelayCommand]
+    private void RotateDevice()
+    {
+        if (EditedDevice is not { } device)
+            return;
+
+        device.Rotate();
+        _contentChanged();
+    }
+
+    /// <summary>
+    /// Выходит из режима редактирования расстановки.
+    /// </summary>
+    [RelayCommand]
+    private void FinishEditing()
+    {
+        IsEditingLayout = false;
+    }
+
+    partial void OnIsEditingLayoutChanged(bool value)
+    {
+        OnPropertyChanged(nameof(SceneHint));
+        OnSelectionCountChanged();
+    }
+
+    /// <summary>
     /// Снимает выделение устройств и закрывает панель группы.
     /// </summary>
     [RelayCommand]
@@ -342,6 +455,10 @@ public sealed partial class SceneViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectionText));
         OnPropertyChanged(nameof(NoSelectionTitle));
         OnPropertyChanged(nameof(NoSelectionHint));
+        OnPropertyChanged(nameof(IsGroupActionShown));
+        OnPropertyChanged(nameof(EditedDevice));
+        OnPropertyChanged(nameof(HasEditedDevice));
+        OnPropertyChanged(nameof(EditedSize));
     }
 
     /// <summary>
@@ -426,6 +543,8 @@ public sealed partial class SceneViewModel : ObservableObject
         var selectedDeviceIds = Devices.Where(d => d.IsSelected).Select(d => d.Id).ToHashSet();
         var groups = new List<(GroupConfig Group, List<SceneDeviceViewModel> Members)>();
 
+        PlaceNewDevices();
+
         Devices.Clear();
         Groups.Clear();
 
@@ -456,6 +575,39 @@ public sealed partial class SceneViewModel : ObservableObject
 
         OnPropertyChanged(nameof(HasDevices));
         OnSelectionCountChanged();
+    }
+
+    /// <summary>
+    /// Даёт место на сцене устройствам, у которых его ещё нет: если не расставлено ни одно устройство — автокомпоновкой
+    /// всей сцены, иначе каждое новое встаёт на первое свободное место. Места попадут в файл со следующим сохранением.
+    /// </summary>
+    private void PlaceNewDevices()
+    {
+        var devices = _manager.Devices;
+
+        if (devices.All(d => d.Settings.Placement == null))
+        {
+            var placements = SceneLayout.Arrange(devices.Select(d => (d.Id, d.Geometry, 0.0)).ToList());
+
+            foreach (var device in devices)
+                device.Settings.Placement = placements[device.Id];
+
+            return;
+        }
+
+        var taken = devices
+            .Where(d => d.Settings.Placement != null)
+            .Select(d => SceneProjection.BoundsOf(d.Geometry, d.Settings.Placement!))
+            .ToList();
+
+        foreach (var device in devices.Where(d => d.Settings.Placement == null))
+        {
+            var geometry = device.Geometry;
+            var placement = SceneLayout.FindFreeSpot(geometry, taken);
+
+            device.Settings.Placement = placement;
+            taken.Add(SceneProjection.BoundsOf(geometry, placement));
+        }
     }
 
     /// <summary>
