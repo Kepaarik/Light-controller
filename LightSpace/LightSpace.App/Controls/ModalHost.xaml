@@ -9,14 +9,17 @@
     <Grid Background="{DynamicResource OverlayBrush}">
         <Border x:Name="Card" Style="{StaticResource DialogCard}" MaxWidth="{StaticResource DialogMaxWidth}"
                 HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{StaticResource Space24}">
-            <StackPanel>
-                <TextBlock x:Name="TitleText" Style="{StaticResource Title}" Margin="{StaticResource GapBottom16}"/>
-                <TextBlock x:Name="MessageText" Style="{StaticResource Body}"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource GapTop16}">
+            <!-- Длинное пояснение прокручивается, а заголовок и кнопки остаются на месте -->
+            <DockPanel>
+                <TextBlock x:Name="TitleText" DockPanel.Dock="Top" Style="{StaticResource Title}" Margin="{StaticResource GapBottom16}"/>
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="{StaticResource GapTop16}">
                     <Button x:Name="CancelButton" Click="OnCancel" Margin="{StaticResource GapRight8}"/>
                     <Button x:Name="ConfirmButton" Click="OnConfirm" Style="{StaticResource AccentButton}"/>
                 </StackPanel>
-            </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="MessageText" Style="{StaticResource Body}"/>
+                </ScrollViewer>
+            </DockPanel>
         </Border>
     </Grid>
 </UserControl>
