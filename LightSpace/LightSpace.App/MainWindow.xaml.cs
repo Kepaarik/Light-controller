@@ -25,6 +25,8 @@ public partial class MainWindow : Window
 
         SourceInitialized += (_, _) => WindowBackdrop.Apply(this, ThemeService.IsDark);
         StateChanged += (_, _) => UpdateMaximizedState();
+        StateChanged += (_, _) => UpdateShown();
+        IsVisibleChanged += (_, _) => UpdateShown();
         ThemeService.ThemeChanged += OnThemeChanged;
         Closed += (_, _) => ThemeService.ThemeChanged -= OnThemeChanged;
 
@@ -34,6 +36,14 @@ public partial class MainWindow : Window
     private void OnThemeChanged(object? sender, EventArgs e)
     {
         WindowBackdrop.Apply(this, ThemeService.IsDark);
+    }
+
+    /// <summary>
+    /// Окно спрятано в трей или свёрнуто — живые цвета и превью не нужны.
+    /// </summary>
+    private void UpdateShown()
+    {
+        _viewModel.SetWindowShown(IsVisible && WindowState != WindowState.Minimized);
     }
 
     private void OnMinimize(object sender, RoutedEventArgs e)

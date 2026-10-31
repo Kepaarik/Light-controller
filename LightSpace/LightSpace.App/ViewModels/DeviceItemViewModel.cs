@@ -1,7 +1,5 @@
-using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using LightSpace.Core;
 using LightSpace.Devices;
 using LightSpace.Devices.Tuya;
 using LightSpace.Engine;
@@ -9,7 +7,7 @@ using LightSpace.Engine;
 namespace LightSpace.App.ViewModels;
 
 /// <summary>
-/// Устройство в списке вкладки «Устройства»: состояние связи, возможности, ручной цвет, ключ и диагностика вывода.
+/// Устройство в списке вкладки «Устройства»: состояние связи, возможности, ключ и диагностика вывода.
 /// </summary>
 public sealed partial class DeviceItemViewModel : ObservableObject
 {
@@ -17,15 +15,12 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     private static readonly string[] LiveProperties =
     {
         nameof(Name), nameof(Protocol), nameof(Address), nameof(Status), nameof(StatusTitle), nameof(StatusText), nameof(IsConnected),
-        nameof(KindText), nameof(LedCountText), nameof(FrameRateText), nameof(Keys), nameof(HasKeys), nameof(ColorHint),
+        nameof(KindText), nameof(LedCountText), nameof(FrameRateText), nameof(Keys), nameof(HasKeys),
         nameof(SentFramesText), nameof(DroppedFramesText), nameof(LastSendText), nameof(LastErrorText)
     };
 
     private readonly DeviceManager _manager;
     private readonly Action _settingsChanged;
-
-    private RgbColor _color;
-    private double _brightness;
 
     [ObservableProperty]
     private string _localKey;
@@ -39,8 +34,6 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         _manager = manager;
         _settingsChanged = settingsChanged;
 
-        _color = ParseColor(device.Settings.Color);
-        _brightness = device.Settings.Brightness;
         _localKey = device.Settings.LocalKey ?? "";
         _dataPoints = DeviceManager.DataPointsOf(device);
     }
@@ -96,44 +89,6 @@ public sealed partial class DeviceItemViewModel : ObservableObject
 
     public IReadOnlyList<TuyaDpScheme> DataPointSchemes { get; } = Enum.GetValues<TuyaDpScheme>();
 
-    /// <summary>
-    /// Цвет устройства на круге выбора цвета; меняется — сразу уходит на устройство.
-    /// </summary>
-    public RgbColor Color
-    {
-        get => _color;
-        set
-        {
-            if (!SetProperty(ref _color, value))
-                return;
-
-            OnPropertyChanged(nameof(ColorHex));
-            OnPropertyChanged(nameof(ColorBrush));
-            ApplyColor();
-        }
-    }
-
-    /// <summary>
-    /// Яркость цвета, 0–100 %.
-    /// </summary>
-    public double Brightness
-    {
-        get => _brightness;
-        set
-        {
-            if (SetProperty(ref _brightness, Math.Round(value)))
-                ApplyColor();
-        }
-    }
-
-    public string ColorHex => _color.ToHex();
-
-    public Brush ColorBrush => new SolidColorBrush(System.Windows.Media.Color.FromRgb(_color.R, _color.G, _color.B));
-
-    public string ColorHint => IsConnected
-        ? "Цвет уходит на устройство сразу и запоминается"
-        : "Устройство не подключено: цвет запомнится и уйдёт на него при следующем подключении";
-
     public string SentFramesText => Device.Output?.Diagnostics.SentFrames.ToString("N0") ?? "—";
 
     public string DroppedFramesText => Device.Output?.Diagnostics.DroppedFrames.ToString("N0") ?? "—";
@@ -162,27 +117,5 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         _settingsChanged();
 
         Refresh();
-    }
-
-    private void ApplyColor()
-    {
-        _manager.SetColor(Device, _color, (int)_brightness);
-        _settingsChanged();
-    }
-
-    private static RgbColor ParseColor(string? hex)
-    {
-        if (string.IsNullOrWhiteSpace(hex))
-            return RgbColor.White;
-
-        try
-        {
-            return RgbColor.Parse(hex);
-        }
-        catch (Exception e) when (e is FormatException or ArgumentException or OverflowException)
-        {
-            // Испорченный руками цвет в настройках — начинаем с белого
-            return RgbColor.White;
-        }
     }
 }

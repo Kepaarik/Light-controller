@@ -1,0 +1,28 @@
+<UserControl x:Class="LightSpace.App.Controls.ColorPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls">
+
+    <!-- Выбор цвета в одну строку: кнопка-поле с образцом и кодом цвета открывает карточку с кругом цветов -->
+    <Grid>
+        <!-- Пока карточка открыта, кнопка не ловит клик: иначе он закрыл бы карточку и тут же открыл её снова -->
+        <ToggleButton x:Name="Opener" Style="{StaticResource PickerButton}"
+                      IsHitTestVisible="{Binding IsOpen, ElementName=Flyout, Converter={x:Static controls:InverseBooleanConverter.Instance}}">
+            <StackPanel Orientation="Horizontal">
+                <Border x:Name="Swatch" Width="{StaticResource SwatchSmallSize}" Height="{StaticResource SwatchSmallSize}"
+                        CornerRadius="{StaticResource RadiusSmall}" BorderBrush="{DynamicResource StrokeBrush}"
+                        BorderThickness="{StaticResource StrokeThin}" VerticalAlignment="Center"/>
+                <TextBlock x:Name="HexText" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}"/>
+            </StackPanel>
+        </ToggleButton>
+
+        <Popup x:Name="Flyout" PlacementTarget="{Binding ElementName=Opener}" Placement="Bottom" StaysOpen="False"
+               AllowsTransparency="True" PopupAnimation="Fade" Focusable="False"
+               IsOpen="{Binding IsChecked, ElementName=Opener, Mode=TwoWay}">
+            <Border Style="{StaticResource FlyoutCard}">
+                <controls:ColorWheel x:Name="Wheel" Width="{StaticResource ColorWheelSize}" Height="{StaticResource ColorWheelSize}"
+                                     Margin="{StaticResource Space12}"/>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

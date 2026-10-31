@@ -8,13 +8,111 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
+    <UserControl.Resources>
+        <!-- Настройки эффекта: число — ползунок с подписью значения -->
+        <DataTemplate DataType="{x:Type vm:NumberParameterViewModel}">
+            <controls:ValueSlider Label="{Binding Title}" Unit="{Binding Unit}" Decimals="{Binding Decimals}"
+                                  Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
+                                  Value="{Binding Value}" Margin="{StaticResource GapBottom16}"/>
+        </DataTemplate>
+
+        <!-- Цвет: подпись слева, кнопка с образцом справа открывает круг цветов -->
+        <DataTemplate DataType="{x:Type vm:ColorParameterViewModel}">
+            <DockPanel Margin="{StaticResource GapBottom16}">
+                <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}"/>
+                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- Выбор из вариантов: сегменты, которые переносятся на новую строку, если не помещаются -->
+        <DataTemplate DataType="{x:Type vm:ChoiceParameterViewModel}">
+            <StackPanel Margin="{StaticResource GapBottom16}">
+                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" Margin="{StaticResource GapBottom8}"/>
+                <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Choices}" SelectedItem="{Binding SelectedChoice}"
+                         DisplayMemberPath="Title">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                </ListBox>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Переключатель -->
+        <DataTemplate DataType="{x:Type vm:ToggleParameterViewModel}">
+            <CheckBox Content="{Binding Title}" IsChecked="{Binding IsOn}" Margin="{StaticResource GapBottom16}"/>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <Grid>
         <!-- Пока устройств нет — пустое состояние; живая карта стола появится вместе с устройствами -->
         <controls:EmptyState Icon="&#xE7F4;" Title="Устройств пока нет" Hint="Light Space найдёт ленты и клавиатуры в сети, по Bluetooth и USB. Найденные устройства появятся на карте стола, их можно будет собрать в группы." ActionText="Найти устройства" ActionIcon="&#xE721;" Command="{Binding FindDevicesCommand}"
                              Visibility="{Binding Devices.HasDevices, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
 
-        <!-- Устройства уже есть, а карты стола ещё нет: цвет пока задаётся на вкладке «Устройства» -->
-        <controls:EmptyState Icon="&#xE7F4;" Title="Карта стола скоро появится" Hint="Устройства найдены. Здесь они встанут на карту стола и соберутся в группы; цвет каждого устройства пока задаётся на вкладке «Устройства»." ActionText="Открыть устройства" ActionIcon="&#xE772;" Command="{Binding OpenDevicesCommand}"
-                             Visibility="{Binding Devices.HasDevices, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+        <!-- Устройства есть: слева их живые цвета (карта стола появится позже), справа эффект, который на них играет -->
+        <Grid DataContext="{Binding Scene}" Margin="{StaticResource PaddingPage}"
+              Visibility="{Binding DataContext.Devices.HasDevices, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="{StaticResource ScenePanelWidth}"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Живые цвета устройств -->
+            <DockPanel d:DataContext="{d:DesignInstance vm:SceneViewModel}">
+                <TextBlock DockPanel.Dock="Top" Text="Сцена" Style="{StaticResource PageTitle}"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Devices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:SceneDeviceViewModel">
+                                <Border Style="{StaticResource Card}" Margin="{StaticResource GapBottom8}">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding KindText}" Style="{StaticResource Caption}"
+                                                       VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
+                                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+
+                                        <!-- Лента: полоса своих светодиодов; устройство одного цвета — одна заливка -->
+                                        <Border Height="{StaticResource LedBarHeight}" CornerRadius="{StaticResource RadiusSmall}"
+                                                Background="{Binding Preview}" BorderBrush="{DynamicResource StrokeBrush}"
+                                                BorderThickness="{StaticResource StrokeThin}" Margin="{StaticResource GapTop8}"
+                                                Visibility="{Binding IsKeyboard, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+                                        <!-- Клавиатура: клавиши закрашены своими цветами -->
+                                        <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left" Margin="{StaticResource GapTop8}"
+                                                 Visibility="{Binding IsKeyboard, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                            <controls:KeyboardLayout Keys="{Binding Keys}" Colors="{Binding KeyColors}"/>
+                                        </Viewbox>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Панель эффекта: галерея, ниже настройки выбранного эффекта и яркость -->
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="{StaticResource GapLeft24}" d:DataContext="{d:DesignInstance vm:SceneViewModel}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="Эффект" Style="{StaticResource Subtitle}"/>
+                        <TextBlock Text="{Binding SelectedTile.Description}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+
+                        <ListBox Style="{StaticResource TileGallery}" ItemsSource="{Binding Tiles}" SelectedItem="{Binding SelectedTile}"
+                                 Margin="{StaticResource GapTop16}"/>
+
+                        <TextBlock Text="{Binding SelectedTile.Title}" Style="{StaticResource SectionLabel}"/>
+                        <ItemsControl ItemsSource="{Binding Parameters}"/>
+
+                        <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                              Value="{Binding Brightness}" Margin="{StaticResource GapBottom16}"/>
+
+                        <Button Style="{StaticResource GhostButton}" Content="Сбросить настройки эффекта" controls:Appearance.Icon="&#xE72C;"
+                                HorizontalAlignment="Left" Command="{Binding ResetParametersCommand}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

@@ -2,8 +2,12 @@ using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LightSpace.App.Controls;
 using LightSpace.App.Services;
 using LightSpace.Core;
+using LightSpace.Devices.RoyalKludge;
+using LightSpace.Engine.Effects;
+using LightSpace.Engine.Space;
 
 namespace LightSpace.App.ViewModels;
 
@@ -68,8 +72,20 @@ public sealed partial class ShowcaseViewModel : ObservableObject
         new("Северное сияние", Gradient("#0B3D3A", "#21D19F", "#6C5CE7")),
         new("Закат", Gradient("#FF7A18", "#AF002D", "#319197")),
         new("Океан", Gradient("#0F2027", "#2C5364", "#5BC0EB")),
+        new("Кадр эффекта", RenderEffect("aurora", DeviceGeometry.Grid(24, 10), 24, 10)),
         new("Без превью", Brushes.Transparent)
     };
+
+    /// <summary>
+    /// Кадр радуги на ленте из 60 светодиодов — образец полосы живых цветов.
+    /// </summary>
+    public Brush StripColors { get; } = RenderEffect("rainbow", DeviceGeometry.Strip("showcase", 60), 60, 1);
+
+    /// <summary>
+    /// Кадр радуги на клавиатуре RK S98 — образец раскладки с живыми цветами клавиш.
+    /// </summary>
+    public IReadOnlyList<RgbColor> KeyboardColors { get; } = EffectRenderer.Render(EffectLibrary.FindOrSolid("rainbow"), EffectValues.Empty,
+        DeviceGeometry.Keyboard(RkS98Layout.Keys, RkS98Layout.Keys.Max(k => k.Led) + 1), 0);
 
     public IReadOnlyList<string> Apps { get; } = new[]
     {
@@ -130,6 +146,17 @@ public sealed partial class ShowcaseViewModel : ObservableObject
     private async Task ShowMessage()
     {
         await Dialogs.ShowAsync("Устройство отключилось", "Лента «Полка» не отвечает. Light Space переподключится, как только она появится в сети.");
+    }
+
+    /// <summary>
+    /// Один кадр эффекта с настройками по умолчанию, нарисованный тем же рендером, что и кадры устройств.
+    /// </summary>
+    private static Brush RenderEffect(string effectId, DeviceGeometry space, int columns, int rows)
+    {
+        var bitmap = new ColorBitmap(columns, rows);
+        bitmap.Write(EffectRenderer.Render(EffectLibrary.FindOrSolid(effectId), EffectValues.Empty, space, 3.3));
+
+        return bitmap.Brush;
     }
 
     private static Brush Gradient(params string[] colors)

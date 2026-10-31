@@ -417,15 +417,30 @@
             <!-- Выбор цвета -->
             <TextBlock Text="Выбор цвета" Style="{StaticResource SectionLabel}"/>
             <Border Style="{StaticResource Card}">
-                <StackPanel Orientation="Horizontal">
-                    <controls:ColorWheel Width="{StaticResource ColorWheelSize}" Height="{StaticResource ColorWheelSize}"
-                                         SelectedColor="{Binding Color}"/>
-                    <StackPanel VerticalAlignment="Center" Margin="{StaticResource Space24}">
-                        <Border Width="{StaticResource FieldHeight}" Height="{StaticResource FieldHeight}" CornerRadius="{StaticResource RadiusControl}"
-                                Background="{Binding ColorBrush}" BorderBrush="{DynamicResource StrokeBrush}"
-                                BorderThickness="{StaticResource StrokeThin}" HorizontalAlignment="Left"/>
-                        <TextBlock Text="{Binding ColorHex}" Style="{StaticResource BodyStrong}" Margin="{StaticResource GapTop8}"/>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <controls:ColorWheel Width="{StaticResource ColorWheelSize}" Height="{StaticResource ColorWheelSize}"
+                                             SelectedColor="{Binding Color}"/>
+                        <StackPanel VerticalAlignment="Center" Margin="{StaticResource Space24}">
+                            <Border Width="{StaticResource FieldHeight}" Height="{StaticResource FieldHeight}" CornerRadius="{StaticResource RadiusControl}"
+                                    Background="{Binding ColorBrush}" BorderBrush="{DynamicResource StrokeBrush}"
+                                    BorderThickness="{StaticResource StrokeThin}" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding ColorHex}" Style="{StaticResource BodyStrong}" Margin="{StaticResource GapTop8}"/>
+                        </StackPanel>
                     </StackPanel>
+
+                    <!-- Тот же цвет в одну строку: кнопка с образцом открывает карточку с кругом -->
+                    <TextBlock Text="Кнопка выбора цвета" Style="{StaticResource CardTitle}" Margin="{StaticResource GapTop16}"/>
+                    <WrapPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <controls:ColorPicker SelectedColor="{Binding Color}" HorizontalAlignment="Left"/>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <controls:ColorPicker SelectedColor="{Binding Color}" HorizontalAlignment="Left" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
                 </StackPanel>
             </Border>
 
@@ -435,6 +450,22 @@
                 <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
                     <controls:KeyboardLayout Keys="{x:Static rk:RkS98Layout.Keys}"/>
                 </Viewbox>
+            </Border>
+
+            <!-- Живые цвета устройств на сцене: кадр эффекта тем же рендером, что уходит на устройства -->
+            <TextBlock Text="Живые цвета устройств" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Полоса ленты" Style="{StaticResource CardTitle}"/>
+                    <Border Height="{StaticResource LedBarHeight}" CornerRadius="{StaticResource RadiusSmall}"
+                            Background="{Binding StripColors}" BorderBrush="{DynamicResource StrokeBrush}"
+                            BorderThickness="{StaticResource StrokeThin}" Margin="{StaticResource GapBottom16}"/>
+
+                    <TextBlock Text="Клавиатура с цветами клавиш" Style="{StaticResource CardTitle}"/>
+                    <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
+                        <controls:KeyboardLayout Keys="{x:Static rk:RkS98Layout.Keys}" Colors="{Binding KeyboardColors}"/>
+                    </Viewbox>
+                </StackPanel>
             </Border>
 
             <!-- Текст и поверхности -->
