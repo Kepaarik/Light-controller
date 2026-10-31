@@ -463,12 +463,24 @@ public static class LedHubImport
     {
         foreach (var (id, values) in effects)
         {
-            if (!content.Effects.ContainsKey(id))
+            if (!content.Effects.TryGetValue(id, out var existing))
+            {
                 content.Effects[id] = new EffectValuesConfig
                 {
                     Numbers = new Dictionary<string, double>(values.Numbers),
                     Colors = new Dictionary<string, string>(values.Colors)
                 };
+
+                continue;
+            }
+
+            // Пустые настройки заводит редактор, когда эффект просто открыли, — эффект ещё не настраивали.
+            // Они заполняются на месте: открытый редактор держит этот же объект
+            if (existing.Numbers.Count == 0 && existing.Colors.Count == 0)
+            {
+                existing.Numbers = new Dictionary<string, double>(values.Numbers);
+                existing.Colors = new Dictionary<string, string>(values.Colors);
+            }
         }
     }
 
