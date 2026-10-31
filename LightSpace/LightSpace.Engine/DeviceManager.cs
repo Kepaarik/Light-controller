@@ -100,6 +100,7 @@ public sealed class DeviceManager : IDisposable
         device.Disconnect();
         _devices.Remove(device);
         _config.Devices.Remove(device.Settings);
+        _config.RemoveFromGroups(device.Id);
 
         DevicesChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -127,6 +128,10 @@ public sealed class DeviceManager : IDisposable
             var settings = new DeviceConfig { Id = device.Id };
 
             _config.Devices.Add(settings);
+
+            // Новое устройство ни в одну группу не входит — оно само себе группа
+            _config.EnsureGroup(settings.Id);
+
             managed = new ManagedDevice(settings);
             _devices.Add(managed);
         }

@@ -113,7 +113,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Эффект, его настройки или яркость изменились: движку — новый снимок, в файл — с задержкой.
+    /// Группы, их эффект, настройки эффекта или яркость изменились: движку — новый снимок, в файл — с задержкой.
     /// </summary>
     private void OnContentChanged()
     {

@@ -15,6 +15,31 @@ public sealed class ContentConfig
     /// Настройки остаются, когда выбирают другой эффект, и возвращаются вместе с ним.
     /// </summary>
     public Dictionary<string, EffectValuesConfig> Effects { get; set; } = new();
+
+    /// <summary>
+    /// Независимая копия содержимого: правки копии не меняют оригинал.
+    /// </summary>
+    public ContentConfig Clone()
+    {
+        return new ContentConfig
+        {
+            EffectId = EffectId,
+            Effects = Effects.Where(e => e.Value != null).ToDictionary(e => e.Key, e => new EffectValuesConfig
+            {
+                Numbers = new Dictionary<string, double>(e.Value.Numbers),
+                Colors = new Dictionary<string, string>(e.Value.Colors)
+            })
+        };
+    }
+
+    /// <summary>
+    /// Приводит содержимое к допустимому: пустые разделы в файле дали бы null вместо эффекта и его настроек.
+    /// </summary>
+    public void Normalize()
+    {
+        EffectId ??= "solid";
+        Effects ??= new Dictionary<string, EffectValuesConfig>();
+    }
 }
 
 /// <summary>
