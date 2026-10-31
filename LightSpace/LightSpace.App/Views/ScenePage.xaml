@@ -27,6 +27,8 @@
                     <StackPanel>
                         <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}"/>
                         <TextBlock Text="{Binding KindText}" Style="{StaticResource Caption}"/>
+                        <TextBlock Text="Играет встроенный эффект устройства — его цвета здесь не видны" Style="{StaticResource Caption}"
+                                   Visibility="{Binding IsBuiltinPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                     </StackPanel>
                 </Border.ToolTip>
                 <Border.Style>
@@ -38,9 +40,17 @@
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-                <Viewbox Stretch="Fill" Visibility="{Binding IsKeyboard, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                    <controls:KeyboardLayout Keys="{Binding Keys}" Colors="{Binding KeyColors}"/>
-                </Viewbox>
+                <Grid>
+                    <Viewbox Stretch="Fill" Visibility="{Binding IsKeyboard, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <controls:KeyboardLayout Keys="{Binding Keys}" Colors="{Binding KeyColors}"/>
+                    </Viewbox>
+
+                    <!-- Встроенный эффект устройство играет само, его цвета неизвестны — вместо них знак молнии -->
+                    <Viewbox MaxHeight="{StaticResource IconButtonSize}" IsHitTestVisible="False"
+                             Visibility="{Binding IsBuiltinPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <TextBlock Text="&#xE945;" Style="{StaticResource Icon}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </Viewbox>
+                </Grid>
             </Border>
         </DataTemplate>
 

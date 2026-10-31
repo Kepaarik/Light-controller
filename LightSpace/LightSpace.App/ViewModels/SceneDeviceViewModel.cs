@@ -30,6 +30,12 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    /// <summary>
+    /// Устройство само играет встроенный эффект: его цвета окну неизвестны, и на сцене вместо них виден знак.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isBuiltinPlaying;
+
     public SceneDeviceViewModel(ManagedDevice device)
     {
         var capabilities = device.Capabilities;

@@ -249,6 +249,10 @@ public sealed class FrameLoop : IDisposable
                         // Устройство отключили в потоке окна; новый снимок без него придёт со следующим кадром
                     }
 
+                    // Окно вместо цветов показывает, что устройство играет встроенный эффект
+                    if (live != null)
+                        live[device.Id] = new LiveDeviceColors(Array.Empty<RgbColor>(), group.Brightness, true);
+
                     continue;
                 }
 
