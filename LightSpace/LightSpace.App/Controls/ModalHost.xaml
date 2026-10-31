@@ -16,6 +16,9 @@
                     <Button x:Name="CancelButton" Click="OnCancel" Margin="{StaticResource GapRight8}"/>
                     <Button x:Name="ConfirmButton" Click="OnConfirm" Style="{StaticResource AccentButton}"/>
                 </StackPanel>
+
+                <!-- Необязательный переключатель под пояснением, например «Заменить расстановку» -->
+                <CheckBox x:Name="OptionBox" DockPanel.Dock="Bottom" Margin="{StaticResource GapTop16}" Visibility="Collapsed"/>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <TextBlock x:Name="MessageText" Style="{StaticResource Body}"/>
                 </ScrollViewer>

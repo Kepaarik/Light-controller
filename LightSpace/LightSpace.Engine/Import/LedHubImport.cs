@@ -27,8 +27,8 @@ public sealed class LedHubImportResult
 /// <summary>
 /// Перенос настроек из файла старого приложения LedHub (%AppData%\LedHub\config.json) в настройки Light Space:
 /// известные устройства с именами и ключами Tuya, расстановка на сцене, группы, настройки эффектов и игровые режимы
-/// Dota 2 и CS2 как сценарии. Только добавляет: то, что уже настроено в Light Space, не меняется. Файл LedHub только
-/// читается.
+/// Dota 2 и CS2 как сценарии. Только добавляет: то, что уже настроено в Light Space, не меняется — кроме расстановки,
+/// если её явно просят заменить. Файл LedHub только читается.
 /// </summary>
 public static class LedHubImport
 {
@@ -56,9 +56,11 @@ public static class LedHubImport
 
     /// <summary>
     /// Переносит настройки LedHub в config. nextGroupName и nextGroupColor дают название и цвет обводки новой группы,
-    /// если в LedHub у группы не было названия. Нераспознанное пропускается и попадает в итог.
+    /// если в LedHub у группы не было названия. replacesPlacements — расстановка LedHub заменяет расстановку Light Space,
+    /// даже если устройства уже расставлены. Нераспознанное пропускается и попадает в итог.
     /// </summary>
-    public static LedHubImportResult Run(AppConfig config, Func<string> nextGroupName, Func<string> nextGroupColor)
+    public static LedHubImportResult Run(AppConfig config, Func<string> nextGroupName, Func<string> nextGroupColor,
+        bool replacesPlacements = false)
     {
         var result = new LedHubImportResult();
         JsonObject root;
@@ -78,7 +80,7 @@ public static class LedHubImport
 
         ImportDevices(config, root, names, result);
         ImportKeys(config, root, result);
-        ImportPlacements(config, root, result);
+        ImportPlacements(config, root, replacesPlacements, result);
         ImportGroups(config, root, nextGroupName, nextGroupColor, result);
 
         var effects = ReadEffects(root);
@@ -196,9 +198,10 @@ public static class LedHubImport
     /// <summary>
     /// Места лент, клавиатур и панелей на сцене. Переносятся, только пока в Light Space не расставлено ни одно
     /// устройство: иначе две расстановки легли бы друг на друга. Вся расстановка LedHub сдвигается в середину сцены
-    /// и, если не помещается, уменьшается целиком.
+    /// и, если не помещается, уменьшается целиком. replacesPlacements — переносится и поверх уже расставленных устройств,
+    /// а устройства, которых нет в расстановке LedHub, потом встают на свободные места.
     /// </summary>
-    private static void ImportPlacements(AppConfig config, JsonObject root, LedHubImportResult result)
+    private static void ImportPlacements(AppConfig config, JsonObject root, bool replacesPlacements, LedHubImportResult result)
     {
         var items = Objects(root["SceneItems"])
             .Select(i => (Key: Text(i["Key"]) ?? "", Kind: Text(i["Kind"]) ?? "", X: Number(i["X"]), Y: Number(i["Y"]),
@@ -211,10 +214,17 @@ public static class LedHubImport
         if (devices.Count == 0)
             return;
 
-        if (config.Devices.Any(d => d.Placement != null))
+        if (!replacesPlacements && config.Devices.Any(d => d.Placement != null))
         {
-            result.Skipped.Add("Расстановка на сцене: в Light Space устройства уже расставлены.");
+            result.Skipped.Add("Расстановка на сцене: в Light Space устройства уже расставлены. Чтобы заменить её, включите «Заменить расстановку устройств на сцене» при импорте.");
             return;
+        }
+
+        // Старая расстановка убирается целиком: устройства без места в LedHub встанут на свободные места вокруг новой
+        if (replacesPlacements)
+        {
+            foreach (var device in config.Devices)
+                device.Placement = null;
         }
 
         // Мониторы входят в рамку, чтобы устройства вокруг них стояли так же, как в LedHub

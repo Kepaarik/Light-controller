@@ -455,6 +455,7 @@
                     </Button>
                     <Button Content="Модальная карточка" Command="{Binding ShowDialogCommand}" Margin="{StaticResource GapRight12}"/>
                     <Button Content="Опасное подтверждение" Command="{Binding ShowDangerDialogCommand}" Margin="{StaticResource GapRight12}"/>
+                    <Button Content="Карточка с опцией" Command="{Binding ShowOptionDialogCommand}" Margin="{StaticResource GapRight12}"/>
                     <Button Content="Сообщение" Command="{Binding ShowMessageCommand}"/>
                 </WrapPanel>
             </Border>
