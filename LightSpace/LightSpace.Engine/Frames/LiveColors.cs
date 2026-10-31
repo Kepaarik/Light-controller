@@ -14,4 +14,5 @@ public sealed record LiveColors(bool IsLightingEnabled, IReadOnlyDictionary<stri
 /// </summary>
 /// <param name="Colors">Цвета светодиодов до яркости; у устройства одного цвета — один цвет.</param>
 /// <param name="Brightness">Яркость группы устройства, с которой цвета ушли на него, 0–100 %.</param>
-public sealed record LiveDeviceColors(IReadOnlyList<RgbColor> Colors, int Brightness);
+/// <param name="IsBuiltin">Устройство играет встроенный эффект само: его цвета неизвестны, и Colors пуст.</param>
+public sealed record LiveDeviceColors(IReadOnlyList<RgbColor> Colors, int Brightness, bool IsBuiltin = false);

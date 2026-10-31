@@ -807,6 +807,7 @@ public sealed partial class SceneViewModel : ObservableObject
             var colors = live is { IsLightingEnabled: true } && live.Devices.TryGetValue(device.Id, out var found) ? found : null;
 
             device.Show(colors?.Colors, colors?.Brightness ?? 100);
+            device.IsBuiltinPlaying = colors?.IsBuiltin == true;
         }
     }
 }
