@@ -66,6 +66,17 @@
 
             <Border Style="{StaticResource SettingRow}">
                 <DockPanel>
+                    <ListBox DockPanel.Dock="Right" Style="{StaticResource Segments}" VerticalAlignment="Center"
+                             ItemsSource="{Binding Themes}" SelectedItem="{Binding Theme}" DisplayMemberPath="Title"/>
+                    <StackPanel VerticalAlignment="Center" Margin="{StaticResource GapRight12}">
+                        <TextBlock Text="Тема оформления" Style="{StaticResource Body}"/>
+                        <TextBlock Text="«Как в Windows» следует системной настройке светлой или тёмной темы" Style="{StaticResource Hint}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Style="{StaticResource SettingRow}">
+                <DockPanel>
                     <CheckBox DockPanel.Dock="Right" IsChecked="{Binding StartWithWindows}"/>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Запускать вместе с Windows" Style="{StaticResource Body}"/>

@@ -51,6 +51,11 @@ public sealed class AppConfig
     public bool MinimizeToTrayOnClose { get; set; } = true;
 
     /// <summary>
+    /// Тема оформления: тёмная, светлая или как в Windows.
+    /// </summary>
+    public ThemePreference Theme { get; set; } = ThemePreference.Dark;
+
+    /// <summary>
     /// Устройства, которые уже находились хотя бы раз, в порядке их появления.
     /// </summary>
     public List<DeviceConfig> Devices { get; set; } = new();
@@ -75,6 +80,10 @@ public sealed class AppConfig
 
         TransitionMilliseconds = Math.Clamp(TransitionMilliseconds, 0, 5000);
         FocusReleaseDelaySeconds = Math.Clamp(FocusReleaseDelaySeconds, 0, 30);
+
+        // Тема, которой нет в этой сборке, могла попасть в файл из правки руками
+        if (!Enum.IsDefined(Theme))
+            Theme = ThemePreference.Dark;
 
         // Устройство без идентификатора не узнать при поиске, а повторы одного устройства путали бы его настройки
         Devices = Devices

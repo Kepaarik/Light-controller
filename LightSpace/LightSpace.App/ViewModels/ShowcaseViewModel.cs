@@ -6,19 +6,12 @@ using CommunityToolkit.Mvvm.Input;
 using LightSpace.App.Controls;
 using LightSpace.App.Services;
 using LightSpace.Core;
+using LightSpace.Core.Config;
 using LightSpace.Devices.RoyalKludge;
 using LightSpace.Engine.Effects;
 using LightSpace.Engine.Space;
 
 namespace LightSpace.App.ViewModels;
-
-/// <summary>
-/// Вариант темы для переключателя на витрине.
-/// </summary>
-public sealed record ThemeOption(ThemePreference Preference, string Title)
-{
-    public override string ToString() => Title;
-}
 
 /// <summary>
 /// Образец плитки галереи: подпись и кисть-превью.

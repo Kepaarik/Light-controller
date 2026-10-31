@@ -31,6 +31,29 @@ public sealed class SettingsViewModel : ObservableObject
     /// </summary>
     public IReadOnlyList<int> FrameRates => AppConfig.FrameRates;
 
+    /// <summary>
+    /// Темы оформления для сегментов: тёмная — основная, поэтому первая.
+    /// </summary>
+    public IReadOnlyList<ThemeOption> Themes { get; } = new ThemeOption[]
+    {
+        new(ThemePreference.Dark, "Тёмная"),
+        new(ThemePreference.Light, "Светлая"),
+        new(ThemePreference.System, "Как в Windows")
+    };
+
+    /// <summary>
+    /// Выбранная тема оформления; применяется сразу.
+    /// </summary>
+    public ThemeOption Theme
+    {
+        get => Themes.First(t => t.Preference == _config.Theme);
+        set
+        {
+            if (Update(_config.Theme, value.Preference, (c, v) => c.Theme = v))
+                ThemeService.SetPreference(value.Preference);
+        }
+    }
+
     public bool LightingEnabled
     {
         get => _config.LightingEnabled;
