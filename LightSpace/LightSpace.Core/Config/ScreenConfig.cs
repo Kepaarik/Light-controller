@@ -2,7 +2,7 @@ namespace LightSpace.Core.Config;
 
 /// <summary>
 /// Настройки содержимого-экрана: с какого монитора берётся картинка и как её цвета ложатся на светодиоды.
-/// Сцена целиком растягивается на кадр монитора, каждый светодиод берёт цвет картинки под своим местом на сцене.
+/// Сцена ложится на кадр монитора (растягивается или сохраняет пропорции), каждый светодиод берёт цвет картинки под своим местом на сцене.
 /// </summary>
 public sealed class ScreenConfig
 {
@@ -33,6 +33,12 @@ public sealed class ScreenConfig
     public int Smoothing { get; set; } = 55;
 
     /// <summary>
+    /// Сохранять пропорции: сцена ложится на середину кадра монитора без растяжения, а не вошедшие в неё края кадра не видны.
+    /// По умолчанию выключено — сцена растягивается на весь кадр, и устройства по краям сцены берут цвет краёв экрана.
+    /// </summary>
+    public bool KeepAspect { get; set; }
+
+    /// <summary>
     /// Независимая копия настроек: правки копии не меняют оригинал.
     /// </summary>
     public ScreenConfig Clone()
@@ -42,7 +48,8 @@ public sealed class ScreenConfig
             MonitorKey = MonitorKey,
             Saturation = Saturation,
             Brightness = Brightness,
-            Smoothing = Smoothing
+            Smoothing = Smoothing,
+            KeepAspect = KeepAspect
         };
     }
 

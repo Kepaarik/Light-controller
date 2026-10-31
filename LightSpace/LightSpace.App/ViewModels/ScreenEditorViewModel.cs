@@ -102,6 +102,23 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Сцена ложится на кадр монитора без растяжения.
+    /// </summary>
+    public bool KeepAspect
+    {
+        get => _screen?.KeepAspect ?? false;
+        set
+        {
+            if (_screen == null || value == _screen.KeepAspect)
+                return;
+
+            _screen.KeepAspect = value;
+            OnPropertyChanged();
+            _changed();
+        }
+    }
+
+    /// <summary>
     /// Открывает содержимое для правки; null — ничего не открыто.
     /// </summary>
     public void Edit(ContentConfig? content)
@@ -115,6 +132,7 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(Saturation));
         OnPropertyChanged(nameof(Brightness));
         OnPropertyChanged(nameof(Smoothing));
+        OnPropertyChanged(nameof(KeepAspect));
     }
 
     /// <summary>

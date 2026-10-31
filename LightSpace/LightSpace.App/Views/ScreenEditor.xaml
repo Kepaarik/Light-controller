@@ -17,6 +17,15 @@
         <TextBlock Text="Монитор" Style="{StaticResource SectionLabel}"/>
         <controls:SearchPicker ItemsSource="{Binding Monitors}" SelectedItem="{Binding SelectedMonitor}"
                                OpenCommand="{Binding RefreshMonitorsCommand}" Placeholder="Выберите монитор"/>
+        <Border Style="{StaticResource SettingRow}" Margin="{StaticResource GapTop8}">
+            <DockPanel>
+                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding KeepAspect}"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Сохранять пропорции сцены" Style="{StaticResource Body}"/>
+                    <TextBlock Text="Сцена не растягивается на экран, а берёт его середину; края экрана по длинной стороне не учитываются" Style="{StaticResource Hint}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
 
         <TextBlock Text="Цвета" Style="{StaticResource SectionLabel}"/>
         <controls:ValueSlider Label="Насыщенность" Unit="%" Minimum="0" Maximum="200" Step="5"
