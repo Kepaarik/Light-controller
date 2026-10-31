@@ -194,6 +194,28 @@ public sealed partial class SceneViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Поворот выбранного в режиме редактирования устройства в градусах, как он вводится в поле: любой угол, не только
+    /// четверть оборота. Не число — поле возвращает прежний угол.
+    /// </summary>
+    public string EditedAngleText
+    {
+        get => EditedDevice is { } device ? NumberText.Format(device.Angle) : "";
+        set
+        {
+            if (EditedDevice is not { } device)
+                return;
+
+            if (NumberText.TryParse(value, out var degrees))
+            {
+                device.SetRotation(degrees);
+                _contentChanged();
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
     private IReadOnlyList<SceneDeviceViewModel> SelectedDevices => Devices.Where(d => d.IsSelected).ToList();
 
     /// <summary>
@@ -407,6 +429,7 @@ public sealed partial class SceneViewModel : ObservableObject
             return;
 
         device.Rotate();
+        OnPropertyChanged(nameof(EditedAngleText));
         _contentChanged();
     }
 
@@ -512,6 +535,7 @@ public sealed partial class SceneViewModel : ObservableObject
         OnPropertyChanged(nameof(EditedDevice));
         OnPropertyChanged(nameof(HasEditedDevice));
         OnPropertyChanged(nameof(EditedSize));
+        OnPropertyChanged(nameof(EditedAngleText));
     }
 
     /// <summary>

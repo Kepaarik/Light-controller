@@ -105,6 +105,8 @@
     <sys:Double x:Key="FlyoutMinWidth">200</sys:Double>
     <sys:Double x:Key="PickerMinWidth">240</sys:Double>
     <sys:Double x:Key="PickerListMaxHeight">280</sys:Double>
+    <!-- Поле для короткого числа, например угла поворота -->
+    <sys:Double x:Key="NumberFieldWidth">104</sys:Double>
     <!-- Значок приложения в списке выбора и в списке сценариев -->
     <sys:Double x:Key="AppIconSize">24</sys:Double>
     <!-- Живое превью сценария в редакторе -->

@@ -138,6 +138,9 @@
                                     Command="{Binding AutoArrangeCommand}" Margin="{StaticResource GapRight4}"/>
                             <Button Style="{StaticResource GhostButton}" Content="Повернуть" controls:Appearance.Icon="&#xE7AD;"
                                     Command="{Binding RotateDeviceCommand}" IsEnabled="{Binding HasEditedDevice}" Margin="{StaticResource GapRight4}"/>
+                            <TextBox Tag="Поворот, °" Text="{Binding EditedAngleText}" Width="{StaticResource NumberFieldWidth}"
+                                     VerticalAlignment="Center" Margin="{StaticResource GapRight12}"
+                                     Visibility="{Binding HasEditedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                             <controls:ValueSlider Label="Размер" Minimum="4" Maximum="200" Step="1" Value="{Binding EditedSize}"
                                                   Width="{StaticResource PickerMinWidth}" VerticalAlignment="Center" Margin="{StaticResource GapRight12}"
                                                   Visibility="{Binding HasEditedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
