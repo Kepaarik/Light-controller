@@ -14,8 +14,9 @@ public static class RunningApps
 
     /// <summary>
     /// Запущенные приложения с окнами, кроме самого Light Space, по одному на exe-файл, по алфавиту.
+    /// includeBackground — показать и фоновые процессы без окон: лаунчеры, службы, процессы в трее.
     /// </summary>
-    public static IReadOnlyList<AppOptionViewModel> List()
+    public static IReadOnlyList<AppOptionViewModel> List(bool includeBackground = false)
     {
         var apps = new Dictionary<string, AppOptionViewModel>(StringComparer.OrdinalIgnoreCase);
         var self = Environment.ProcessId;
@@ -26,7 +27,7 @@ public static class RunningApps
             {
                 try
                 {
-                    if (process.Id == self || process.MainWindowHandle == IntPtr.Zero)
+                    if (process.Id == self || (!includeBackground && process.MainWindowHandle == IntPtr.Zero))
                         continue;
 
                     // Путь к exe не всегда доступен (например, у приложений администратора) — тогда хватает имени процесса

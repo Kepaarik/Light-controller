@@ -42,6 +42,12 @@ public sealed partial class ScenariosViewModel : ObservableObject
     private string? _gamesProblem;
 
     /// <summary>
+    /// В выборе приложения видны и фоновые процессы без окон, а не только приложения с окнами.
+    /// </summary>
+    [ObservableProperty]
+    private bool _showsAllProcesses;
+
+    /// <summary>
     /// contentChanged вызывается после каждой правки сценариев: их состава, названия, условия, содержимого и групп.
     /// </summary>
     public ScenariosViewModel(AppConfig config, DeviceManager manager, AppWatcher apps, SourceHub sources, Action contentChanged)
@@ -367,7 +373,12 @@ public sealed partial class ScenariosViewModel : ObservableObject
     [RelayCommand]
     private void RefreshRunningApps()
     {
-        RunningApps = Services.RunningApps.List();
+        RunningApps = Services.RunningApps.List(ShowsAllProcesses);
+    }
+
+    partial void OnShowsAllProcessesChanged(bool value)
+    {
+        RefreshRunningApps();
     }
 
     /// <summary>
