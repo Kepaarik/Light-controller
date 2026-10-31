@@ -99,6 +99,19 @@ public sealed class GamePlayback
     private RgbColor _eventColor;
 
     /// <summary>
+    /// Игра game сейчас в матче и присылает свежее состояние; иначе свет ждёт начала матча.
+    /// </summary>
+    public static bool IsInMatch(GameKind game, GameState state)
+    {
+        return game switch
+        {
+            GameKind.Dota2 => state.Dota is { } dota && DateTime.UtcNow - dota.ReceivedAt <= StaleAfter && dota.GameState != "",
+            GameKind.CounterStrike2 => state.CounterStrike is { } cs && DateTime.UtcNow - cs.ReceivedAt <= StaleAfter && cs.MapPhase != "",
+            _ => false
+        };
+    }
+
+    /// <summary>
     /// Двигает время на seconds секунд и берёт для следующего кадра последнее состояние игры и картинку монитора.
     /// </summary>
     public void Advance(GameSettings settings, GameState state, ScreenPicture picture, double seconds)

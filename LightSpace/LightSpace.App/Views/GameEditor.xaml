@@ -13,6 +13,9 @@
         <Border Style="{StaticResource LivePreview}" Background="{Binding Preview}" Margin="{StaticResource GapTop16}"/>
         <TextBlock Text="Живое превью: так сценарий будет выглядеть, когда включится. Сверху — здоровье, снизу — мана или броня, как на клавиатуре."
                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+        <TextBlock Text="Игра сейчас не в матче — превью показывает пример с придуманными здоровьем и маной или бронёй. Устройства ждут начала матча."
+                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"
+                   Visibility="{Binding IsDemo, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
 
         <!-- Какая игра и что свет в ней показывает -->
         <TextBlock Text="Игра" Style="{StaticResource SectionLabel}"/>

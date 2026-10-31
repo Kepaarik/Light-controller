@@ -108,6 +108,16 @@ public sealed partial class GameEditorViewModel : ObservableObject
     private IReadOnlyList<MonitorOption> _monitors = Array.Empty<MonitorOption>();
     private IReadOnlyList<GameEventViewModel> _events = Array.Empty<GameEventViewModel>();
 
+    // Время показа примера, пока игра молчит: по нему меняются придуманные здоровье и мана
+    private double _demoTime;
+
+    /// <summary>
+    /// Игра сейчас не в матче, и превью показывает пример с придуманными здоровьем и маной или бронёй.
+    /// Пример только в превью: устройства по-прежнему ждут начала матча.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isDemo;
+
     /// <summary>
     /// Подключена ли выбранная игра: лежит ли в её папке файл, по которому она шлёт события.
     /// </summary>
@@ -307,7 +317,17 @@ public sealed partial class GameEditorViewModel : ObservableObject
         _sources.Require(this, new SourceDemand(monitors, new HashSet<AudioInput>(), settings.NeedsGameState));
         Problem = settings.NeedsGameState ? _sources.GamesProblem : null;
 
-        _playback.Advance(settings, _sources.Games, _sources.PictureOf(settings.Screen.MonitorKey), seconds);
+        var state = _sources.Games;
+
+        IsDemo = settings.NeedsGameState && !GamePlayback.IsInMatch(settings.Game, state);
+
+        if (IsDemo)
+        {
+            _demoTime += seconds;
+            state = DemoState(_demoTime);
+        }
+
+        _playback.Advance(settings, state, _sources.PictureOf(settings.Screen.MonitorKey), seconds);
         _bitmap.Write(_playback.Render(PreviewKey, settings, PreviewSpace, PreviewSpace.Points, PreviewSpace.Width, PreviewSpace.Height));
     }
 
@@ -381,6 +401,24 @@ public sealed partial class GameEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(GameHint));
         OnPropertyChanged(nameof(GameNote));
         RefreshConnection();
+    }
+
+    /// <summary>
+    /// Придуманный матч для превью: здоровье ступеньками падает со 100 до 16 % и восстанавливается, мана и броня
+    /// плавно меняются. time — сколько секунд идёт пример.
+    /// </summary>
+    private static GameState DemoState(double time)
+    {
+        var step = (int)(time % 8);
+        var health = step < 7 ? 100 - step * 14 : 100;
+        var other = (int)Math.Round(55 + 40 * Math.Sin(time * 0.9));
+        var now = DateTime.UtcNow;
+
+        var dota = new DotaState(DotaState.InProgress, true, "", "radiant", true, true, health, other, 0,
+            false, false, false, false, now);
+        var cs = new CsState(true, "CT", health, other, 0, 0, "live", "live", "", "", now);
+
+        return new GameState(dota, cs);
     }
 
     /// <summary>
