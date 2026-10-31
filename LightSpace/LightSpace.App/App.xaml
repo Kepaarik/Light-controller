@@ -18,6 +18,7 @@
                 <ResourceDictionary Source="/LightSpace;component/Styles/Selection.xaml"/>
                 <ResourceDictionary Source="/LightSpace;component/Styles/Scroll.xaml"/>
                 <ResourceDictionary Source="/LightSpace;component/Styles/Popups.xaml"/>
+                <ResourceDictionary Source="/LightSpace;component/Styles/Scene.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
