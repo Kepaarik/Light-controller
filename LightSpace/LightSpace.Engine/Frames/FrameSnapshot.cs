@@ -1,6 +1,8 @@
 using LightSpace.Core.Config;
+using LightSpace.Engine.Apps;
 using LightSpace.Engine.Effects;
 using LightSpace.Engine.Output;
+using LightSpace.Engine.Scenarios;
 using LightSpace.Engine.Space;
 
 namespace LightSpace.Engine.Frames;
@@ -44,16 +46,19 @@ public sealed record FrameGroup(string Id, FrameContent Active, int Brightness, 
 /// Неизменяемый снимок всего, что нужно потоку кадров: какие группы есть, что в каждой играет, с какими настройками
 /// и яркостью, на каких устройствах и как часто. Окно меняет настройки у себя и отдаёт движку новый снимок целиком.
 /// </summary>
+/// <param name="TransitionMilliseconds">Длительность плавного перехода, когда в группе сменился сценарий; 0 — сразу.</param>
 public sealed record FrameSnapshot(
     bool IsLightingEnabled,
     int FrameRate,
+    int TransitionMilliseconds,
     IReadOnlyList<FrameGroup> Groups)
 {
     /// <summary>
-    /// Снимок текущих настроек и подключённых устройств, готовых принимать кадры.
+    /// Снимок текущих настроек и подключённых устройств, готовых принимать кадры; в каждой группе — её активный сценарий
+    /// по тому, какие приложения запущены и в фокусе сейчас.
     /// Вызывается в потоке окна: копирует всё, что потом может поменяться в настройках.
     /// </summary>
-    public static FrameSnapshot Build(AppConfig config, IEnumerable<ManagedDevice> devices)
+    public static FrameSnapshot Build(AppConfig config, IEnumerable<ManagedDevice> devices, AppWatcher apps)
     {
         var ready = new Dictionary<string, FrameDevice>();
         var groups = new List<FrameGroup>();
@@ -70,18 +75,22 @@ public sealed record FrameSnapshot(
         {
             var targets = group.DeviceIds.Where(ready.ContainsKey).Select(id => ready[id]).ToList();
 
-            groups.Add(new FrameGroup(group.Id, ActiveContentOf(group), group.Brightness, targets));
+            groups.Add(new FrameGroup(group.Id, ActiveContentOf(config, group, apps), group.Brightness, targets));
         }
 
-        return new FrameSnapshot(config.LightingEnabled, config.FrameRate, groups);
+        return new FrameSnapshot(config.LightingEnabled, config.FrameRate, config.TransitionMilliseconds, groups);
     }
 
     /// <summary>
     /// Содержимое активного сценария группы: первого из её списка, у которого выполнено условие, а если таких нет —
-    /// «По умолчанию». Условий у сценариев пока нет, поэтому активно всегда «По умолчанию».
+    /// «По умолчанию».
     /// </summary>
-    private static FrameContent ActiveContentOf(GroupConfig group)
+    private static FrameContent ActiveContentOf(AppConfig config, GroupConfig group, AppWatcher apps)
     {
-        return FrameContent.From(null, group.DefaultContent);
+        var scenario = ScenarioSelector.Choose(config, group, apps).Scenario;
+
+        return scenario == null
+            ? FrameContent.From(null, group.DefaultContent)
+            : FrameContent.From(scenario.Id, scenario.Content);
     }
 }

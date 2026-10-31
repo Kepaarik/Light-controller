@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LightSpace.Core.Config;
 using LightSpace.Engine;
+using LightSpace.Engine.Apps;
 using LightSpace.Engine.Frames;
 
 namespace LightSpace.App.ViewModels;
@@ -14,6 +15,7 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly AppConfig _config;
     private readonly DeviceManager _deviceManager;
+    private readonly AppWatcher _apps;
     private readonly FrameLoop _frameLoop;
 
     // Окно открыто и не свёрнуто
@@ -28,12 +30,14 @@ public sealed partial class MainViewModel : ObservableObject
         Settings = new SettingsViewModel(config);
 
         _deviceManager = new DeviceManager(config);
-        _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices));
+        _apps = new AppWatcher { FocusReleaseDelay = TimeSpan.FromSeconds(config.FocusReleaseDelaySeconds) };
+        _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices, _apps));
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave);
         Scene = new SceneViewModel(config, _deviceManager, _frameLoop, OnContentChanged);
 
         Settings.PropertyChanged += OnSettingsChanged;
         _deviceManager.DevicesChanged += OnDevicesChanged;
+        _apps.Changed += OnAppsChanged;
     }
 
     /// <summary>
@@ -69,6 +73,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Settings.PropertyChanged -= OnSettingsChanged;
         _deviceManager.DevicesChanged -= OnDevicesChanged;
+        _apps.Changed -= OnAppsChanged;
+        _apps.Dispose();
         Scene.SetLive(false);
 
         // Сначала поток кадров: иначе он клал бы кадры в уже закрытые выводы устройств
@@ -102,12 +108,25 @@ public sealed partial class MainViewModel : ObservableObject
         if (e.PropertyName == nameof(SettingsViewModel.LightingEnabled))
             _deviceManager.SetLightingEnabled(Settings.LightingEnabled);
 
-        // Выключенная подсветка и частота кадров — тоже часть снимка для потока кадров
-        if (e.PropertyName is nameof(SettingsViewModel.LightingEnabled) or nameof(SettingsViewModel.FrameRate))
+        // Задержку снятия фокусного сценария держит слежение за приложениями; снимок обновится по его событию
+        if (e.PropertyName == nameof(SettingsViewModel.FocusReleaseDelaySeconds))
+            _apps.FocusReleaseDelay = TimeSpan.FromSeconds(Settings.FocusReleaseDelaySeconds);
+
+        // Выключенная подсветка, частота кадров и длительность перехода — тоже часть снимка для потока кадров
+        if (e.PropertyName is nameof(SettingsViewModel.LightingEnabled) or nameof(SettingsViewModel.FrameRate)
+            or nameof(SettingsViewModel.TransitionMilliseconds))
             UpdateFrames();
     }
 
     private void OnDevicesChanged(object? sender, EventArgs e)
+    {
+        UpdateFrames();
+    }
+
+    /// <summary>
+    /// Запустилось или закрылось приложение, сменилось окно в фокусе: в группах мог смениться активный сценарий.
+    /// </summary>
+    private void OnAppsChanged(object? sender, EventArgs e)
     {
         UpdateFrames();
     }
@@ -126,7 +145,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private void UpdateFrames()
     {
-        _frameLoop.Update(FrameSnapshot.Build(_config, _deviceManager.Devices));
+        _frameLoop.Update(FrameSnapshot.Build(_config, _deviceManager.Devices, _apps));
     }
 
     partial void OnSelectedPageChanged(AppPage value)

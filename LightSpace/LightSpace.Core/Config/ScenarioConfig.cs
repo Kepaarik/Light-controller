@@ -14,6 +14,11 @@ public sealed class ScenarioConfig
     public string Name { get; set; } = "";
 
     /// <summary>
+    /// Когда сценарий включается: приложение и режим «в фокусе» или «запущен».
+    /// </summary>
+    public ScenarioCondition Condition { get; set; } = new();
+
+    /// <summary>
     /// Что играет, пока сценарий активен.
     /// </summary>
     public ContentConfig Content { get; set; } = new();
