@@ -355,6 +355,32 @@
                         <controls:SearchPicker Width="280" ItemsSource="{Binding Apps}" Placeholder="Выключено" IsEnabled="False"/>
                     </WrapPanel>
 
+                    <TextBlock Text="Выбор приложения со значками" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}">
+                            <controls:SearchPicker Width="280" ItemsSource="{Binding AppOptions}" SelectedItem="{Binding SelectedAppOption}"
+                                                   ItemTemplate="{StaticResource AppOptionTemplate}" Placeholder="Выберите приложение"/>
+                            <TextBlock Text="Выбрано" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <controls:SearchPicker Width="280" ItemsSource="{Binding AppOptions}" ItemTemplate="{StaticResource AppOptionTemplate}"
+                                                   Placeholder="Выберите приложение"/>
+                            <TextBlock Text="Ничего не выбрано" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <controls:SearchPicker Width="280" ItemsSource="{Binding AppOptions}" SelectedItem="{Binding SelectedAppOption}"
+                                                   ItemTemplate="{StaticResource AppOptionTemplate}" IsEnabled="False"/>
+                            <TextBlock Text="Выключено" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}">
+                            <Border Style="{StaticResource FlyoutCard}" Width="280" Margin="{StaticResource SpaceNone}">
+                                <ListBox ItemsSource="{Binding AppOptions}" SelectedItem="{Binding SelectedAppOption}"
+                                         ItemTemplate="{StaticResource AppOptionTemplate}" Margin="{StaticResource Space4}"/>
+                            </Border>
+                            <TextBlock Text="Список в открытой панели" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
                     <TextBlock Text="Ползунок с подписью значения" Style="{StaticResource CardTitle}"/>
                     <WrapPanel Margin="{StaticResource GapBottom16}">
                         <controls:ValueSlider Width="280" Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
@@ -376,6 +402,17 @@
                         <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Segments}" SelectedItem="{Binding SelectedSegment}"
                                  Margin="{StaticResource GapRight12}"/>
                         <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Segments}" SelectedIndex="0" IsEnabled="False"/>
+                    </WrapPanel>
+
+                    <TextBlock Text="Сегменты с недоступными вариантами" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ContentKinds}" SelectedItem="{Binding SelectedContentKind}">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource SegmentItem}">
+                                    <Setter Property="IsEnabled" Value="{Binding IsAvailable}"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
                     </WrapPanel>
 
                     <TextBlock Text="Плитки-галерея" Style="{StaticResource CardTitle}"/>
@@ -469,6 +506,18 @@
                             Background="{Binding StripColors}" BorderBrush="{DynamicResource StrokeBrush}"
                             BorderThickness="{StaticResource StrokeThin}" Margin="{StaticResource GapBottom16}"/>
 
+                    <TextBlock Text="Живое превью сценария" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource LivePreview}" Background="{Binding Tiles[4].Preview}"/>
+                            <TextBlock Text="С кадром эффекта" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource LivePreview}"/>
+                            <TextBlock Text="Без кадра" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+
                     <TextBlock Text="Клавиатура с цветами клавиш" Style="{StaticResource CardTitle}"/>
                     <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left">
                         <controls:KeyboardLayout Keys="{x:Static rk:RkS98Layout.Keys}" Colors="{Binding KeyboardColors}"/>
@@ -552,18 +601,71 @@
                         </StackPanel>
                     </WrapPanel>
 
-                    <TextBlock Text="Сценарии группы" Style="{StaticResource CardTitle}"/>
-                    <StackPanel Width="{StaticResource PickerMinWidth}" HorizontalAlignment="Left" Margin="{StaticResource GapBottom16}">
-                        <Border Style="{StaticResource SettingRow}">
-                            <TextBlock Text="Игры" Style="{StaticResource Body}" VerticalAlignment="Center"/>
-                        </Border>
-                        <Border Style="{StaticResource SettingRow}">
-                            <DockPanel VerticalAlignment="Center">
-                                <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"/>
+                    <TextBlock Text="Сценарии группы: перетаскиваемый список" Style="{StaticResource CardTitle}"/>
+                    <WrapPanel Margin="{StaticResource GapBottom16}">
+                        <!-- Живой список: строки переставляются мышью, внизу всегда «По умолчанию» -->
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <ItemsControl ItemsSource="{Binding ReorderSamples}" controls:DragReorder.MoveCommand="{Binding MoveSampleCommand}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:ReorderSample">
+                                        <Border Style="{StaticResource ReorderRow}">
+                                            <DockPanel VerticalAlignment="Center">
+                                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
+                                                <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"
+                                                           Visibility="{Binding IsPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}" Style="{StaticResource Body}"/>
+                                                    <TextBlock Text="{Binding Caption}" Style="{StaticResource Caption}"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Style="{StaticResource SettingRow}">
                                 <TextBlock Text="По умолчанию" Style="{StaticResource Body}" VerticalAlignment="Center"/>
-                            </DockPanel>
-                        </Border>
-                    </StackPanel>
+                            </Border>
+                            <Button Style="{StaticResource GhostButton}" Content="Сценарий" controls:Appearance.Icon="&#xE710;"
+                                    HorizontalAlignment="Left"/>
+                            <TextBlock Text="Обычное (тяните строки мышью)" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource ReorderRow}" controls:Appearance.ForceHover="True">
+                                <DockPanel VerticalAlignment="Center">
+                                    <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
+                                    <StackPanel>
+                                        <TextBlock Text="Музыка" Style="{StaticResource Body}"/>
+                                        <TextBlock Text="Spotify.exe · запущен" Style="{StaticResource Caption}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="Наведение" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource ReorderRow}" controls:DragReorder.IsDragging="True">
+                                <DockPanel VerticalAlignment="Center">
+                                    <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
+                                    <StackPanel>
+                                        <TextBlock Text="Музыка" Style="{StaticResource Body}"/>
+                                        <TextBlock Text="Spotify.exe · запущен" Style="{StaticResource Caption}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="Перетаскивается" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource SettingRow}">
+                                <DockPanel VerticalAlignment="Center">
+                                    <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"/>
+                                    <TextBlock Text="По умолчанию" Style="{StaticResource Body}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="«По умолчанию» играет" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
 
                     <TextBlock Text="Действие с выделением и рамка выделения" Style="{StaticResource CardTitle}"/>
                     <WrapPanel>

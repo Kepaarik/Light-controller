@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -25,6 +26,11 @@ public sealed record ThemeOption(ThemePreference Preference, string Title)
 public sealed record TileSample(string Title, Brush Preview);
 
 /// <summary>
+/// Образец строки перетаскиваемого списка: название, пояснение и отметка «▶ играет».
+/// </summary>
+public sealed record ReorderSample(string Title, string Caption, bool IsPlaying);
+
+/// <summary>
 /// Витрина компонентов: образцы данных для всех компонентов дизайн-системы и переключатель темы.
 /// </summary>
 public sealed partial class ShowcaseViewModel : ObservableObject
@@ -42,6 +48,12 @@ public sealed partial class ShowcaseViewModel : ObservableObject
     private string? _selectedApp;
 
     [ObservableProperty]
+    private AppOptionViewModel? _selectedAppOption;
+
+    [ObservableProperty]
+    private ContentKindOption _selectedContentKind = ContentKindOption.All[0];
+
+    [ObservableProperty]
     private double _brightness = 70;
 
     [ObservableProperty]
@@ -55,6 +67,7 @@ public sealed partial class ShowcaseViewModel : ObservableObject
         _selectedTheme = Themes.First(t => t.Preference == ThemeService.Preference);
         _selectedTile = Tiles[1];
         _selectedApp = Apps[2];
+        _selectedAppOption = AppOptions[0];
     }
 
     public IReadOnlyList<ThemeOption> Themes { get; } = new ThemeOption[]
@@ -92,6 +105,32 @@ public sealed partial class ShowcaseViewModel : ObservableObject
         "Dota 2 — dota2.exe", "Counter-Strike 2 — cs2.exe", "Visual Studio — devenv.exe", "Spotify — Spotify.exe",
         "Discord — Discord.exe", "Google Chrome — chrome.exe", "Telegram — Telegram.exe", "OBS Studio — obs64.exe",
         "Steam — steam.exe", "Блокнот — notepad.exe"
+    };
+
+    /// <summary>
+    /// Приложения со значками для панели выбора приложения; у последнего пути нет — он показывается общим значком.
+    /// </summary>
+    public IReadOnlyList<AppOptionViewModel> AppOptions { get; } = new[]
+    {
+        AppOptionViewModel.From(Environment.ProcessPath ?? "LightSpace.exe"),
+        AppOptionViewModel.From(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe")),
+        AppOptionViewModel.From(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "notepad.exe")),
+        AppOptionViewModel.From("dota2.exe")
+    };
+
+    /// <summary>
+    /// Типы содержимого сценария: доступные и выключенные сегменты.
+    /// </summary>
+    public IReadOnlyList<ContentKindOption> ContentKinds => ContentKindOption.All;
+
+    /// <summary>
+    /// Строки перетаскиваемого списка: их можно переставлять мышью.
+    /// </summary>
+    public ObservableCollection<ReorderSample> ReorderSamples { get; } = new()
+    {
+        new("Игры", "dota2.exe · в фокусе", true),
+        new("Музыка", "Spotify.exe · запущен", false),
+        new("Работа", "devenv.exe · в фокусе", false)
     };
 
     public ThemeOption SelectedTheme
@@ -140,6 +179,13 @@ public sealed partial class ShowcaseViewModel : ObservableObject
             "Устройства останутся, но каждое станет отдельной группой.", "Удалить", isDanger: true);
 
         Status = confirmed ? "Удаление: подтверждено" : "Удаление: отменено";
+    }
+
+    [RelayCommand]
+    private void MoveSample(ReorderMove move)
+    {
+        ReorderSamples.Move(move.From, move.To);
+        Status = $"Перестановка: {move.From + 1} → {move.To + 1}";
     }
 
     [RelayCommand]
