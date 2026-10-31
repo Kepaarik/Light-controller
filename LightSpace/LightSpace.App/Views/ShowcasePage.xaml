@@ -404,6 +404,11 @@
                         <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Segments}" SelectedIndex="0" IsEnabled="False"/>
                     </WrapPanel>
 
+                    <!-- Черта выбранной вкладки вырастает из середины и светится акцентом -->
+                    <TextBlock Text="Вкладки заголовка окна" Style="{StaticResource CardTitle}"/>
+                    <ListBox Style="{StaticResource TitleTabs}" ItemsSource="{Binding Segments}" SelectedIndex="0"
+                             Height="{StaticResource CaptionHeight}" HorizontalAlignment="Left" Margin="{StaticResource GapBottom16}"/>
+
                     <TextBlock Text="Сегменты с недоступными вариантами" Style="{StaticResource CardTitle}"/>
                     <WrapPanel Margin="{StaticResource GapBottom16}">
                         <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ContentKinds}" SelectedItem="{Binding SelectedContentKind}">

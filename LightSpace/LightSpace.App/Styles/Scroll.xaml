@@ -29,7 +29,24 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ScrollBar}}" Value="True">
-                            <Setter TargetName="Bar" Property="Width" Value="{StaticResource ScrollThumbThick}"/>
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bar" Storyboard.TargetProperty="Width"
+                                                         To="{StaticResource ScrollThumbThick}" Duration="{StaticResource MotionFast}"
+                                                         EasingFunction="{StaticResource EaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bar" Storyboard.TargetProperty="Width"
+                                                         To="{StaticResource ScrollThumbThin}" Duration="{StaticResource MotionNormal}"
+                                                         EasingFunction="{StaticResource EaseOut}" FillBehavior="Stop"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
                         </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -47,7 +64,24 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ScrollBar}}" Value="True">
-                            <Setter TargetName="Bar" Property="Height" Value="{StaticResource ScrollThumbThick}"/>
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bar" Storyboard.TargetProperty="Height"
+                                                         To="{StaticResource ScrollThumbThick}" Duration="{StaticResource MotionFast}"
+                                                         EasingFunction="{StaticResource EaseOut}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Bar" Storyboard.TargetProperty="Height"
+                                                         To="{StaticResource ScrollThumbThin}" Duration="{StaticResource MotionNormal}"
+                                                         EasingFunction="{StaticResource EaseOut}" FillBehavior="Stop"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
                         </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

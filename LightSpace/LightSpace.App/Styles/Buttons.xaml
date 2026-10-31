@@ -7,27 +7,33 @@
         <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Общий шаблон всех кнопок: фон по состоянию берётся из Appearance.HoverBrush и Appearance.PressedBrush,
-         значок слева от подписи — из Appearance.Icon -->
+    <!-- Общий шаблон всех кнопок: поверх фона лежит слой состояния, его цвет под курсором и при нажатии берётся
+         из Appearance.HoverBrush и Appearance.PressedBrush, а сам слой плавно проявляется и гаснет.
+         Значок слева от подписи — из Appearance.Icon -->
     <ControlTemplate x:Key="ButtonTemplate" TargetType="ButtonBase">
         <Border x:Name="Root"
                 Background="{TemplateBinding Background}"
                 BorderBrush="{TemplateBinding BorderBrush}"
                 BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="{Binding (controls:Appearance.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"
-                Padding="{TemplateBinding Padding}"
                 SnapsToDevicePixels="True">
-            <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="IconGlyph"
-                           Text="{Binding (controls:Appearance.Icon), RelativeSource={RelativeSource TemplatedParent}}"
-                           FontFamily="{StaticResource FontIcon}" FontSize="{StaticResource FontSizeIcon}"
-                           VerticalAlignment="Center" Margin="{StaticResource GapRight8}"/>
-                <ContentPresenter x:Name="Content" Grid.Column="1" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+            <Grid>
+                <Border x:Name="StateLayer" Opacity="0" IsHitTestVisible="False"
+                        CornerRadius="{Binding (controls:Appearance.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"
+                        Background="{Binding (controls:Appearance.HoverBrush), RelativeSource={RelativeSource TemplatedParent}}"/>
+                <Grid Margin="{TemplateBinding Padding}"
+                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="IconGlyph"
+                               Text="{Binding (controls:Appearance.Icon), RelativeSource={RelativeSource TemplatedParent}}"
+                               FontFamily="{StaticResource FontIcon}" FontSize="{StaticResource FontSizeIcon}"
+                               VerticalAlignment="Center" Margin="{StaticResource GapRight8}"/>
+                    <ContentPresenter x:Name="Content" Grid.Column="1" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+                </Grid>
             </Grid>
         </Border>
         <ControlTemplate.Triggers>
@@ -38,21 +44,38 @@
                 <Setter TargetName="IconGlyph" Property="Margin" Value="{StaticResource SpaceNone}"/>
                 <Setter TargetName="Content" Property="Visibility" Value="Collapsed"/>
             </Trigger>
+            <!-- Слой проявляется быстро и гаснет чуть медленнее; погасший слой отдаёт прозрачность обратно триггерам ниже -->
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Root" Property="Background"
-                        Value="{Binding (controls:Appearance.HoverBrush), RelativeSource={RelativeSource TemplatedParent}}"/>
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="StateLayer" Storyboard.TargetProperty="Opacity"
+                                             To="1" Duration="{StaticResource MotionFast}" EasingFunction="{StaticResource EaseOut}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="StateLayer" Storyboard.TargetProperty="Opacity"
+                                             To="0" Duration="{StaticResource MotionNormal}" EasingFunction="{StaticResource EaseOut}"
+                                             FillBehavior="Stop"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="controls:Appearance.ForceHover" Value="True">
-                <Setter TargetName="Root" Property="Background"
-                        Value="{Binding (controls:Appearance.HoverBrush), RelativeSource={RelativeSource TemplatedParent}}"/>
+                <Setter TargetName="StateLayer" Property="Opacity" Value="1"/>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="Root" Property="Background"
+                <Setter TargetName="StateLayer" Property="Opacity" Value="1"/>
+                <Setter TargetName="StateLayer" Property="Background"
                         Value="{Binding (controls:Appearance.PressedBrush), RelativeSource={RelativeSource TemplatedParent}}"/>
                 <Setter TargetName="Content" Property="Opacity" Value="0.8"/>
             </Trigger>
             <Trigger Property="controls:Appearance.ForcePressed" Value="True">
-                <Setter TargetName="Root" Property="Background"
+                <Setter TargetName="StateLayer" Property="Opacity" Value="1"/>
+                <Setter TargetName="StateLayer" Property="Background"
                         Value="{Binding (controls:Appearance.PressedBrush), RelativeSource={RelativeSource TemplatedParent}}"/>
                 <Setter TargetName="Content" Property="Opacity" Value="0.8"/>
             </Trigger>
@@ -68,8 +91,8 @@
         <Setter Property="Background" Value="{DynamicResource ControlBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
         <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
-        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource ControlHoverBrush}"/>
-        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource ControlPressedBrush}"/>
+        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource StateHoverBrush}"/>
+        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource StatePressedBrush}"/>
         <Setter Property="controls:Appearance.CornerRadius" Value="{StaticResource RadiusControl}"/>
         <Setter Property="Padding" Value="{StaticResource PaddingControl}"/>
         <Setter Property="MinHeight" Value="{StaticResource ControlHeight}"/>
@@ -81,14 +104,21 @@
         <Setter Property="Template" Value="{StaticResource ButtonTemplate}"/>
     </Style>
 
-    <!-- Главное действие: заливка системным акцентным цветом -->
+    <!-- Главное действие: заливка системным акцентным цветом и мягкое свечение акцентом вокруг -->
     <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
         <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource AccentHoverBrush}"/>
-        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource AccentPressedBrush}"/>
+        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource AccentStateHoverBrush}"/>
+        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource AccentStatePressedBrush}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Effect" Value="{DynamicResource ShadowAccentGlow}"/>
+        <Style.Triggers>
+            <!-- Выключенная кнопка не светится -->
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Effect" Value="{x:Null}"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Второстепенное действие: без заливки, подложка только под курсором -->
@@ -102,8 +132,8 @@
         <Setter Property="Foreground" Value="{DynamicResource OnDangerBrush}"/>
         <Setter Property="Background" Value="{DynamicResource DangerBrush}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
-        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource DangerHoverBrush}"/>
-        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource DangerPressedBrush}"/>
+        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource AccentStateHoverBrush}"/>
+        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource AccentStatePressedBrush}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
 
@@ -121,7 +151,7 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="Padding" Value="{StaticResource PaddingMenuItem}"/>
-        <Setter Property="controls:Appearance.CornerRadius" Value="{StaticResource RadiusSmall}"/>
+        <Setter Property="controls:Appearance.CornerRadius" Value="{StaticResource RadiusControl}"/>
     </Style>
 
     <!-- Кнопки окна в своём заголовке -->
@@ -153,8 +183,8 @@
         <Setter Property="Background" Value="{DynamicResource ControlBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
         <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
-        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource ControlHoverBrush}"/>
-        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource ControlPressedBrush}"/>
+        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource StateHoverBrush}"/>
+        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource StatePressedBrush}"/>
         <Setter Property="controls:Appearance.CornerRadius" Value="{StaticResource RadiusControl}"/>
         <Setter Property="Padding" Value="{StaticResource PaddingControl}"/>
         <Setter Property="MinHeight" Value="{StaticResource ControlHeight}"/>
@@ -177,8 +207,8 @@
         <Setter Property="Background" Value="{DynamicResource ControlBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
         <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
-        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource ControlHoverBrush}"/>
-        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource ControlPressedBrush}"/>
+        <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource StateHoverBrush}"/>
+        <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource StatePressedBrush}"/>
         <Setter Property="controls:Appearance.CornerRadius" Value="{StaticResource RadiusControl}"/>
         <Setter Property="Padding" Value="{StaticResource PaddingControl}"/>
         <Setter Property="Cursor" Value="Hand"/>

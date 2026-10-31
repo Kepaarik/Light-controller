@@ -31,6 +31,7 @@
     </Style>
 
     <Style x:Key="Subtitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource FontDisplay}"/>
         <Setter Property="FontSize" Value="{StaticResource FontSizeSubtitle}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
@@ -54,7 +55,8 @@
 
     <!-- Подпись над группой элементов на странице -->
     <Style x:Key="SectionLabel" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontDisplay}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSubtitle}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="Margin" Value="{StaticResource SectionLabelMargin}"/>
@@ -105,7 +107,7 @@
         <Setter Property="Background" Value="{DynamicResource FlyoutBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}"/>
         <Setter Property="BorderThickness" Value="{StaticResource StrokeThin}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
         <Setter Property="Padding" Value="{StaticResource PaddingFlyout}"/>
         <Setter Property="Margin" Value="{StaticResource ShadowRoom}"/>
         <Setter Property="Effect" Value="{DynamicResource ShadowFlyout}"/>

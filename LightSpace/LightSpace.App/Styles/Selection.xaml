@@ -5,6 +5,7 @@
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
+        <ResourceDictionary Source="/LightSpace;component/Styles/States.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
     <!-- Список: прозрачный, со своей тонкой прокруткой -->
@@ -44,22 +45,17 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Root" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}"
-                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                    <Border x:Name="Root" Background="Transparent" CornerRadius="{StaticResource RadiusControl}" SnapsToDevicePixels="True">
                         <Grid>
+                            <Border Style="{StaticResource HoverLayer}" CornerRadius="{StaticResource RadiusControl}"/>
                             <Border x:Name="Marker" Width="{StaticResource TabIndicatorHeight}" Height="{StaticResource TabIndicatorWidth}"
                                     CornerRadius="{StaticResource RadiusPill}" Background="{DynamicResource AccentBrush}"
-                                    HorizontalAlignment="Left" Margin="-12,0,0,0" Visibility="Hidden"/>
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                                    HorizontalAlignment="Left" Visibility="Hidden"
+                                    Effect="{DynamicResource ShadowAccentGlow}"/>
+                            <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="controls:Appearance.ForceHover" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlBrush}"/>
                             <Setter TargetName="Marker" Property="Visibility" Value="Visible"/>
@@ -83,19 +79,15 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Root" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}"
-                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    <Grid x:Name="Root" Background="Transparent" SnapsToDevicePixels="True">
+                        <Border Style="{StaticResource HoverLayer}" CornerRadius="{StaticResource RadiusInner}"/>
+                        <!-- Заливка выбранного варианта проявляется плавно и мягко светится акцентом -->
+                        <Border Style="{StaticResource SelectionLayer}" CornerRadius="{StaticResource RadiusInner}"
+                                Background="{DynamicResource AccentBrush}" Effect="{DynamicResource ShadowAccentGlow}"/>
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
-                        <Trigger Property="controls:Appearance.ForceHover" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                        </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AccentBrush}"/>
                             <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
@@ -223,20 +215,18 @@
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
                                 <Border x:Name="Root" CornerRadius="{StaticResource RadiusControl}" Background="{DynamicResource ControlBrush}"
-                                        Padding="{StaticResource PaddingTile}" BorderBrush="{DynamicResource StrokeBrush}"
+                                        BorderBrush="{DynamicResource StrokeBrush}"
                                         BorderThickness="{StaticResource StrokeThick}" SnapsToDevicePixels="True">
-                                    <ContentPresenter/>
+                                    <Grid>
+                                        <Border Style="{StaticResource HoverLayer}" CornerRadius="{StaticResource RadiusInner}"/>
+                                        <ContentPresenter Margin="{StaticResource PaddingTile}"/>
+                                    </Grid>
                                 </Border>
                                 <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                                    </Trigger>
-                                    <Trigger Property="controls:Appearance.ForceHover" Value="True">
-                                        <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-                                    </Trigger>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                         <Setter TargetName="Root" Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                                        <Setter TargetName="Root" Property="Effect" Value="{DynamicResource ShadowAccentGlow}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -343,10 +333,15 @@
                             <ControlTemplate TargetType="ListBoxItem">
                                 <Grid Background="Transparent">
                                     <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                                    <!-- Черта выбранной вкладки вырастает из середины и светится акцентом -->
                                     <Border x:Name="Indicator" Width="{StaticResource TabIndicatorWidth}" Height="{StaticResource TabIndicatorHeight}"
                                             CornerRadius="{StaticResource RadiusPill}" Background="{DynamicResource AccentBrush}"
                                             VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="{StaticResource GapBottom8}"
-                                            Visibility="Hidden"/>
+                                            Opacity="0" RenderTransformOrigin="0.5,0.5" Effect="{DynamicResource ShadowAccentGlow}">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleX="{StaticResource TabIndicatorRestScale}"/>
+                                        </Border.RenderTransform>
+                                    </Border>
                                 </Grid>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
@@ -354,7 +349,29 @@
                                     </Trigger>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-                                        <Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
+                                        <Trigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="Indicator" Storyboard.TargetProperty="Opacity"
+                                                                     To="1" Duration="{StaticResource MotionNormal}" EasingFunction="{StaticResource EaseOut}"/>
+                                                    <DoubleAnimation Storyboard.TargetName="Indicator"
+                                                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                     To="1" Duration="{StaticResource MotionNormal}" EasingFunction="{StaticResource EaseOut}"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.EnterActions>
+                                        <Trigger.ExitActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetName="Indicator" Storyboard.TargetProperty="Opacity"
+                                                                     To="0" Duration="{StaticResource MotionFast}" FillBehavior="Stop"/>
+                                                    <DoubleAnimation Storyboard.TargetName="Indicator"
+                                                                     Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                     To="{StaticResource TabIndicatorRestScale}" Duration="{StaticResource MotionFast}"
+                                                                     FillBehavior="Stop"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.ExitActions>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
