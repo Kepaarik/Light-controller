@@ -17,6 +17,28 @@ public readonly record struct RgbColor(byte R, byte G, byte B)
     }
 
     /// <summary>
+    /// Читает цвет в формате #RRGGBB; false — строка пустая или не цвет, тогда color белый.
+    /// </summary>
+    public static bool TryParse(string? hex, out RgbColor color)
+    {
+        color = White;
+
+        if (string.IsNullOrWhiteSpace(hex))
+            return false;
+
+        try
+        {
+            color = Parse(hex);
+            return true;
+        }
+        catch (Exception e) when (e is FormatException or ArgumentException or OverflowException)
+        {
+            // Цвет в файле настроек могли испортить руками — такой цвет просто не читается
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Создаёт цвет из HSV: тон 0–360, насыщенность и значение 0–1.
     /// </summary>
     public static RgbColor FromHsv(double hue, double saturation, double value)
