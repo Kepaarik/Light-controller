@@ -684,6 +684,132 @@
                 </StackPanel>
             </Border>
 
+            <!-- Карта сцены: подложка-стол, устройства на своих местах, рамка группы с подписью, границы слоёв, список слоёв -->
+            <TextBlock Text="Карта сцены и слои" Style="{StaticResource SectionLabel}"/>
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Карта: устройства и группа" Style="{StaticResource CardTitle}"/>
+                    <Grid Height="{StaticResource SceneEditorHeight}" Margin="{StaticResource SceneMapMargin}">
+                        <controls:SceneMap>
+                            <Border Style="{StaticResource SceneSurface}" controls:SceneMap.Place="{x:Static controls:SceneMap.WholeScene}"/>
+
+                            <!-- Рамка группы, подпись над ней -->
+                            <Grid controls:SceneMap.Place="14,10,172,14">
+                                <Border Style="{StaticResource MapGroupFrame}">
+                                    <Border.BorderBrush>
+                                        <SolidColorBrush Color="{Binding [0], Source={StaticResource GroupPalette}}"/>
+                                    </Border.BorderBrush>
+                                </Border>
+                                <Canvas VerticalAlignment="Top" Height="0">
+                                    <TextBlock Canvas.Bottom="0" Text="Стол  ▶ По умолчанию" Style="{StaticResource MapLabel}"/>
+                                </Canvas>
+                            </Grid>
+
+                            <!-- Ленты: обычная, выбранная; вертикальная — под курсором в режиме перетаскивания -->
+                            <Border Style="{StaticResource SceneDevice}" controls:SceneMap.Place="20,15,75,4" Background="{Binding StripColors}"/>
+                            <Border Style="{StaticResource SceneDevice}" controls:SceneMap.Place="105,15,75,4" Background="{Binding StripColors}"
+                                    controls:Appearance.IsSelected="True"/>
+                            <Border Style="{StaticResource SceneDevice}" controls:SceneMap.Place="-12,68,60,4" controls:SceneMap.Angle="90"
+                                    Background="{Binding StripColors}" controls:Appearance.IsMovable="True" controls:Appearance.ForceHover="True"/>
+
+                            <!-- Клавиатура с цветами клавиш и устройство одного цвета -->
+                            <Border Style="{StaticResource SceneDevice}" controls:SceneMap.Place="62,62,76,28">
+                                <Viewbox Stretch="Fill">
+                                    <controls:KeyboardLayout Keys="{x:Static rk:RkS98Layout.Keys}" Colors="{Binding KeyboardColors}"/>
+                                </Viewbox>
+                            </Border>
+                            <Border Style="{StaticResource SceneDevice}" controls:SceneMap.Place="170,80,12,12" CornerRadius="{StaticResource RadiusPill}"
+                                    Background="{Binding ColorBrush}"/>
+                        </controls:SceneMap>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
+                               Text="Рамка группы с подписью; ленты: обычная, выбранная и вертикальная под курсором в режиме перетаскивания; клавиатура; устройство одного цвета."/>
+
+                    <TextBlock Text="Холст слоёв" Style="{StaticResource CardTitle}" Margin="{StaticResource GapTop16}"/>
+                    <Grid Height="{StaticResource SceneEditorHeight}">
+                        <controls:SceneMap>
+                            <!-- Подложка показывает кадр всей сцены -->
+                            <Border Style="{StaticResource SceneSurface}" controls:SceneMap.Place="{x:Static controls:SceneMap.WholeScene}"
+                                    Background="{Binding Tiles[4].Preview}"/>
+
+                            <Grid controls:SceneMap.Place="10,10,80,45">
+                                <Rectangle Style="{StaticResource LayerBounds}"/>
+                                <Border Style="{StaticResource LayerTag}">
+                                    <TextBlock Text="Обычное" Style="{StaticResource Caption}"/>
+                                </Border>
+                            </Grid>
+                            <Grid controls:SceneMap.Place="110,10,80,45">
+                                <Rectangle Style="{StaticResource LayerBounds}" controls:Appearance.ForceHover="True"/>
+                                <Border Style="{StaticResource LayerTag}">
+                                    <TextBlock Text="Наведение" Style="{StaticResource Caption}"/>
+                                </Border>
+                            </Grid>
+                            <Grid controls:SceneMap.Place="10,65,80,45">
+                                <Rectangle Style="{StaticResource LayerBounds}" controls:Appearance.IsSelected="True"/>
+                                <Border Style="{StaticResource LayerTag}">
+                                    <TextBlock Text="Выбрано" Style="{StaticResource Caption}"/>
+                                </Border>
+                                <Border Style="{StaticResource LayerHandle}"/>
+                            </Grid>
+                            <Grid controls:SceneMap.Place="110,65,80,45" Opacity="{StaticResource OpacityDisabled}">
+                                <Rectangle Style="{StaticResource LayerBounds}"/>
+                                <Border Style="{StaticResource LayerTag}">
+                                    <TextBlock Text="Скрыто" Style="{StaticResource Caption}"/>
+                                </Border>
+                            </Grid>
+                        </controls:SceneMap>
+                    </Grid>
+                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
+                               Text="Границы слоя: обычные, под курсором, выбранные с ручкой размера в правом нижнем углу, скрытый слой."/>
+
+                    <TextBlock Text="Строки списка слоёв" Style="{StaticResource CardTitle}" Margin="{StaticResource GapTop16}"/>
+                    <WrapPanel>
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource ReorderRow}">
+                                <DockPanel VerticalAlignment="Center">
+                                    <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE74D;" ToolTip="Удалить слой"/>
+                                    <CheckBox DockPanel.Dock="Right" IsChecked="True" ToolTip="Слой виден" Margin="{StaticResource GapRight8}"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Радуга" Style="{StaticResource Body}"/>
+                                        <TextBlock Text="Обычное · 100 %" Style="{StaticResource Caption}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="Обычное" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource ReorderRow}" controls:Appearance.IsSelected="True">
+                                <DockPanel VerticalAlignment="Center">
+                                    <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE74D;" ToolTip="Удалить слой"/>
+                                    <CheckBox DockPanel.Dock="Right" IsChecked="True" ToolTip="Слой виден" Margin="{StaticResource GapRight8}"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Пламя" Style="{StaticResource Body}"/>
+                                        <TextBlock Text="Сложение · 60 %" Style="{StaticResource Caption}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="Выбрано" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                        <StackPanel Style="{StaticResource Cell}" Width="{StaticResource PickerMinWidth}">
+                            <Border Style="{StaticResource ReorderRow}">
+                                <DockPanel VerticalAlignment="Center">
+                                    <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE74D;" ToolTip="Удалить слой"/>
+                                    <CheckBox DockPanel.Dock="Right" ToolTip="Слой виден" Margin="{StaticResource GapRight8}"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Звёзды" Style="{StaticResource Body}"/>
+                                        <TextBlock Text="Светлее · 100 %" Style="{StaticResource Caption}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="Скрытый слой" Style="{StaticResource Caption}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Текст и поверхности -->
             <TextBlock Text="Текст и поверхности" Style="{StaticResource SectionLabel}"/>
             <Border Style="{StaticResource Card}">
