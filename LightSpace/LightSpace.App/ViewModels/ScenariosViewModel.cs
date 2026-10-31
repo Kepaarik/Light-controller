@@ -44,6 +44,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
         _contentChanged = contentChanged;
 
         Editor = new EffectEditorViewModel(contentChanged);
+        SceneEditor = new SceneEditorViewModel(manager, contentChanged);
 
         foreach (var scenario in config.Scenarios)
             Items.Add(new ScenarioItemViewModel(scenario, contentChanged));
@@ -72,8 +73,11 @@ public sealed partial class ScenariosViewModel : ObservableObject
                 return;
 
             OnPropertyChanged(nameof(HasSelection));
+            OnPropertyChanged(nameof(SelectedContentKind));
+            OnPropertyChanged(nameof(IsSceneContent));
 
             Editor.Edit(value?.Settings.Content);
+            SceneEditor.Edit(value?.Settings.Content);
             BuildGroupChips();
         }
     }
@@ -88,19 +92,54 @@ public sealed partial class ScenariosViewModel : ObservableObject
     public EffectEditorViewModel Editor { get; }
 
     /// <summary>
+    /// Холст и слои, которые играют, пока сценарий активен, если его содержимое — сцена.
+    /// </summary>
+    public SceneEditorViewModel SceneEditor { get; }
+
+    /// <summary>
     /// Режимы условия для сегментов «Когда».
     /// </summary>
     public IReadOnlyList<ConditionModeOption> Modes => ConditionModeOption.All;
 
     /// <summary>
-    /// Типы содержимого для сегментов «Что»; пока доступен только эффект.
+    /// Типы содержимого для сегментов «Что»; доступны эффект и сцена.
     /// </summary>
     public IReadOnlyList<ContentKindOption> ContentKinds => ContentKindOption.All;
 
     /// <summary>
-    /// Выбранный тип содержимого: пока всегда эффект.
+    /// Выбранный тип содержимого: эффект или сцена. Сцена без слоёв получает первый слой во всю сцену
+    /// с эффектом, который играл до этого.
     /// </summary>
-    public ContentKindOption SelectedContentKind => ContentKindOption.All[0];
+    public ContentKindOption SelectedContentKind
+    {
+        get => IsSceneContent ? ContentKindOption.Scene : ContentKindOption.Effect;
+        set
+        {
+            var content = _selectedItem?.Settings.Content;
+            var kind = value == ContentKindOption.Scene ? ContentKind.Scene : ContentKind.Effect;
+
+            // Недоступные типы выбрать нельзя; сегменты сбрасывают выбор в null, когда пересобираются
+            if (content == null || value == null || !value.IsAvailable || kind == content.Kind)
+                return;
+
+            content.Kind = kind;
+
+            if (kind == ContentKind.Scene && content.Layers.Count == 0)
+            {
+                content.Layers.Add(SceneLayerConfig.Covering(content));
+                SceneEditor.Edit(content);
+            }
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSceneContent));
+            _contentChanged();
+        }
+    }
+
+    /// <summary>
+    /// Содержимое открытого сценария — сцена со слоями.
+    /// </summary>
+    public bool IsSceneContent => _selectedItem?.Settings.Content.Kind == ContentKind.Scene;
 
     /// <summary>
     /// Группы для чипов «Группы»: отмечены те, где стоит открытый сценарий.
@@ -126,6 +165,9 @@ public sealed partial class ScenariosViewModel : ObservableObject
             _clock.Stop();
             return;
         }
+
+        // Пока вкладку не видели, устройства могли переставить на сцене
+        SceneEditor.RefreshDevices();
 
         _clock.Restart();
         _lastTick = TimeSpan.Zero;
@@ -319,6 +361,10 @@ public sealed partial class ScenariosViewModel : ObservableObject
         var seconds = (now - _lastTick).TotalSeconds;
         _lastTick = now;
 
-        Editor.Advance(seconds);
+        // У сцены свой холст и своя галерея — эффекта выбранного слоя
+        if (IsSceneContent)
+            SceneEditor.Advance(seconds);
+        else
+            Editor.Advance(seconds);
     }
 }
