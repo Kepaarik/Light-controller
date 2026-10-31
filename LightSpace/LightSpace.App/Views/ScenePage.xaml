@@ -12,52 +12,63 @@
     <UserControl.Resources>
         <!-- Настройки эффекта — в общем редакторе EffectEditor -->
 
-        <!-- Карточка устройства с живыми цветами. Имя DeviceCard ищет выделение мышью в ScenePage.xaml.cs -->
-        <DataTemplate x:Key="DeviceCardTemplate" DataType="vm:SceneDeviceViewModel">
-            <Border x:Name="DeviceCard" Style="{StaticResource DeviceCard}" Margin="{StaticResource GapBottom8}"
-                    controls:Appearance.IsSelected="{Binding IsSelected}">
-                <StackPanel>
-                    <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding KindText}" Style="{StaticResource Caption}"
-                                   VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
-                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextTrimming="CharacterEllipsis"/>
-                    </DockPanel>
-
-                    <!-- Лента: полоса своих светодиодов; устройство одного цвета — одна заливка -->
-                    <Border Height="{StaticResource LedBarHeight}" CornerRadius="{StaticResource RadiusSmall}"
-                            Background="{Binding Preview}" BorderBrush="{DynamicResource StrokeBrush}"
-                            BorderThickness="{StaticResource StrokeThin}" Margin="{StaticResource GapTop8}"
-                            Visibility="{Binding IsKeyboard, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
-
-                    <!-- Клавиатура: клавиши закрашены своими цветами -->
-                    <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left" Margin="{StaticResource GapTop8}"
-                             Visibility="{Binding IsKeyboard, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <controls:KeyboardLayout Keys="{Binding Keys}" Colors="{Binding KeyColors}"/>
-                    </Viewbox>
-                </StackPanel>
+        <!-- Устройство на карте сцены с живыми цветами: лента — полоса своих светодиодов, клавиатура — раскладка
+             с закрашенными клавишами, устройство одного цвета — кружок. Имя DeviceShape ищет мышь в ScenePage.xaml.cs -->
+        <DataTemplate x:Key="DeviceShapeTemplate" DataType="vm:SceneDeviceViewModel">
+            <Border x:Name="DeviceShape" Background="{Binding Preview}"
+                    controls:Appearance.IsSelected="{Binding IsSelected}"
+                    controls:Appearance.IsMovable="{Binding DataContext.IsEditingLayout, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                <Border.ToolTip>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}"/>
+                        <TextBlock Text="{Binding KindText}" Style="{StaticResource Caption}"/>
+                    </StackPanel>
+                </Border.ToolTip>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource SceneDevice}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPoint}" Value="True">
+                                <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Viewbox Stretch="Fill" Visibility="{Binding IsKeyboard, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                    <controls:KeyboardLayout Keys="{Binding Keys}" Colors="{Binding KeyColors}"/>
+                </Viewbox>
             </Border>
         </DataTemplate>
 
-        <!-- Устройство без группы — просто его карточка -->
-        <DataTemplate x:Key="SoloGroupTemplate" DataType="vm:SceneGroupViewModel">
-            <ContentPresenter Content="{Binding Device}" ContentTemplate="{StaticResource DeviceCardTemplate}"/>
+        <!-- Группа на карте сцены: рамка её цвета вокруг её устройств, над рамкой название и играющий сценарий.
+             У устройства без группы рамки нет, только подпись. Имя GroupFrame ищет мышь в ScenePage.xaml.cs -->
+        <DataTemplate x:Key="MapGroupTemplate" DataType="vm:SceneGroupViewModel">
+            <Grid>
+                <Border x:Name="GroupFrame" Style="{StaticResource MapGroupFrame}" BorderBrush="{Binding OutlineBrush}"
+                        controls:Appearance.IsSelected="{Binding IsSelected}"/>
+                <Canvas VerticalAlignment="Top" Height="0" IsHitTestVisible="False">
+                    <TextBlock Canvas.Bottom="0" Style="{StaticResource MapLabel}">
+                        <Run Text="{Binding Title, Mode=OneWay}"/>
+                        <Run Text="{Binding ActiveScenarioTitle, Mode=OneWay, StringFormat='▶ {0}'}" Foreground="{DynamicResource AccentTextBrush}"
+                             FontWeight="SemiBold"/>
+                    </TextBlock>
+                </Canvas>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsSolo}" Value="True">
+                    <Setter TargetName="GroupFrame" Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
 
-        <!-- Группа: рамка её цвета, название и играющий сценарий, внутри — карточки её устройств.
-             Имя GroupFrame ищет клик мышью в ScenePage.xaml.cs -->
-        <DataTemplate x:Key="GroupTemplate" DataType="vm:SceneGroupViewModel">
-            <Border x:Name="GroupFrame" Style="{StaticResource GroupFrame}" BorderBrush="{Binding OutlineBrush}"
-                    controls:Appearance.IsSelected="{Binding IsSelected}" Margin="{StaticResource GapBottom8}">
-                <StackPanel>
-                    <DockPanel Style="{StaticResource GroupFrameHeader}">
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding ActiveScenarioTitle, StringFormat='▶ {0}'}"
-                                   Style="{StaticResource PlayingMark}" Margin="{StaticResource GapLeft12}"/>
-                        <TextBlock Text="{Binding Title}" Style="{StaticResource BodyStrong}" TextTrimming="CharacterEllipsis"/>
-                    </DockPanel>
-                    <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource DeviceCardTemplate}"/>
-                </StackPanel>
-            </Border>
-        </DataTemplate>
+        <!-- Элементы карты стоят на своих местах на сцене -->
+        <Style x:Key="MapItem" TargetType="ContentPresenter">
+            <Setter Property="controls:SceneMap.Place" Value="{Binding Place}"/>
+        </Style>
+
+        <Style x:Key="MapDevice" TargetType="ContentPresenter">
+            <Setter Property="controls:SceneMap.Place" Value="{Binding Place}"/>
+            <Setter Property="controls:SceneMap.Angle" Value="{Binding Angle}"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -65,7 +76,7 @@
         <controls:EmptyState Icon="&#xE7F4;" Title="Устройств пока нет" Hint="Light Space найдёт ленты и клавиатуры в сети, по Bluetooth и USB. Найденные устройства появятся на карте стола, их можно будет собрать в группы." ActionText="Найти устройства" ActionIcon="&#xE721;" Command="{Binding FindDevicesCommand}"
                              Visibility="{Binding Devices.HasDevices, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
 
-        <!-- Устройства есть: слева их живые цвета (карта стола появится позже), справа эффект, который на них играет -->
+        <!-- Устройства есть: слева их живые цвета на карте стола, справа эффект, который на них играет -->
         <Grid DataContext="{Binding Scene}" Margin="{StaticResource PaddingPage}"
               Visibility="{Binding DataContext.Devices.HasDevices, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
             <Grid.ColumnDefinitions>
@@ -76,44 +87,68 @@
             <!-- Живые цвета устройств по группам: клик выбирает группу или устройство, Ctrl+клик и рамка мышью выделяют
                  несколько устройств -->
             <DockPanel d:DataContext="{d:DesignInstance vm:SceneViewModel}">
-                <TextBlock DockPanel.Dock="Top" Text="Сцена" Style="{StaticResource PageTitle}"/>
-                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}"
-                           Text="Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой."/>
+                <!-- Заголовок и вход в режим редактирования расстановки -->
+                <DockPanel DockPanel.Dock="Top">
+                    <ToggleButton DockPanel.Dock="Right" Content="Редактировать расстановку" controls:Appearance.Icon="&#xE70F;"
+                                  IsChecked="{Binding IsEditingLayout}" VerticalAlignment="Top"/>
+                    <TextBlock Text="Сцена" Style="{StaticResource PageTitle}"/>
+                </DockPanel>
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}" Text="{Binding SceneHint}"/>
                 <Grid>
-                    <ScrollViewer x:Name="SceneScroll" VerticalScrollBarVisibility="Auto">
-                        <!-- Пустое место под карточками тоже ловит мышь: с него начинается рамка выделения -->
-                        <Grid x:Name="SceneArea" Background="Transparent"
-                              MinHeight="{Binding ViewportHeight, ElementName=SceneScroll}"
-                              PreviewMouseLeftButtonDown="OnAreaMouseDown" MouseMove="OnAreaMouseMove"
-                              MouseLeftButtonUp="OnAreaMouseUp" LostMouseCapture="OnAreaLostMouseCapture">
-                            <ItemsControl ItemsSource="{Binding Groups}" VerticalAlignment="Top">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="vm:SceneGroupViewModel">
-                                        <ContentControl Content="{Binding}" Focusable="False">
-                                            <ContentControl.Style>
-                                                <Style TargetType="ContentControl">
-                                                    <Setter Property="ContentTemplate" Value="{StaticResource GroupTemplate}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsSolo}" Value="True">
-                                                            <Setter Property="ContentTemplate" Value="{StaticResource SoloGroupTemplate}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </ContentControl.Style>
-                                        </ContentControl>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
+                    <!-- Пустое место вокруг карты тоже ловит мышь: с него начинается рамка выделения -->
+                    <Grid x:Name="SceneArea" Background="Transparent"
+                          PreviewMouseLeftButtonDown="OnAreaMouseDown" MouseMove="OnAreaMouseMove"
+                          MouseLeftButtonUp="OnAreaMouseUp" LostMouseCapture="OnAreaLostMouseCapture">
+                        <!-- Карта стола: подложка, рамки групп с подписями, устройства на своих местах. Все слои карты одного
+                             размера, поэтому совпадают точка в точку -->
+                        <Grid x:Name="MapHost" Margin="{StaticResource SceneMapMargin}">
+                            <controls:SceneMap>
+                                <Border Style="{StaticResource SceneSurface}" controls:SceneMap.Place="{x:Static controls:SceneMap.WholeScene}"/>
+                            </controls:SceneMap>
+
+                            <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource MapGroupTemplate}"
+                                          ItemContainerStyle="{StaticResource MapItem}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <controls:SceneMap/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+
+                            <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource DeviceShapeTemplate}"
+                                          ItemContainerStyle="{StaticResource MapDevice}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <controls:SceneMap/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
                             </ItemsControl>
 
                             <Canvas IsHitTestVisible="False">
                                 <Border x:Name="SelectionBand" Style="{StaticResource SelectionBand}" Visibility="Collapsed"/>
                             </Canvas>
                         </Grid>
-                    </ScrollViewer>
+                    </Grid>
+
+                    <!-- Режим редактирования расстановки: автокомпоновка, поворот и размер выбранного устройства -->
+                    <Border Style="{StaticResource FlyoutCard}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            Visibility="{Binding IsEditingLayout, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource GhostButton}" Content="Автокомпоновка" controls:Appearance.Icon="&#xE8A9;"
+                                    Command="{Binding AutoArrangeCommand}" Margin="{StaticResource GapRight4}"/>
+                            <Button Style="{StaticResource GhostButton}" Content="Повернуть" controls:Appearance.Icon="&#xE7AD;"
+                                    Command="{Binding RotateDeviceCommand}" IsEnabled="{Binding HasEditedDevice}" Margin="{StaticResource GapRight4}"/>
+                            <controls:ValueSlider Label="Размер" Minimum="4" Maximum="200" Step="1" Value="{Binding EditedSize}"
+                                                  Width="{StaticResource PickerMinWidth}" VerticalAlignment="Center" Margin="{StaticResource GapRight12}"
+                                                  Visibility="{Binding HasEditedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                            <Button Style="{StaticResource AccentButton}" Content="Готово" controls:Appearance.Icon="&#xE8FB;"
+                                    Command="{Binding FinishEditingCommand}"/>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Выделено несколько устройств: всплывающая карточка с действием «Сделать группой» -->
                     <Border Style="{StaticResource FlyoutCard}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                            Visibility="{Binding CanMakeGroup, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                            Visibility="{Binding IsGroupActionShown, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding SelectionText}" Style="{StaticResource Body}" VerticalAlignment="Center"
                                        Margin="{StaticResource PaddingMenuItem}"/>

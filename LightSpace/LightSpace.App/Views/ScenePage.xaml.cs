@@ -2,7 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using LightSpace.App.Controls;
 using LightSpace.App.ViewModels;
+using LightSpace.Core;
 
 namespace LightSpace.App.Views;
 
@@ -18,6 +20,12 @@ public partial class ScenePage : UserControl
     private bool _isPressed;
     private bool _isBanding;
 
+    // Устройства, которые тянут мышью в режиме редактирования расстановки, где была мышь на прошлом шаге (в единицах сцены)
+    // и сдвинулись ли они хоть раз
+    private IReadOnlyList<SceneDeviceViewModel>? _moving;
+    private Point _lastScenePoint;
+    private bool _isMoved;
+
     public ScenePage()
     {
         InitializeComponent();
@@ -26,15 +34,25 @@ public partial class ScenePage : UserControl
     private SceneViewModel? Scene => SceneArea.DataContext as SceneViewModel;
 
     /// <summary>
-    /// Нажатие на сцене: что это — клик или начало рамки, станет ясно, когда мышь сдвинется или отпустят кнопку.
+    /// Нажатие на сцене: что это — клик, начало рамки или перетаскивание устройства, станет ясно, когда мышь сдвинется
+    /// или отпустят кнопку.
     /// </summary>
     private void OnAreaMouseDown(object sender, MouseButtonEventArgs e)
     {
-        _pressPoint = e.GetPosition(SceneArea);
+        _pressPoint = e.GetPosition(MapHost);
         _pressTarget = TargetOf(e.OriginalSource as DependencyObject);
         _isAdding = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         _isPressed = true;
         _isBanding = false;
+        _isMoved = false;
+        _moving = null;
+
+        // Устройства двигаются только в режиме редактирования расстановки, чтобы случайно ничего не сдвинуть
+        if (Scene is { IsEditingLayout: true } scene && _pressTarget is SceneDeviceViewModel device && !_isAdding)
+        {
+            _moving = scene.DevicesToMove(device);
+            _lastScenePoint = SceneMap.ToScene(_pressPoint, MapHost.RenderSize);
+        }
 
         SceneArea.CaptureMouse();
         e.Handled = true;
@@ -45,12 +63,22 @@ public partial class ScenePage : UserControl
         if (!_isPressed)
             return;
 
-        var point = e.GetPosition(SceneArea);
+        var point = e.GetPosition(MapHost);
 
         // Мелкое дрожание руки при клике рамкой не считается
-        if (!_isBanding && Math.Abs(point.X - _pressPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+        if (!_isBanding && !_isMoved && Math.Abs(point.X - _pressPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
             Math.Abs(point.Y - _pressPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
+
+        if (_moving != null && Scene is { } scene)
+        {
+            var scenePoint = SceneMap.ToScene(point, MapHost.RenderSize);
+
+            scene.MoveDevices(_moving, scenePoint.X - _lastScenePoint.X, scenePoint.Y - _lastScenePoint.Y);
+            _lastScenePoint = scenePoint;
+            _isMoved = true;
+            return;
+        }
 
         _isBanding = true;
 
@@ -65,6 +93,7 @@ public partial class ScenePage : UserControl
 
     /// <summary>
     /// Кнопку отпустили: рамка выделяет устройства, которых коснулась, клик выбирает то, на что нажали.
+    /// Перетаскивание устройств заканчивается при потере захвата мыши.
     /// </summary>
     private void OnAreaMouseUp(object sender, MouseButtonEventArgs e)
     {
@@ -72,18 +101,19 @@ public partial class ScenePage : UserControl
             return;
 
         var isBanding = _isBanding;
-        var band = new Rect(_pressPoint, e.GetPosition(SceneArea));
+        var isMoved = _isMoved;
+        var band = new Rect(_pressPoint, e.GetPosition(MapHost));
         var target = _pressTarget;
 
         // Отпускание захвата сбрасывает состояние нажатия и прячет рамку
         SceneArea.ReleaseMouseCapture();
 
-        if (Scene is not { } scene)
+        if (Scene is not { } scene || isMoved)
             return;
 
         if (isBanding)
         {
-            scene.SelectDevices(DevicesIn(band), _isAdding);
+            scene.SelectDevices(DevicesIn(scene, band), _isAdding);
             return;
         }
 
@@ -107,19 +137,25 @@ public partial class ScenePage : UserControl
 
     private void OnAreaLostMouseCapture(object sender, MouseEventArgs e)
     {
+        // Устройства отпустили — новые места сохраняются, даже если захват мыши пропал сам
+        if (_isMoved)
+            Scene?.FinishMove();
+
         _isPressed = false;
         _isBanding = false;
+        _isMoved = false;
+        _moving = null;
         SelectionBand.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>
-    /// Устройство или группа под курсором: ближайшая карточка устройства или рамка группы вверх по дереву элементов.
+    /// Устройство или группа под курсором: ближайшая фигура устройства или рамка группы вверх по дереву элементов.
     /// </summary>
     private object? TargetOf(DependencyObject? element)
     {
         while (element != null && element != SceneArea)
         {
-            if (element is FrameworkElement { Name: "DeviceCard", DataContext: SceneDeviceViewModel device })
+            if (element is FrameworkElement { Name: "DeviceShape", DataContext: SceneDeviceViewModel device })
                 return device;
 
             if (element is FrameworkElement { Name: "GroupFrame", DataContext: SceneGroupViewModel group })
@@ -133,34 +169,14 @@ public partial class ScenePage : UserControl
     }
 
     /// <summary>
-    /// Устройства, карточки которых пересекаются с рамкой.
+    /// Устройства, которые на сцене пересекаются с рамкой.
     /// </summary>
-    private List<SceneDeviceViewModel> DevicesIn(Rect band)
+    private List<SceneDeviceViewModel> DevicesIn(SceneViewModel scene, Rect band)
     {
-        var devices = new List<SceneDeviceViewModel>();
+        var from = SceneMap.ToScene(band.TopLeft, MapHost.RenderSize);
+        var to = SceneMap.ToScene(band.BottomRight, MapHost.RenderSize);
+        var area = new SceneRect(from.X, from.Y, to.X - from.X, to.Y - from.Y);
 
-        CollectDevices(SceneArea, band, devices);
-
-        return devices;
-    }
-
-    private void CollectDevices(DependencyObject parent, Rect band, List<SceneDeviceViewModel> devices)
-    {
-        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-
-            if (child is Border { Name: "DeviceCard", IsVisible: true, DataContext: SceneDeviceViewModel device } card)
-            {
-                var bounds = card.TransformToAncestor(SceneArea).TransformBounds(new Rect(card.RenderSize));
-
-                if (bounds.IntersectsWith(band))
-                    devices.Add(device);
-
-                continue;
-            }
-
-            CollectDevices(child, band, devices);
-        }
+        return scene.Devices.Where(d => d.Bounds.IntersectsWith(area)).ToList();
     }
 }
