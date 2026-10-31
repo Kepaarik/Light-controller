@@ -16,6 +16,9 @@ public sealed class DeviceOutput : IDisposable
     // Сколько остановка ждёт, пока уйдёт последняя команда
     private static readonly TimeSpan StopTimeout = TimeSpan.FromMilliseconds(500);
 
+    // Через сколько повторяется запуск встроенного эффекта, который не дошёл до устройства
+    private static readonly TimeSpan BuiltinRetryDelay = TimeSpan.FromSeconds(5);
+
     // Какая доля разницы гасится за 50 мс, когда клавиша на клавиатуре темнеет; при другой частоте шаг пересчитывается
     private const double FadePer50Ms = 0.6;
 
@@ -247,7 +250,10 @@ public sealed class DeviceOutput : IDisposable
 
         if (builtin != null)
         {
-            await RunCommandAsync(() => StartBuiltinAsync(builtin, ct), isFrame: false, ct);
+            // Кадров, которые повторили бы попытку, у встроенного эффекта нет — запуск повторяется сам
+            if (!await RunCommandAsync(() => StartBuiltinAsync(builtin, ct), isFrame: false, ct))
+                _ = RetryBuiltinAsync(builtin, ct);
+
             return true;
         }
 
@@ -292,6 +298,31 @@ public sealed class DeviceOutput : IDisposable
         _smoothed = null;
 
         return builtin.StartBuiltinEffectAsync(start.EffectId, start.Speed, start.Brightness, start.Color, ct);
+    }
+
+    /// <summary>
+    /// Через несколько секунд снова кладёт в ящик запуск встроенного эффекта, если устройство всё ещё должно его играть.
+    /// </summary>
+    private async Task RetryBuiltinAsync(BuiltinEffectStart start, CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(BuiltinRetryDelay, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        lock (_sync)
+        {
+            // За это время могли прийти кадр, другой эффект или выключение подсветки
+            if (ct.IsCancellationRequested || !Equals(_builtin, start) || !_isEnabled || _pendingBuiltin != null)
+                return;
+
+            _pendingBuiltin = start;
+            Signal();
+        }
     }
 
     private Task SendFrameAsync(OutputFrame frame, TimeSpan since, CancellationToken ct)
@@ -369,9 +400,9 @@ public sealed class DeviceOutput : IDisposable
     }
 
     /// <summary>
-    /// Выполняет команду устройства и записывает в диагностику её время или ошибку.
+    /// Выполняет команду устройства и записывает в диагностику её время или ошибку. false — команда не дошла.
     /// </summary>
-    private async Task RunCommandAsync(Func<Task> command, bool isFrame, CancellationToken ct)
+    private async Task<bool> RunCommandAsync(Func<Task> command, bool isFrame, CancellationToken ct)
     {
         var started = Stopwatch.GetTimestamp();
 
@@ -390,6 +421,8 @@ public sealed class DeviceOutput : IDisposable
                 _lastSentAt = DateTime.Now;
                 _isFailing = false;
             }
+
+            return true;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -404,6 +437,8 @@ public sealed class DeviceOutput : IDisposable
                 _lastErrorAt = DateTime.Now;
                 _isFailing = true;
             }
+
+            return false;
         }
     }
 }
