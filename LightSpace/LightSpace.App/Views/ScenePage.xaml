@@ -43,6 +43,53 @@
         <DataTemplate DataType="{x:Type vm:ToggleParameterViewModel}">
             <CheckBox Content="{Binding Title}" IsChecked="{Binding IsOn}" Margin="{StaticResource GapBottom16}"/>
         </DataTemplate>
+
+        <!-- Карточка устройства с живыми цветами. Имя DeviceCard ищет выделение мышью в ScenePage.xaml.cs -->
+        <DataTemplate x:Key="DeviceCardTemplate" DataType="vm:SceneDeviceViewModel">
+            <Border x:Name="DeviceCard" Style="{StaticResource DeviceCard}" Margin="{StaticResource GapBottom8}"
+                    controls:Appearance.IsSelected="{Binding IsSelected}">
+                <StackPanel>
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding KindText}" Style="{StaticResource Caption}"
+                                   VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
+                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+
+                    <!-- Лента: полоса своих светодиодов; устройство одного цвета — одна заливка -->
+                    <Border Height="{StaticResource LedBarHeight}" CornerRadius="{StaticResource RadiusSmall}"
+                            Background="{Binding Preview}" BorderBrush="{DynamicResource StrokeBrush}"
+                            BorderThickness="{StaticResource StrokeThin}" Margin="{StaticResource GapTop8}"
+                            Visibility="{Binding IsKeyboard, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+                    <!-- Клавиатура: клавиши закрашены своими цветами -->
+                    <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left" Margin="{StaticResource GapTop8}"
+                             Visibility="{Binding IsKeyboard, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <controls:KeyboardLayout Keys="{Binding Keys}" Colors="{Binding KeyColors}"/>
+                    </Viewbox>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- Устройство без группы — просто его карточка -->
+        <DataTemplate x:Key="SoloGroupTemplate" DataType="vm:SceneGroupViewModel">
+            <ContentPresenter Content="{Binding Device}" ContentTemplate="{StaticResource DeviceCardTemplate}"/>
+        </DataTemplate>
+
+        <!-- Группа: рамка её цвета, название и играющий сценарий, внутри — карточки её устройств.
+             Имя GroupFrame ищет клик мышью в ScenePage.xaml.cs -->
+        <DataTemplate x:Key="GroupTemplate" DataType="vm:SceneGroupViewModel">
+            <Border x:Name="GroupFrame" Style="{StaticResource GroupFrame}" BorderBrush="{Binding OutlineBrush}"
+                    controls:Appearance.IsSelected="{Binding IsSelected}" Margin="{StaticResource GapBottom8}">
+                <StackPanel>
+                    <DockPanel Style="{StaticResource GroupFrameHeader}">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding ActiveScenarioTitle, StringFormat='▶ {0}'}"
+                                   Style="{StaticResource PlayingMark}" Margin="{StaticResource GapLeft12}"/>
+                        <TextBlock Text="{Binding Title}" Style="{StaticResource BodyStrong}" TextTrimming="CharacterEllipsis"/>
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource DeviceCardTemplate}"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid>
@@ -58,60 +105,140 @@
                 <ColumnDefinition Width="{StaticResource ScenePanelWidth}"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Живые цвета устройств -->
+            <!-- Живые цвета устройств по группам: клик выбирает группу или устройство, Ctrl+клик и рамка мышью выделяют
+                 несколько устройств -->
             <DockPanel d:DataContext="{d:DesignInstance vm:SceneViewModel}">
                 <TextBlock DockPanel.Dock="Top" Text="Сцена" Style="{StaticResource PageTitle}"/>
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Devices}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="vm:SceneDeviceViewModel">
-                                <Border Style="{StaticResource Card}" Margin="{StaticResource GapBottom8}">
-                                    <StackPanel>
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding KindText}" Style="{StaticResource Caption}"
-                                                       VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
-                                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextTrimming="CharacterEllipsis"/>
-                                        </DockPanel>
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}"
+                           Text="Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой."/>
+                <Grid>
+                    <ScrollViewer x:Name="SceneScroll" VerticalScrollBarVisibility="Auto">
+                        <!-- Пустое место под карточками тоже ловит мышь: с него начинается рамка выделения -->
+                        <Grid x:Name="SceneArea" Background="Transparent"
+                              MinHeight="{Binding ViewportHeight, ElementName=SceneScroll}"
+                              PreviewMouseLeftButtonDown="OnAreaMouseDown" MouseMove="OnAreaMouseMove"
+                              MouseLeftButtonUp="OnAreaMouseUp" LostMouseCapture="OnAreaLostMouseCapture">
+                            <ItemsControl ItemsSource="{Binding Groups}" VerticalAlignment="Top">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:SceneGroupViewModel">
+                                        <ContentControl Content="{Binding}" Focusable="False">
+                                            <ContentControl.Style>
+                                                <Style TargetType="ContentControl">
+                                                    <Setter Property="ContentTemplate" Value="{StaticResource GroupTemplate}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSolo}" Value="True">
+                                                            <Setter Property="ContentTemplate" Value="{StaticResource SoloGroupTemplate}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ContentControl.Style>
+                                        </ContentControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                                        <!-- Лента: полоса своих светодиодов; устройство одного цвета — одна заливка -->
-                                        <Border Height="{StaticResource LedBarHeight}" CornerRadius="{StaticResource RadiusSmall}"
-                                                Background="{Binding Preview}" BorderBrush="{DynamicResource StrokeBrush}"
-                                                BorderThickness="{StaticResource StrokeThin}" Margin="{StaticResource GapTop8}"
-                                                Visibility="{Binding IsKeyboard, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+                            <Canvas IsHitTestVisible="False">
+                                <Border x:Name="SelectionBand" Style="{StaticResource SelectionBand}" Visibility="Collapsed"/>
+                            </Canvas>
+                        </Grid>
+                    </ScrollViewer>
 
-                                        <!-- Клавиатура: клавиши закрашены своими цветами -->
-                                        <Viewbox StretchDirection="DownOnly" HorizontalAlignment="Left" Margin="{StaticResource GapTop8}"
-                                                 Visibility="{Binding IsKeyboard, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                                            <controls:KeyboardLayout Keys="{Binding Keys}" Colors="{Binding KeyColors}"/>
-                                        </Viewbox>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                    <!-- Выделено несколько устройств: всплывающая карточка с действием «Сделать группой» -->
+                    <Border Style="{StaticResource FlyoutCard}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            Visibility="{Binding CanMakeGroup, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding SelectionText}" Style="{StaticResource Body}" VerticalAlignment="Center"
+                                       Margin="{StaticResource PaddingMenuItem}"/>
+                            <Button Style="{StaticResource AccentButton}" Content="Сделать группой" controls:Appearance.Icon="&#xE902;"
+                                    Command="{Binding MakeGroupCommand}" Margin="{StaticResource GapRight4}"/>
+                            <Button Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE711;" ToolTip="Снять выделение"
+                                    Command="{Binding ClearSelectionCommand}"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </DockPanel>
 
-            <!-- Панель эффекта: галерея, ниже настройки выбранного эффекта и яркость -->
+            <!-- Панель выбранной группы: название и цвет, сценарии, яркость, содержимое «По умолчанию», действия группы.
+                 Пока ничего не выбрано — подсказка -->
             <Border Grid.Column="1" Style="{StaticResource Card}" Margin="{StaticResource GapLeft24}" d:DataContext="{d:DesignInstance vm:SceneViewModel}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Text="Эффект" Style="{StaticResource Subtitle}"/>
-                        <TextBlock Text="{Binding SelectedTile.Description}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+                <Grid>
+                    <controls:EmptyState Icon="&#xE8B3;" Title="{Binding NoSelectionTitle}" Hint="{Binding NoSelectionHint}"
+                                         Visibility="{Binding HasSelection, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
 
-                        <ListBox Style="{StaticResource TileGallery}" ItemsSource="{Binding Tiles}" SelectedItem="{Binding SelectedTile}"
-                                 Margin="{StaticResource GapTop16}"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding HasSelection, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <StackPanel>
+                            <!-- Группа: своё название и цвет обводки -->
+                            <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                                <TextBox Tag="Название группы" Text="{Binding SelectedGroup.Name, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Цвет обводки" Style="{StaticResource SectionLabel}"/>
+                                <ListBox Style="{StaticResource SwatchPalette}" ItemsSource="{StaticResource GroupPalette}"
+                                         SelectedItem="{Binding SelectedGroup.OutlineColor}"/>
+                            </StackPanel>
 
-                        <TextBlock Text="{Binding SelectedTile.Title}" Style="{StaticResource SectionLabel}"/>
-                        <ItemsControl ItemsSource="{Binding Parameters}"/>
+                            <!-- Устройство без группы: его название вместо названия группы -->
+                            <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                <TextBlock Text="{Binding SelectedGroup.Title}" Style="{StaticResource Subtitle}"/>
+                                <TextBlock Text="Устройство без группы. Выделите его вместе с другими устройствами, чтобы сделать группу."
+                                           Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+                            </StackPanel>
 
-                        <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                              Value="{Binding Brightness}" Margin="{StaticResource GapBottom16}"/>
+                            <TextBlock Text="Сценарии" Style="{StaticResource SectionLabel}"/>
+                            <ItemsControl ItemsSource="{Binding SelectedGroup.Scenarios}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:ScenarioRowViewModel">
+                                        <Border Style="{StaticResource SettingRow}">
+                                            <DockPanel VerticalAlignment="Center">
+                                                <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"
+                                                           Visibility="{Binding IsPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                                                <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" VerticalAlignment="Center"/>
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                        <Button Style="{StaticResource GhostButton}" Content="Сбросить настройки эффекта" controls:Appearance.Icon="&#xE72C;"
-                                HorizontalAlignment="Left" Command="{Binding ResetParametersCommand}"/>
-                    </StackPanel>
-                </ScrollViewer>
+                            <controls:ValueSlider Label="Яркость группы" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                                  Value="{Binding SelectedGroup.Brightness}" Margin="{StaticResource GapTop16}"/>
+
+                            <!-- Содержимое «По умолчанию»: галерея, ниже настройки выбранного эффекта -->
+                            <TextBlock Text="По умолчанию" Style="{StaticResource SectionLabel}"/>
+                            <TextBlock Text="{Binding SelectedTile.Description}" Style="{StaticResource Hint}"/>
+
+                            <ListBox Style="{StaticResource TileGallery}" ItemsSource="{Binding Tiles}" SelectedItem="{Binding SelectedTile}"
+                                     Margin="{StaticResource GapTop16}"/>
+
+                            <TextBlock Text="{Binding SelectedTile.Title}" Style="{StaticResource SectionLabel}"/>
+                            <ItemsControl ItemsSource="{Binding Parameters}"/>
+
+                            <Button Style="{StaticResource GhostButton}" Content="Сбросить настройки эффекта" controls:Appearance.Icon="&#xE72C;"
+                                    HorizontalAlignment="Left" Command="{Binding ResetParametersCommand}"/>
+
+                            <!-- Устройства группы и действия с ней -->
+                            <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                                <TextBlock Text="Устройства группы" Style="{StaticResource SectionLabel}"/>
+                                <ItemsControl ItemsSource="{Binding SelectedGroup.Devices}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:SceneDeviceViewModel">
+                                            <Border Style="{StaticResource SettingRow}">
+                                                <DockPanel VerticalAlignment="Center">
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE738;"
+                                                            ToolTip="Убрать из группы" CommandParameter="{Binding}"
+                                                            Command="{Binding DataContext.Scene.RemoveFromGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource Body}" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </DockPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <Button Style="{StaticResource GhostButton}" Content="Разгруппировать" controls:Appearance.Icon="&#xE74D;"
+                                        HorizontalAlignment="Left" Command="{Binding UngroupCommand}" Margin="{StaticResource GapTop8}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

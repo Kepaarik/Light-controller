@@ -18,6 +18,10 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     [ObservableProperty]
     private IReadOnlyList<RgbColor>? _keyColors;
 
+    // Устройство выделено на сцене: кликом, Ctrl+кликом или рамкой
+    [ObservableProperty]
+    private bool _isSelected;
+
     public SceneDeviceViewModel(ManagedDevice device)
     {
         var capabilities = device.Capabilities;

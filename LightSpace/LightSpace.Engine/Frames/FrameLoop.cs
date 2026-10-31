@@ -7,9 +7,9 @@ using LightSpace.Engine.Output;
 namespace LightSpace.Engine.Frames;
 
 /// <summary>
-/// Поток кадров, один на приложение. Каждый кадр берёт последний снимок настроек, считает кадр для каждого устройства
-/// и кладёт его в вывод устройства. С окном поток делит только неизменяемые снимки: окно подменяет снимок настроек,
-/// поток подменяет снимок цветов и время расчёта.
+/// Поток кадров, один на приложение. Каждый кадр берёт последний снимок настроек, для каждой группы считает кадр
+/// каждого её устройства содержимым группы и кладёт его в вывод устройства. С окном поток делит только неизменяемые
+/// снимки: окно подменяет снимок настроек, поток подменяет снимок цветов и время расчёта.
 /// </summary>
 public sealed class FrameLoop : IDisposable
 {
@@ -93,25 +93,16 @@ public sealed class FrameLoop : IDisposable
             var lastTick = clock.Elapsed;
             var lastLive = -LiveColorsInterval;
             var next = clock.Elapsed;
-            var time = 0.0;
-            string? effectId = null;
+
+            // Время эффекта у каждой группы своё; часы живут только в потоке кадров
+            var clocks = new Dictionary<string, EffectClock>();
 
             while (true)
             {
                 var snapshot = Volatile.Read(ref _snapshot);
                 var now = clock.Elapsed;
 
-                // Новый эффект начинается с начала; у текущего время копится по шагам, чтобы смена скорости не давала скачка
-                if (snapshot.Effect.Id != effectId)
-                {
-                    effectId = snapshot.Effect.Id;
-                    time = 0;
-                }
-                else
-                {
-                    time += (now - lastTick).TotalSeconds * snapshot.Speed;
-                }
-
+                AdvanceClocks(clocks, snapshot, (now - lastTick).TotalSeconds);
                 lastTick = now;
 
                 var isLiveDue = _isLiveColorsWanted && now - lastLive >= LiveColorsInterval;
@@ -119,7 +110,7 @@ public sealed class FrameLoop : IDisposable
                 if (isLiveDue)
                     lastLive = now;
 
-                RenderFrame(snapshot, time, isLiveDue);
+                RenderFrame(snapshot, clocks, isLiveDue);
 
                 // Отставший поток не догоняет пачкой кадров, а продолжает с текущего момента
                 next += TimeSpan.FromSeconds(1.0 / Math.Max(snapshot.FrameRate, 1));
@@ -143,47 +134,79 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Считает кадр для каждого устройства снимка и отправляет его; isLiveDue — заодно собрать снимок цветов для окна.
+    /// Двигает время эффекта каждой группы на seconds секунд с учётом его скорости.
     /// </summary>
-    private void RenderFrame(FrameSnapshot snapshot, double time, bool isLiveDue)
+    private static void AdvanceClocks(Dictionary<string, EffectClock> clocks, FrameSnapshot snapshot, double seconds)
     {
-        var live = isLiveDue ? new Dictionary<string, IReadOnlyList<RgbColor>>() : null;
+        foreach (var group in snapshot.Groups)
+        {
+            var effectId = group.Active.Effect.Id;
+
+            // Новый эффект начинается с начала; у текущего время копится по шагам, чтобы смена скорости не давала скачка
+            if (!clocks.TryGetValue(group.Id, out var clock) || clock.EffectId != effectId)
+                clocks[group.Id] = new EffectClock(effectId);
+            else
+                clock.Time += seconds * group.Active.Speed;
+        }
+
+        // Часы распущенных и удалённых групп больше не нужны
+        if (clocks.Count > snapshot.Groups.Count)
+        {
+            foreach (var id in clocks.Keys.Except(snapshot.Groups.Select(g => g.Id)).ToList())
+                clocks.Remove(id);
+        }
+    }
+
+    /// <summary>
+    /// Считает кадр для каждого устройства каждой группы её содержимым и отправляет его;
+    /// isLiveDue — заодно собрать снимок цветов для окна.
+    /// </summary>
+    private void RenderFrame(FrameSnapshot snapshot, Dictionary<string, EffectClock> clocks, bool isLiveDue)
+    {
+        var live = isLiveDue ? new Dictionary<string, LiveDeviceColors>() : null;
 
         // Выключенная подсветка ничего не показывает — и считать для неё нечего
         if (!snapshot.IsLightingEnabled)
         {
             if (live != null)
-                Volatile.Write(ref _liveColors, new LiveColors(false, snapshot.Brightness, live));
+                Volatile.Write(ref _liveColors, new LiveColors(false, live));
 
             return;
         }
 
         var started = Stopwatch.GetTimestamp();
 
-        foreach (var device in snapshot.Devices)
+        foreach (var group in snapshot.Groups)
         {
-            var colors = EffectRenderer.Render(snapshot.Effect, snapshot.Values, device.Geometry, time);
+            var content = group.Active;
+            var time = clocks[group.Id].Time;
 
-            var frame = device.Geometry.IsAddressable
-                ? OutputFrame.PerLed(colors, snapshot.Brightness)
-                : OutputFrame.Solid(colors[0], snapshot.Brightness);
-
-            try
+            foreach (var device in group.Devices)
             {
-                device.Output.Submit(frame);
-            }
-            catch (ObjectDisposedException)
-            {
-                // Устройство отключили в потоке окна, пока считался кадр; новый снимок без него придёт со следующим кадром
-            }
+                var colors = EffectRenderer.Render(content.Effect, content.Values, device.Geometry, time);
 
-            live?.Add(device.Id, colors);
+                var frame = device.Geometry.IsAddressable
+                    ? OutputFrame.PerLed(colors, group.Brightness)
+                    : OutputFrame.Solid(colors[0], group.Brightness);
+
+                try
+                {
+                    device.Output.Submit(frame);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Устройство отключили в потоке окна, пока считался кадр; новый снимок без него придёт со следующим кадром
+                }
+
+                if (live != null)
+                    live[device.Id] = new LiveDeviceColors(colors, group.Brightness);
+            }
         }
 
         RecordTiming(Stopwatch.GetElapsedTime(started));
 
         if (live != null)
-            Volatile.Write(ref _liveColors, new LiveColors(true, snapshot.Brightness, live));
+            Volatile.Write(ref _liveColors, new LiveColors(true, live));
     }
 
     private void RecordTiming(TimeSpan duration)
@@ -195,6 +218,24 @@ public sealed class FrameLoop : IDisposable
             : previous.Average + (duration - previous.Average) * AverageWeight;
 
         Volatile.Write(ref _timing, new FrameTiming(duration, average, previous.Frames + 1));
+    }
+
+    /// <summary>
+    /// Время эффекта одной группы: сколько секунд эффекта прошло с его начала с учётом скорости.
+    /// </summary>
+    private sealed class EffectClock
+    {
+        public EffectClock(string effectId)
+        {
+            EffectId = effectId;
+        }
+
+        /// <summary>
+        /// Эффект, время которого считают эти часы; другой эффект начинается с нуля.
+        /// </summary>
+        public string EffectId { get; }
+
+        public double Time { get; set; }
     }
 
     [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
