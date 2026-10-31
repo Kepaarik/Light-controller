@@ -9,6 +9,11 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:MainViewModel}">
 
+    <!-- Ctrl+Z отменяет последний шаг в режиме редактирования расстановки -->
+    <UserControl.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding Scene.UndoCommand}"/>
+    </UserControl.InputBindings>
+
     <UserControl.Resources>
         <!-- Настройки эффекта — в общем редакторе EffectEditor -->
 
@@ -96,7 +101,7 @@
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}" Text="{Binding SceneHint}"/>
                 <Grid>
                     <!-- Пустое место вокруг карты тоже ловит мышь: с него начинается рамка выделения -->
-                    <Grid x:Name="SceneArea" Background="Transparent"
+                    <Grid x:Name="SceneArea" Background="Transparent" Focusable="True" FocusVisualStyle="{x:Null}"
                           PreviewMouseLeftButtonDown="OnAreaMouseDown" MouseMove="OnAreaMouseMove"
                           MouseLeftButtonUp="OnAreaMouseUp" LostMouseCapture="OnAreaLostMouseCapture">
                         <!-- Карта стола: подложка, рамки групп с подписями, устройства на своих местах. Все слои карты одного
@@ -134,6 +139,8 @@
                     <Border Style="{StaticResource FlyoutCard}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
                             Visibility="{Binding IsEditingLayout, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                         <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE7A7;" ToolTip="Отменить (Ctrl+Z)"
+                                    Command="{Binding UndoCommand}" Margin="{StaticResource GapRight4}"/>
                             <Button Style="{StaticResource GhostButton}" Content="Автокомпоновка" controls:Appearance.Icon="&#xE8A9;"
                                     Command="{Binding AutoArrangeCommand}" Margin="{StaticResource GapRight4}"/>
                             <Button Style="{StaticResource GhostButton}" Content="Повернуть" controls:Appearance.Icon="&#xE7AD;"

@@ -54,6 +54,8 @@ public partial class ScenePage : UserControl
             _lastScenePoint = SceneMap.ToScene(_pressPoint, MapHost.RenderSize);
         }
 
+        // Фокус на сцене: поле ввода отдаёт своё значение, а Ctrl+Z доходит до страницы
+        SceneArea.Focus();
         SceneArea.CaptureMouse();
         e.Handled = true;
     }
@@ -73,6 +75,10 @@ public partial class ScenePage : UserControl
         if (_moving != null && Scene is { } scene)
         {
             var scenePoint = SceneMap.ToScene(point, MapHost.RenderSize);
+
+            // Места до перетаскивания запоминаются один раз — их вернёт Ctrl+Z
+            if (!_isMoved)
+                scene.BeginMove();
 
             scene.MoveDevices(_moving, scenePoint.X - _lastScenePoint.X, scenePoint.Y - _lastScenePoint.Y);
             _lastScenePoint = scenePoint;

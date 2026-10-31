@@ -27,6 +27,9 @@ public sealed partial class SceneViewModel : ObservableObject
     // Живые цвета и превью обновляются не чаще 30 раз в секунду
     private static readonly TimeSpan LiveInterval = TimeSpan.FromSeconds(1.0 / 30);
 
+    // Сколько шагов расстановки можно отменить
+    private const int UndoLimit = 50;
+
     private readonly AppConfig _config;
     private readonly DeviceManager _manager;
     private readonly FrameLoop _loop;
@@ -39,6 +42,11 @@ public sealed partial class SceneViewModel : ObservableObject
 
     private SceneGroupViewModel? _selectedGroup;
     private TimeSpan _lastTick;
+
+    // Места всех устройств перед каждым шагом в режиме редактирования расстановки, последний шаг — в конце.
+    // Ползунок размера двигается мелкими шагами: подряд идущие изменения одного устройства — один шаг отмены
+    private readonly LinkedList<Dictionary<string, DevicePlacement?>> _undo = new();
+    private string? _lastUndoKey;
 
     // Режим «Редактировать расстановку»: только в нём устройства двигаются мышью
     [ObservableProperty]
@@ -188,6 +196,7 @@ public sealed partial class SceneViewModel : ObservableObject
             if (EditedDevice is not { } device)
                 return;
 
+            RememberPlacements("size:" + device.Id);
             device.SceneSize = value;
             OnPropertyChanged();
             _contentChanged();
@@ -208,6 +217,7 @@ public sealed partial class SceneViewModel : ObservableObject
 
             if (NumberText.TryParse(value, out var degrees))
             {
+                RememberPlacements();
                 device.SetRotation(degrees);
                 _contentChanged();
             }
@@ -224,6 +234,14 @@ public sealed partial class SceneViewModel : ObservableObject
     public IReadOnlyList<SceneDeviceViewModel> DevicesToMove(SceneDeviceViewModel device)
     {
         return device.IsSelected ? SelectedDevices : new[] { device };
+    }
+
+    /// <summary>
+    /// Устройства начали тянуть мышью: их места до перетаскивания запоминаются для отмены.
+    /// </summary>
+    public void BeginMove()
+    {
+        RememberPlacements();
     }
 
     /// <summary>
@@ -406,6 +424,8 @@ public sealed partial class SceneViewModel : ObservableObject
     [RelayCommand]
     private void AutoArrange()
     {
+        RememberPlacements();
+
         var placements = SceneLayout.Arrange(_manager.Devices
             .Select(d => (d.Id, d.Geometry, d.Settings.Placement?.Size ?? 0))
             .ToList());
@@ -416,6 +436,8 @@ public sealed partial class SceneViewModel : ObservableObject
         foreach (var device in Devices)
             device.OnPlacementChanged();
 
+        OnPropertyChanged(nameof(EditedSize));
+        OnPropertyChanged(nameof(EditedAngleText));
         _contentChanged();
     }
 
@@ -428,6 +450,7 @@ public sealed partial class SceneViewModel : ObservableObject
         if (EditedDevice is not { } device)
             return;
 
+        RememberPlacements();
         device.Rotate();
         OnPropertyChanged(nameof(EditedAngleText));
         _contentChanged();
@@ -442,8 +465,64 @@ public sealed partial class SceneViewModel : ObservableObject
         IsEditingLayout = false;
     }
 
+    /// <summary>
+    /// Ctrl+Z в режиме редактирования расстановки: возвращает места всех устройств, какими они были до последнего шага.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private void Undo()
+    {
+        if (_undo.Last is not { } last)
+            return;
+
+        _undo.RemoveLast();
+        _lastUndoKey = null;
+
+        foreach (var device in _manager.Devices)
+        {
+            // Устройство, которое нашлось уже после этого шага, остаётся на своём месте
+            if (last.Value.TryGetValue(device.Id, out var placement))
+                device.Settings.Placement = placement;
+        }
+
+        foreach (var device in Devices)
+            device.OnPlacementChanged();
+
+        OnPropertyChanged(nameof(EditedSize));
+        OnPropertyChanged(nameof(EditedAngleText));
+        UndoCommand.NotifyCanExecuteChanged();
+        _contentChanged();
+    }
+
+    private bool CanUndo()
+    {
+        return IsEditingLayout && _undo.Count > 0;
+    }
+
+    /// <summary>
+    /// Запоминает места всех устройств перед шагом расстановки. key — что меняется: подряд идущие шаги с одним key
+    /// отменяются вместе; null — каждый шаг отдельно.
+    /// </summary>
+    private void RememberPlacements(string? key = null)
+    {
+        if (key != null && key == _lastUndoKey)
+            return;
+
+        _lastUndoKey = key;
+        _undo.AddLast(_manager.Devices.ToDictionary(d => d.Id, d => d.Settings.Placement?.Clone()));
+
+        if (_undo.Count > UndoLimit)
+            _undo.RemoveFirst();
+
+        UndoCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnIsEditingLayoutChanged(bool value)
     {
+        // Отмена — только в пределах одного захода в режим редактирования
+        _undo.Clear();
+        _lastUndoKey = null;
+        UndoCommand.NotifyCanExecuteChanged();
+
         // Холст сцены «По умолчанию» показывает устройства на их новых местах
         if (!value)
             SceneEditor.RefreshDevices();
