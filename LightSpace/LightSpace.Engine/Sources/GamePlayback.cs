@@ -378,15 +378,15 @@ public sealed class GamePlayback
         if (points.Count == 0)
             return;
 
-        var left = points.Min(p => p.Point.X);
-        var right = points.Max(p => p.Point.X);
         var top = points.Min(p => p.Point.Y);
         var bottom = points.Max(p => p.Point.Y);
         var middle = (top + bottom) / 2;
 
         foreach (var (point, index) in points)
         {
-            var position = right > left ? (point.X - left) / (right - left) : 0.5;
+            // Место середины клавиши на всей ширине устройства: крайняя справа загорается чуть раньше 100 %,
+            // как и полоска на ленте, а не только на полной полоске
+            var position = point.X / Math.Max(geometry.Width, 0.01);
 
             colors[index] = Bar(point.Y < middle, position);
         }
