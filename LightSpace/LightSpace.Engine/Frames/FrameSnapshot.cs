@@ -29,6 +29,9 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
     private const string ScreenClockId = "screen";
     private const string MusicClockId = "music";
 
+    // Игра помнит в часах урон, бомбу и сглаженные цвета экрана; другая игра начинает это заново
+    private const string GameClockId = "game";
+
     /// <summary>
     /// Настройки экрана, если содержимое — экран; иначе null.
     /// </summary>
@@ -40,6 +43,11 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
     public MusicSettings? Music { get; init; }
 
     /// <summary>
+    /// Настройки игры, если содержимое — игра; иначе null.
+    /// </summary>
+    public GameSettings? Game { get; init; }
+
+    /// <summary>
     /// Скорость эффекта: во сколько раз быстрее обычного идёт его время.
     /// </summary>
     public double Speed => Layers == null ? Effect.Number(Values, "speed") : 1;
@@ -49,6 +57,7 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
     /// </summary>
     public string ClockId => Screen != null ? ScreenClockId
         : Music != null ? MusicClockId
+        : Game != null ? $"{GameClockId}:{Game.Game}"
         : Layers == null ? Effect.Id : SceneClockId;
 
     /// <summary>
@@ -62,7 +71,8 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
         return new FrameContent(scenarioId, effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)), layers)
         {
             Screen = content.Kind == ContentKind.Screen ? ScreenSettings.From(content.Screen) : null,
-            Music = content.Kind == ContentKind.Music ? MusicSettings.From(content.Music) : null
+            Music = content.Kind == ContentKind.Music ? MusicSettings.From(content.Music) : null,
+            Game = content.Kind == ContentKind.Game ? GameSettings.From(content.Game) : null
         };
     }
 }
