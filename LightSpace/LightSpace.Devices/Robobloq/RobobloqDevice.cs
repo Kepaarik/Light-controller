@@ -144,6 +144,15 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         await SendAsync(new[] { CommandSetEffectSpeed, (byte)(100 - Math.Clamp(speed, 0, 100)) }, ct);
     }
 
+    /// <summary>
+    /// Эффект ленты останавливается, все светодиоды гаснут; следующий цвет или кадр включает ленту снова.
+    /// </summary>
+    public override async Task ResetAsync(CancellationToken ct = default)
+    {
+        await SendAsync(new[] { CommandTurnOff }, ct);
+        await SendColorAsync(new RgbColor(0, 0, 0), ct);
+    }
+
     public override void Dispose()
     {
         _stream.Dispose();

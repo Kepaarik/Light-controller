@@ -49,6 +49,15 @@ public abstract class LedDevice : IDisposable
     /// </summary>
     public abstract Task SetColorAsync(RgbColor color, int brightness, CancellationToken ct = default);
 
+    /// <summary>
+    /// Останавливает эффект, который устройство играет само, и стирает показанные цвета: следующий эффект начинается
+    /// на чистом устройстве. Устройство, которое только показывает присланные цвета, сбрасывать нечего.
+    /// </summary>
+    public virtual Task ResetAsync(CancellationToken ct = default)
+    {
+        return Task.CompletedTask;
+    }
+
     public virtual void Dispose()
     {
     }

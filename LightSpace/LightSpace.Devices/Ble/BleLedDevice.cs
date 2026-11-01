@@ -101,6 +101,14 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
     }
 
     /// <summary>
+    /// Встроенный эффект контроллера останавливается обычным цветом — чёрным.
+    /// </summary>
+    public override Task ResetAsync(CancellationToken ct = default)
+    {
+        return SetScaledColorAsync(new RgbColor(0, 0, 0), 0, ct);
+    }
+
+    /// <summary>
     /// Яркость передаётся через сам цвет — так одинаково работает на всех вариантах контроллеров.
     /// </summary>
     private Task SetScaledColorAsync(RgbColor color, int brightness, CancellationToken ct)

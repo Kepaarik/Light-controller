@@ -38,7 +38,7 @@ public sealed record ContentKindOption(string Title, bool IsAvailable)
     public static readonly ContentKindOption Builtin = new("Встроенный", true);
 
     /// <summary>
-    /// Все типы содержимого по порядку.
+    /// Все типы содержимого по порядку. Игра пока не выбирается.
     /// </summary>
     public static readonly IReadOnlyList<ContentKindOption> All = new ContentKindOption[]
     {
@@ -46,7 +46,6 @@ public sealed record ContentKindOption(string Title, bool IsAvailable)
         Scene,
         Screen,
         Music,
-        Game,
         Builtin
     };
 

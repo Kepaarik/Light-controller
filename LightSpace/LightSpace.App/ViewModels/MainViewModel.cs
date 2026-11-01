@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,12 +25,22 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _isWindowShown;
 
     [ObservableProperty]
-    private AppPage _selectedPage = AppPage.Scene;
+    private AppPage _selectedPage = AppPage.Devices;
+
+    // Устройство, выбранное в левом меню; null — открыта не страница устройства
+    [ObservableProperty]
+    private string? _selectedDeviceId;
+
+    // Устройство, чья страница открыта: список в меню пересобирается и на время сбрасывает выбор
+    private string? _openedDeviceId;
 
     public MainViewModel(AppConfig config)
     {
         _config = config;
         Settings = new SettingsViewModel(config, ImportFromLedHubAsync);
+
+        // Страницы «Сцена» пока нет: у каждого устройства своё содержимое, оно выбирается на странице устройства
+        config.Mode = SceneMode.Devices;
 
         _deviceManager = new DeviceManager(config);
         _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices), _sources);
@@ -39,14 +50,20 @@ public sealed partial class MainViewModel : ObservableObject
 
         Settings.PropertyChanged += OnSettingsChanged;
         _deviceManager.DevicesChanged += OnDevicesChanged;
+
+        RefreshDeviceNav();
     }
+
+    /// <summary>
+    /// Найденные устройства в левом меню, под разделами.
+    /// </summary>
+    public ObservableCollection<DeviceNavOption> DeviceNav { get; } = new();
 
     /// <summary>
     /// Разделы в левом меню окна.
     /// </summary>
     public IReadOnlyList<PageOption> Pages { get; } = new PageOption[]
     {
-        new(AppPage.Scene, "Сцена", ""),
         new(AppPage.Devices, "Устройства", ""),
         new(AppPage.Monitors, "Мониторы", "")
     };
@@ -188,6 +205,45 @@ public sealed partial class MainViewModel : ObservableObject
     private void OnDevicesChanged(object? sender, EventArgs e)
     {
         UpdateFrames();
+        RefreshDeviceNav();
+    }
+
+    /// <summary>
+    /// Пересобирает устройства в меню; открытое устройство остаётся открытым, пропавшее — возвращает на «Устройства».
+    /// </summary>
+    private void RefreshDeviceNav()
+    {
+        var opened = _openedDeviceId;
+
+        DeviceNav.Clear();
+
+        foreach (var device in Scene.Devices)
+            DeviceNav.Add(new DeviceNavOption(device.Id, device.Name, device.IsKeyboard ? "" : ""));
+
+        if (SelectedPage != AppPage.Device || opened == null)
+            return;
+
+        if (DeviceNav.Any(d => d.Id == opened))
+        {
+            // Меню при пересборке сбросило выбор — возвращаем его
+            SelectedDeviceId = opened;
+            OnPropertyChanged(nameof(SelectedDeviceId));
+        }
+        else
+        {
+            SelectedPage = AppPage.Devices;
+        }
+    }
+
+    partial void OnSelectedDeviceIdChanged(string? value)
+    {
+        // null приходит и от пересборки меню — страница устройства при этом остаётся открытой
+        if (value == null)
+            return;
+
+        _openedDeviceId = value;
+        Scene.OpenDevice(value);
+        SelectedPage = AppPage.Device;
     }
 
     /// <summary>
@@ -213,6 +269,13 @@ public sealed partial class MainViewModel : ObservableObject
         if (value == AppPage.Monitors)
             Monitors.Refresh();
 
+        // Ушли со страницы устройства — его пункт в меню больше не выделен
+        if (value != AppPage.Device)
+        {
+            _openedDeviceId = null;
+            SelectedDeviceId = null;
+        }
+
         UpdateLive();
     }
 
@@ -221,6 +284,6 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private void UpdateLive()
     {
-        Scene.SetLive(_isWindowShown && SelectedPage == AppPage.Scene);
+        Scene.SetLive(_isWindowShown && SelectedPage is AppPage.Scene or AppPage.Device);
     }
 }

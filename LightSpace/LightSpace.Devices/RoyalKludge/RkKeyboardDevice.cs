@@ -250,6 +250,35 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice, IBuiltinEffec
         }
     }
 
+    /// <summary>
+    /// Эффект прошивки останавливается режимом «свои цвета», а прежние цвета клавиш стираются чёрными.
+    /// </summary>
+    public override async Task ResetAsync(CancellationToken ct = default)
+    {
+        if (_profile == null)
+            return;
+
+        var black = BuildPacket(CommandSetLedColors, 0, KeyLedCount * 3);
+
+        await _lock.WaitAsync(ct);
+        try
+        {
+            await Task.Run(() =>
+            {
+                _stream.SetFeature(BuildCustomModeProfile());
+                _stream.SetFeature(black);
+            }, ct);
+
+            _isCustomMode = true;
+            _lastFrame = black;
+            _sinceFrame.Restart();
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     public override void Dispose()
     {
         _stream.Dispose();
