@@ -105,9 +105,12 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
     /// <summary>
     /// Встроенный эффект контроллера останавливается обычным цветом — чёрным.
     /// </summary>
-    public override Task ResetAsync(CancellationToken ct = default)
+    public override async Task ResetAsync(CancellationToken ct = default)
     {
-        return SetScaledColorAsync(new RgbColor(0, 0, 0), 0, ct);
+        await SetScaledColorAsync(new RgbColor(0, 0, 0), 0, ct);
+
+        // Следом обычно идёт запуск встроенного эффекта — без паузы контроллер ELK его теряет и остаётся на цвете
+        await Task.Delay(150, ct);
     }
 
     /// <summary>
