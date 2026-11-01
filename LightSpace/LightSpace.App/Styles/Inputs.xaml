@@ -26,7 +26,7 @@
                                     Background="{DynamicResource ControlBrush}"
                                     BorderBrush="{DynamicResource StrokeStrongBrush}" BorderThickness="{StaticResource StrokeThin}"/>
                             <Border x:Name="TrackOn" CornerRadius="{StaticResource RadiusPill}" Opacity="0"
-                                    Background="{DynamicResource AccentBrush}" Effect="{DynamicResource ShadowAccentGlow}"/>
+                                    Background="{DynamicResource AccentGradientBrush}" Effect="{DynamicResource ShadowAccentGlow}"/>
                             <Ellipse x:Name="Knob" Width="{StaticResource ToggleKnobSize}" Height="{StaticResource ToggleKnobSize}"
                                      Fill="{DynamicResource ControlStrongBrush}" HorizontalAlignment="Left" VerticalAlignment="Center"
                                      Margin="{StaticResource ToggleKnobMargin}" RenderTransformOrigin="0.5,0.5">
@@ -112,7 +112,7 @@
                                 <Condition Property="IsChecked" Value="True"/>
                                 <Condition Property="IsMouseOver" Value="True"/>
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="TrackOn" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                            <Setter TargetName="TrackOn" Property="Background" Value="{DynamicResource AccentGradientHoverBrush}"/>
                         </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="{StaticResource OpacityDisabled}"/>
@@ -202,7 +202,7 @@
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource AccentGradientBrush}"/>
                             <Setter TargetName="Root" Property="BorderBrush" Value="Transparent"/>
                             <Setter TargetName="Root" Property="Effect" Value="{DynamicResource ShadowAccentGlow}"/>
                             <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>

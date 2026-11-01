@@ -6,19 +6,19 @@ using System.Windows.Media;
 namespace LightSpace.App.Services;
 
 /// <summary>
-/// Фон окна Mica от Windows 11 под всем окном со своим заголовком.
-/// В Windows без Mica окно просто заливается цветом фона темы.
+/// Стеклянный фон окна Acrylic от Windows 11 под всем окном со своим заголовком.
+/// В Windows без системного стекла окно просто заливается цветом фона темы.
 /// </summary>
 public static class WindowBackdrop
 {
     private const int DwmUseImmersiveDarkMode = 20;
     private const int DwmWindowCornerPreference = 33;
     private const int DwmSystemBackdropType = 38;
-    private const int BackdropMica = 2;
+    private const int BackdropAcrylic = 3;
     private const int CornerRound = 2;
 
     // Первая сборка Windows 11, где DWMWA_SYSTEMBACKDROP_TYPE поддерживается официально (22H2)
-    private const int MicaMinimumBuild = 22621;
+    private const int BackdropMinimumBuild = 22621;
 
     private const int ThemeAttributeNonClient = 1;
     private const uint NoDrawCaption = 0x1;
@@ -27,12 +27,12 @@ public static class WindowBackdrop
     private const uint ValidBits = 0xF;
 
     /// <summary>
-    /// Mica поддерживается этой версией Windows.
+    /// Системное стекло поддерживается этой версией Windows.
     /// </summary>
-    public static bool IsMicaSupported => Environment.OSVersion.Version.Build >= MicaMinimumBuild;
+    public static bool IsBackdropSupported => Environment.OSVersion.Version.Build >= BackdropMinimumBuild;
 
     /// <summary>
-    /// Включает Mica и тёмный или светлый вариант рамки; вызывать после SourceInitialized и при смене темы.
+    /// Включает Acrylic и тёмный или светлый вариант рамки; вызывать после SourceInitialized и при смене темы.
     /// </summary>
     public static void Apply(Window window, bool isDark)
     {
@@ -45,17 +45,17 @@ public static class WindowBackdrop
         var dark = isDark ? 1 : 0;
         DwmSetWindowAttribute(handle, DwmUseImmersiveDarkMode, ref dark, sizeof(int));
 
-        if (!IsMicaSupported)
+        if (!IsBackdropSupported)
         {
             window.SetResourceReference(Window.BackgroundProperty, "WindowBrush");
             return;
         }
 
         var corner = CornerRound;
-        var backdrop = BackdropMica;
+        var backdrop = BackdropAcrylic;
         var margins = new Margins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
 
-        // Окно должно быть прозрачным насквозь, иначе Mica закроет заливка WPF
+        // Окно должно быть прозрачным насквозь, иначе стекло закроет заливка WPF
         window.Background = Brushes.Transparent;
         source.CompositionTarget.BackgroundColor = Colors.Transparent;
 

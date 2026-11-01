@@ -10,30 +10,33 @@
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         Title="Light Space"
         Icon="Assets/LightSpace.ico"
-        Width="1200" Height="760" MinWidth="960" MinHeight="560"
+        Width="1416" Height="760" MinWidth="1176" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource WindowBrush}"
         Foreground="{DynamicResource TextBrush}"
         FontFamily="{StaticResource FontText}"
         FontSize="{StaticResource FontSizeBody}">
 
-    <!-- Своя рамка: Mica тянется на всё окно, заголовок с вкладками и кнопками окна — свои -->
+    <!-- Своя рамка: Acrylic тянется на всё окно, заголовок и кнопки окна — свои -->
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="{StaticResource CaptionHeight}" GlassFrameThickness="-1" UseAeroCaptionButtons="False"
                       ResizeBorderThickness="6" CornerRadius="0"/>
     </WindowChrome.WindowChrome>
 
-    <!-- Тонировка поверх Mica: в тёмной теме окно глубже и холоднее системного фона -->
+    <!-- Тонировка поверх Acrylic: «жидкое стекло», в тёмной теме с фиолетовым оттенком -->
     <Grid x:Name="Root" Background="{DynamicResource BackdropTintBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="{StaticResource CaptionRowHeight}"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{StaticResource NavWidth}"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- Заголовок: значок, название, вкладки; свободное место тянет окно; справа кнопки окна -->
-        <Grid>
+        <!-- Заголовок: значок и название; свободное место тянет окно; справа кнопки окна -->
+        <Grid Grid.ColumnSpan="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -45,19 +48,20 @@
                            VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
             </StackPanel>
 
-            <ListBox Grid.Column="1" Style="{StaticResource TitleTabs}" WindowChrome.IsHitTestVisibleInChrome="True"
-                     ItemsSource="{Binding Pages}" DisplayMemberPath="Title"
-                     SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
-
-            <StackPanel Grid.Column="3" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+            <StackPanel Grid.Column="2" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
                 <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="OnMinimize" ToolTip="Свернуть"/>
                 <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="OnMaximize" ToolTip="Развернуть"/>
                 <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" Click="OnClose" ToolTip="Закрыть"/>
             </StackPanel>
         </Grid>
 
-        <!-- Слой содержимого поверх Mica, как в приложениях Windows 11 -->
-        <Border x:Name="PageHost" Grid.Row="1" Background="{DynamicResource LayerBrush}" CornerRadius="{StaticResource RadiusTopLeftCard}"
+        <!-- Левое меню разделов прямо на стекле -->
+        <ListBox Grid.Row="1" Style="{StaticResource SideNav}"
+                 ItemsSource="{Binding Pages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"
+                 Margin="{StaticResource PaddingNav}"/>
+
+        <!-- Слой содержимого поверх стекла, как в приложениях Windows 11 -->
+        <Border x:Name="PageHost" Grid.Row="1" Grid.Column="1" Background="{DynamicResource LayerBrush}" CornerRadius="{StaticResource RadiusTopLeftCard}"
                 BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="{StaticResource StrokeTopLeft}">
             <Grid x:Name="Pages">
                 <views:ScenePage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Scene}"/>
@@ -70,6 +74,6 @@
         </Border>
 
         <!-- Модальные карточки поверх всего окна -->
-        <controls:ModalHost x:Name="Modal" Grid.RowSpan="2"/>
+        <controls:ModalHost x:Name="Modal" Grid.RowSpan="2" Grid.ColumnSpan="2"/>
     </Grid>
 </Window>

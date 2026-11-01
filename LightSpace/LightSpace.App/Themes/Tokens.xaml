@@ -7,11 +7,11 @@
     <!-- Радиусы скругления -->
     <CornerRadius x:Key="RadiusNone">0</CornerRadius>
     <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
-    <CornerRadius x:Key="RadiusControl">8</CornerRadius>
+    <CornerRadius x:Key="RadiusControl">10</CornerRadius>
     <!-- Элемент внутри скруглённого контейнера с узким отступом, например вариант в сегментах или подсказка -->
-    <CornerRadius x:Key="RadiusInner">6</CornerRadius>
-    <CornerRadius x:Key="RadiusCard">12</CornerRadius>
-    <CornerRadius x:Key="RadiusOverlay">16</CornerRadius>
+    <CornerRadius x:Key="RadiusInner">8</CornerRadius>
+    <CornerRadius x:Key="RadiusCard">16</CornerRadius>
+    <CornerRadius x:Key="RadiusOverlay">20</CornerRadius>
     <CornerRadius x:Key="RadiusPill">999</CornerRadius>
     <CornerRadius x:Key="RadiusTopLeftCard">12,0,0,0</CornerRadius>
 
@@ -109,6 +109,16 @@
     <sys:Double x:Key="ScrollThumbThick">6</sys:Double>
     <sys:Double x:Key="TileWidth">132</sys:Double>
     <sys:Double x:Key="TilePreviewHeight">56</sys:Double>
+    <!-- Левое меню разделов: ширина колонки, отступы, пункт со значком и акцентная черта у выбранного -->
+    <GridLength x:Key="NavWidth">216</GridLength>
+    <Thickness x:Key="PaddingNav">10,4,10,12</Thickness>
+    <Thickness x:Key="PaddingNavItem">12,10</Thickness>
+    <Thickness x:Key="NavLabelMargin">14,0,0,0</Thickness>
+    <sys:Double x:Key="NavIconWidth">20</sys:Double>
+    <sys:Double x:Key="NavMarkerWidth">3</sys:Double>
+    <sys:Double x:Key="NavMarkerHeight">16</sys:Double>
+    <!-- Черта выбранного пункта стоит у самого края пункта, на месте его левого отступа -->
+    <Thickness x:Key="NavMarkerMargin">-12,0,0,0</Thickness>
     <sys:Double x:Key="TabIndicatorWidth">20</sys:Double>
     <sys:Double x:Key="TabIndicatorHeight">3</sys:Double>
     <!-- Ширина черты вкладки в начале появления, доля полной ширины -->
