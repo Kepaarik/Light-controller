@@ -11,7 +11,7 @@
     <UserControl.Resources>
         <!-- Состояние связи цветом: подключено, нужна настройка, нет связи; не найденное — приглушённым -->
         <Style x:Key="StatusLabel" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
-            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Status}" Value="Connected">
                     <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
@@ -31,7 +31,7 @@
         </Style>
 
         <Style x:Key="FactLabel" TargetType="TextBlock" BasedOn="{StaticResource Body}">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="Margin" Value="{StaticResource GapRight12}"/>
         </Style>
 
@@ -123,7 +123,8 @@
                             <TextBlock Text="Ключ устройства" Style="{StaticResource SectionLabel}"/>
                             <Border Style="{StaticResource Card}">
                                 <StackPanel>
-                                    <TextBox Tag="Local Key (16 символов)" Text="{Binding LocalKey, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <TextBlock Text="Local Key (16 символов)" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                                    <TextBox Text="{Binding LocalKey, UpdateSourceTrigger=PropertyChanged}"/>
                                     <DockPanel Margin="{StaticResource GapTop8}">
                                         <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Сохранить"
                                                 Command="{Binding SaveNetworkKeyCommand}"/>

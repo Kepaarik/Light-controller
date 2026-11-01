@@ -7,8 +7,8 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Цвета темы: всегда первым, ThemeService подменяет его на светлый или тёмный -->
-                <ResourceDictionary Source="/LightSpace;component/Themes/Dark.xaml"/>
+                <!-- Палитра стекла; тонировку, карточки, блик и слой содержимого GlassTheme перекрашивает по настройкам -->
+                <ResourceDictionary Source="/LightSpace;component/Themes/Glass.xaml"/>
                 <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
 
                 <!-- Компоненты дизайн-системы -->

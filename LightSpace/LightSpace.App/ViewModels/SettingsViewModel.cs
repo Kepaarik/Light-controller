@@ -24,6 +24,8 @@ public sealed class SettingsViewModel : ObservableObject
 
         _saveTimer = new DispatcherTimer { Interval = SaveDelay };
         _saveTimer.Tick += (_, _) => SaveNow();
+
+        Glass = new GlassViewModel(config.Glass, ScheduleSave);
     }
 
     /// <summary>
@@ -32,26 +34,22 @@ public sealed class SettingsViewModel : ObservableObject
     public IReadOnlyList<int> FrameRates => AppConfig.FrameRates;
 
     /// <summary>
-    /// Темы оформления для сегментов: тёмная — основная, поэтому первая.
+    /// Тонировка и прозрачность стекла окна.
     /// </summary>
-    public IReadOnlyList<ThemeOption> Themes { get; } = new ThemeOption[]
-    {
-        new(ThemePreference.Dark, "Тёмная"),
-        new(ThemePreference.Light, "Светлая"),
-        new(ThemePreference.System, "Как в Windows")
-    };
+    public GlassViewModel Glass { get; }
 
     /// <summary>
-    /// Выбранная тема оформления; применяется сразу.
+    /// Системное стекло есть в этой версии Windows.
     /// </summary>
-    public ThemeOption Theme
+    public bool IsAcrylicSupported => WindowBackdrop.IsSupported;
+
+    /// <summary>
+    /// Окно из прозрачного стекла (Acrylic); иначе — матовое (Mica).
+    /// </summary>
+    public bool UseAcrylic
     {
-        get => Themes.First(t => t.Preference == _config.Theme);
-        set
-        {
-            if (Update(_config.Theme, value.Preference, (c, v) => c.Theme = v))
-                ThemeService.SetPreference(value.Preference);
-        }
+        get => _config.UseAcrylic;
+        set => Update(_config.UseAcrylic, value, (c, v) => c.UseAcrylic = v);
     }
 
     public bool LightingEnabled

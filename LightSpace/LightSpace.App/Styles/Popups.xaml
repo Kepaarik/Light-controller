@@ -6,7 +6,7 @@
         <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Подсказка: маленькая карточка с тенью -->
+    <!-- Подсказка: маленькая тёмная карточка с тенью -->
     <Style TargetType="ToolTip">
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
         <Setter Property="FontFamily" Value="{StaticResource FontText}"/>
@@ -16,7 +16,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToolTip">
-                    <Border Background="{DynamicResource FlyoutBrush}" BorderBrush="{DynamicResource StrokeBrush}"
+                    <Border Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusInner}"
                             Padding="{StaticResource PaddingTooltip}" Margin="{StaticResource ShadowRoom}"
                             Effect="{DynamicResource ShadowFlyout}">
@@ -38,8 +38,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
-                    <Border Background="{DynamicResource FlyoutBrush}" BorderBrush="{DynamicResource StrokeBrush}"
-                            BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusCard}"
+                    <Border Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="{StaticResource StrokeThin}" CornerRadius="12"
                             Padding="{StaticResource PaddingFlyout}" Margin="{StaticResource ShadowRoom}"
                             MinWidth="{StaticResource FlyoutMinWidth}" Effect="{DynamicResource ShadowFlyout}">
                         <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
@@ -54,7 +54,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Separator">
-                    <Border Height="{StaticResource StrokeWidth}" Background="{DynamicResource DividerBrush}" Margin="{StaticResource Space4}"/>
+                    <Border Height="{StaticResource StrokeWidth}" Background="{DynamicResource BorderBrush}" Margin="{StaticResource Space4}"/>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -86,7 +86,7 @@
                                            FontSize="{StaticResource FontSizeIconSmall}" VerticalAlignment="Center"
                                            Margin="{StaticResource GapRight12}" Visibility="Collapsed"/>
                                 <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}" Foreground="{DynamicResource MutedBrush}"
                                            FontSize="{StaticResource FontSizeCaption}" VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
                                 <TextBlock x:Name="Chevron" Grid.Column="3" Text="&#xE76C;" FontFamily="{StaticResource FontIcon}"
                                            FontSize="{StaticResource FontSizeIconSmall}" VerticalAlignment="Center"
@@ -97,8 +97,8 @@
                                HorizontalOffset="{StaticResource FlyoutOffsetX}" VerticalOffset="{StaticResource SubmenuOffsetY}"
                                IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                PopupAnimation="Fade">
-                            <Border Background="{DynamicResource FlyoutBrush}" BorderBrush="{DynamicResource StrokeBrush}"
-                                    BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusCard}"
+                            <Border Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="{StaticResource StrokeThin}" CornerRadius="12"
                                     Padding="{StaticResource PaddingFlyout}" Margin="{StaticResource ShadowRoom}"
                                     MinWidth="{StaticResource FlyoutMinWidth}" Effect="{DynamicResource ShadowFlyout}"
                                     Grid.IsSharedSizeScope="True">
@@ -120,7 +120,7 @@
                             <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="{StaticResource OpacityDisabled}"/>

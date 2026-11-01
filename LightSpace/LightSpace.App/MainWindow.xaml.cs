@@ -1,17 +1,22 @@
+using System.ComponentModel;
 using System.Windows;
-using System.Windows.Input;
 using LightSpace.App.Services;
 using LightSpace.App.ViewModels;
 
 namespace LightSpace.App;
 
 /// <summary>
-/// Главное окно приложения на стеклянном фоне Acrylic: свой заголовок, меню разделов слева и страницы справа.
+/// Главное окно приложения, как в LedHub: системное стекло под всем окном, меню разделов слева и страницы справа.
 /// </summary>
 public partial class MainWindow : Window
 {
-    private const string MaximizeGlyph = "";
-    private const string RestoreGlyph = "";
+    /// <summary>
+    /// Ширина, уже которой меню разделов сворачивается до значков.
+    /// </summary>
+    private const double CompactNavWidth = 1100;
+
+    private const double NavWidth = 232;
+    private const double CompactNavItemWidth = 68;
 
     private readonly MainViewModel _viewModel;
 
@@ -23,19 +28,35 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         Dialogs.Host = Modal;
 
-        SourceInitialized += (_, _) => WindowBackdrop.Apply(this, ThemeService.IsDark);
-        StateChanged += (_, _) => UpdateMaximizedState();
+        SourceInitialized += (_, _) => ApplyBackdrop();
+        SizeChanged += (_, _) => UpdateAdaptiveLayout();
+        StateChanged += (_, _) => UpdateMaximizedMargin();
         StateChanged += (_, _) => UpdateShown();
         IsVisibleChanged += (_, _) => UpdateShown();
-        ThemeService.ThemeChanged += OnThemeChanged;
-        Closed += (_, _) => ThemeService.ThemeChanged -= OnThemeChanged;
-
-        AddShowcase();
+        _viewModel.Settings.PropertyChanged += OnSettingsPropertyChanged;
+        Closed += (_, _) => _viewModel.Settings.PropertyChanged -= OnSettingsPropertyChanged;
     }
 
-    private void OnThemeChanged(object? sender, EventArgs e)
+    private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        WindowBackdrop.Apply(this, ThemeService.IsDark);
+        if (e.PropertyName == nameof(SettingsViewModel.UseAcrylic))
+            ApplyBackdrop();
+    }
+
+    private void ApplyBackdrop()
+    {
+        WindowBackdrop.Apply(this, _viewModel.Settings.UseAcrylic);
+    }
+
+    /// <summary>
+    /// В нешироком окне меню разделов сворачивается до значков.
+    /// </summary>
+    private void UpdateAdaptiveLayout()
+    {
+        var compact = ActualWidth < CompactNavWidth;
+
+        Nav.Width = compact ? CompactNavItemWidth : NavWidth;
+        NavList.Tag = compact;
     }
 
     /// <summary>
@@ -46,58 +67,15 @@ public partial class MainWindow : Window
         _viewModel.SetWindowShown(IsVisible && WindowState != WindowState.Minimized);
     }
 
-    private void OnMinimize(object sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState.Minimized;
-    }
-
-    private void OnMaximize(object sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-    }
-
-    private void OnClose(object sender, RoutedEventArgs e)
-    {
-        Close();
-    }
-
     /// <summary>
     /// Развёрнутое окно со своей рамкой вылезает за край экрана на толщину рамки — отступ возвращает содержимое на экран.
     /// </summary>
-    private void UpdateMaximizedState()
+    private void UpdateMaximizedMargin()
     {
-        var maximized = WindowState == WindowState.Maximized;
         var frame = SystemParameters.WindowResizeBorderThickness;
 
-        Root.Margin = maximized
+        Root.Margin = WindowState == WindowState.Maximized
             ? new Thickness(frame.Left + 4, frame.Top + 4, frame.Right + 4, frame.Bottom + 4)
             : new Thickness(0);
-
-        MaximizeButton.Content = maximized ? RestoreGlyph : MaximizeGlyph;
-        MaximizeButton.ToolTip = maximized ? "Восстановить" : "Развернуть";
-    }
-
-    /// <summary>
-    /// В отладочной сборке добавляет скрытую страницу «Витрина», она открывается по Ctrl+Shift+D.
-    /// </summary>
-    private void AddShowcase()
-    {
-#if DEBUG
-        var page = new Views.ShowcasePage();
-
-        page.SetBinding(VisibilityProperty, new System.Windows.Data.Binding(nameof(MainViewModel.SelectedPage))
-        {
-            Source = _viewModel,
-            Converter = Controls.EqualsToVisibilityConverter.Instance,
-            ConverterParameter = nameof(AppPage.Showcase)
-        });
-
-        Pages.Children.Add(page);
-
-        var open = new KeyBinding(new CommunityToolkit.Mvvm.Input.RelayCommand(() => _viewModel.SelectedPage = AppPage.Showcase),
-            Key.D, ModifierKeys.Control | ModifierKeys.Shift);
-
-        InputBindings.Add(open);
-#endif
     }
 }

@@ -241,7 +241,7 @@ public partial class SearchPicker : UserControl
         var isTemplated = hasSelection && ItemTemplate is not null;
 
         SelectionText.Text = hasSelection ? TextOf(SelectedItem!) : Placeholder;
-        SelectionText.SetResourceReference(TextBlock.ForegroundProperty, hasSelection ? "TextBrush" : "TextTertiaryBrush");
+        SelectionText.SetResourceReference(TextBlock.ForegroundProperty, hasSelection ? "TextBrush" : "MutedBrush");
 
         SelectionContent.Content = isTemplated ? SelectedItem : null;
         SelectionContent.Visibility = isTemplated ? Visibility.Visible : Visibility.Collapsed;

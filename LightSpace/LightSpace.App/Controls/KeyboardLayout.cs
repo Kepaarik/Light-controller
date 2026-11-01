@@ -67,7 +67,7 @@ public sealed class KeyboardLayout : Canvas
             if (colors == null || key.Led < 0 || key.Led >= colors.Count)
             {
                 cap.SetResourceReference(Border.BackgroundProperty, "ControlBrush");
-                label.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+                label.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
                 continue;
             }
 
@@ -114,7 +114,7 @@ public sealed class KeyboardLayout : Canvas
             };
 
             label.SetResourceReference(TextBlock.FontSizeProperty, "FontSizeCaption");
-            label.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
+            label.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
 
             var cap = new Border
             {
@@ -124,7 +124,7 @@ public sealed class KeyboardLayout : Canvas
             };
 
             cap.SetResourceReference(Border.BackgroundProperty, "ControlBrush");
-            cap.SetResourceReference(Border.BorderBrushProperty, "StrokeBrush");
+            cap.SetResourceReference(Border.BorderBrushProperty, "BorderBrush");
             cap.SetResourceReference(Border.BorderThicknessProperty, "StrokeThin");
             cap.SetResourceReference(Border.CornerRadiusProperty, "RadiusSmall");
 

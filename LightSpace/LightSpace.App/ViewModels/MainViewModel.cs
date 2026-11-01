@@ -12,7 +12,7 @@ using LightSpace.Engine.Sources;
 namespace LightSpace.App.ViewModels;
 
 /// <summary>
-/// Главное окно и меню трея: вкладки, настройки, общие команды.
+/// Главное окно и меню трея: разделы, настройки, общие команды.
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
@@ -46,7 +46,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Пункты левого меню разделов.
+    /// Разделы в левом меню окна.
     /// </summary>
     public IReadOnlyList<PageOption> Pages { get; } = new PageOption[]
     {

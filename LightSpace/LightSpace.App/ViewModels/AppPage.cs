@@ -8,16 +8,11 @@ public enum AppPage
     Scene,
     Scenarios,
     Devices,
-    Settings,
-
-    /// <summary>
-    /// Витрина компонентов, есть только в отладочной сборке.
-    /// </summary>
-    Showcase
+    Settings
 }
 
 /// <summary>
-/// Пункт левого меню разделов: страница, подпись и значок из Segoe Fluent Icons.
+/// Раздел в левом меню окна: страница, подпись и значок из Segoe Fluent Icons.
 /// </summary>
 public sealed record PageOption(AppPage Page, string Title, string Icon)
 {

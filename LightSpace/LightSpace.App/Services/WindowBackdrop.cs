@@ -6,74 +6,53 @@ using System.Windows.Media;
 namespace LightSpace.App.Services;
 
 /// <summary>
-/// Стеклянный фон окна Acrylic от Windows 11 под всем окном со своим заголовком.
-/// В Windows без системного стекла окно просто заливается цветом фона темы.
+/// Системное стекло Windows 11 под всем окном, как в LedHub: прозрачное (Acrylic) или матовое (Mica).
+/// В Windows без системного стекла окно просто заливается тёмным цветом.
 /// </summary>
 public static class WindowBackdrop
 {
     private const int DwmUseImmersiveDarkMode = 20;
-    private const int DwmWindowCornerPreference = 33;
     private const int DwmSystemBackdropType = 38;
+    private const int BackdropMica = 2;
     private const int BackdropAcrylic = 3;
-    private const int CornerRound = 2;
 
     // Первая сборка Windows 11, где DWMWA_SYSTEMBACKDROP_TYPE поддерживается официально (22H2)
-    private const int BackdropMinimumBuild = 22621;
-
-    private const int ThemeAttributeNonClient = 1;
-    private const uint NoDrawCaption = 0x1;
-    private const uint NoDrawIcon = 0x2;
-    private const uint NoSystemMenu = 0x4;
-    private const uint ValidBits = 0xF;
+    private const int MinimumBuild = 22621;
 
     /// <summary>
-    /// Системное стекло поддерживается этой версией Windows.
+    /// Системное стекло есть в этой версии Windows.
     /// </summary>
-    public static bool IsBackdropSupported => Environment.OSVersion.Version.Build >= BackdropMinimumBuild;
+    public static bool IsSupported => Environment.OSVersion.Version.Build >= MinimumBuild;
 
     /// <summary>
-    /// Включает Acrylic и тёмный или светлый вариант рамки; вызывать после SourceInitialized и при смене темы.
+    /// Включает тёмный заголовок и системное стекло под всем окном; вызывать после SourceInitialized и при смене вида стекла.
     /// </summary>
-    public static void Apply(Window window, bool isDark)
+    public static void Apply(Window window, bool useAcrylic)
     {
         var handle = new WindowInteropHelper(window).Handle;
         var source = HwndSource.FromHwnd(handle);
+        var dark = 1;
 
-        if (handle == IntPtr.Zero || source is null)
+        if (handle == IntPtr.Zero)
             return;
 
-        var dark = isDark ? 1 : 0;
         DwmSetWindowAttribute(handle, DwmUseImmersiveDarkMode, ref dark, sizeof(int));
 
-        if (!IsBackdropSupported)
+        if (!IsSupported || source is null)
         {
             window.SetResourceReference(Window.BackgroundProperty, "WindowBrush");
             return;
         }
 
-        var corner = CornerRound;
-        var backdrop = BackdropAcrylic;
         var margins = new Margins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
+        var backdrop = useAcrylic ? BackdropAcrylic : BackdropMica;
 
         // Окно должно быть прозрачным насквозь, иначе стекло закроет заливка WPF
         window.Background = Brushes.Transparent;
         source.CompositionTarget.BackgroundColor = Colors.Transparent;
 
         DwmExtendFrameIntoClientArea(handle, ref margins);
-        DwmSetWindowAttribute(handle, DwmWindowCornerPreference, ref corner, sizeof(int));
         DwmSetWindowAttribute(handle, DwmSystemBackdropType, ref backdrop, sizeof(int));
-
-        HideSystemCaption(handle);
-    }
-
-    /// <summary>
-    /// Убирает системные подпись, значок и кнопки заголовка: на прозрачном окне они просвечивали бы сквозь свой заголовок.
-    /// </summary>
-    private static void HideSystemCaption(IntPtr handle)
-    {
-        var options = new ThemeOptions { Flags = NoDrawCaption | NoDrawIcon | NoSystemMenu, Mask = ValidBits };
-
-        SetWindowThemeAttribute(handle, ThemeAttributeNonClient, ref options, (uint)Marshal.SizeOf<ThemeOptions>());
     }
 
     [DllImport("dwmapi.dll")]
@@ -82,9 +61,6 @@ public static class WindowBackdrop
     [DllImport("dwmapi.dll")]
     private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref Margins margins);
 
-    [DllImport("uxtheme.dll")]
-    private static extern int SetWindowThemeAttribute(IntPtr hwnd, int attribute, ref ThemeOptions options, uint size);
-
     [StructLayout(LayoutKind.Sequential)]
     private struct Margins
     {
@@ -92,12 +68,5 @@ public static class WindowBackdrop
         public int Right;
         public int Top;
         public int Bottom;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct ThemeOptions
-    {
-        public uint Flags;
-        public uint Mask;
     }
 }

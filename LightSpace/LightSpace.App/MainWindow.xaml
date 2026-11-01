@@ -10,60 +10,46 @@
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
         Title="Light Space"
         Icon="Assets/LightSpace.ico"
-        Width="1416" Height="760" MinWidth="1176" MinHeight="560"
+        Width="1280" Height="820" MinWidth="960" MinHeight="560"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource WindowBrush}"
+        Background="Transparent"
         Foreground="{DynamicResource TextBrush}"
         FontFamily="{StaticResource FontText}"
         FontSize="{StaticResource FontSizeBody}">
 
-    <!-- Своя рамка: Acrylic тянется на всё окно, заголовок и кнопки окна — свои -->
+    <!-- Своя рамка: системное стекло (Acrylic или Mica) тянется на всё окно, кнопки свернуть/закрыть остаются системными -->
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="{StaticResource CaptionHeight}" GlassFrameThickness="-1" UseAeroCaptionButtons="False"
+        <WindowChrome CaptionHeight="{StaticResource CaptionHeight}" GlassFrameThickness="-1" UseAeroCaptionButtons="True"
                       ResizeBorderThickness="6" CornerRadius="0"/>
     </WindowChrome.WindowChrome>
 
-    <!-- Тонировка поверх Acrylic: «жидкое стекло», в тёмной теме с фиолетовым оттенком -->
-    <Grid x:Name="Root" Background="{DynamicResource BackdropTintBrush}">
+    <!-- Тонировка лежит прямо на системном стекле: её цвет и плотность задаются в «Настройках» -->
+    <Grid x:Name="Root" Background="{DynamicResource GlassTintBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="{StaticResource CaptionRowHeight}"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="{StaticResource NavWidth}"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
 
-        <!-- Заголовок: значок и название; свободное место тянет окно; справа кнопки окна -->
-        <Grid Grid.ColumnSpan="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+        <!-- Заголовок: значок и название; правый верхний угол свободен под системные кнопки -->
+        <StackPanel Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+            <Image Source="Assets/LightSpace.ico" Width="18" Height="18"/>
+            <TextBlock Text="Light Space" FontSize="{StaticResource FontSizeCaption}" Margin="{StaticResource GapLeft12}" VerticalAlignment="Center"/>
+        </StackPanel>
 
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="{StaticResource Space16}">
-                <Image Source="Assets/LightSpace.ico" Width="{StaticResource FontSizeIcon}" Height="{StaticResource FontSizeIcon}"/>
-                <TextBlock Text="Light Space" Style="{StaticResource Caption}" Foreground="{DynamicResource TextBrush}"
-                           VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"/>
-            </StackPanel>
+        <!-- Левое меню разделов; в нешироком окне — только значки -->
+        <Border x:Name="Nav" Grid.Row="1" Width="232" Padding="10,8,10,12">
+            <ListBox x:Name="NavList" Style="{StaticResource NavList}"
+                     ItemsSource="{Binding Pages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
+        </Border>
 
-            <StackPanel Grid.Column="2" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
-                <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" Click="OnMinimize" ToolTip="Свернуть"/>
-                <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" Content="&#xE922;" Click="OnMaximize" ToolTip="Развернуть"/>
-                <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;" Click="OnClose" ToolTip="Закрыть"/>
-            </StackPanel>
-        </Grid>
-
-        <!-- Левое меню разделов прямо на стекле -->
-        <ListBox Grid.Row="1" Style="{StaticResource SideNav}"
-                 ItemsSource="{Binding Pages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"
-                 Margin="{StaticResource PaddingNav}"/>
-
-        <!-- Слой содержимого поверх стекла, как в приложениях Windows 11 -->
-        <Border x:Name="PageHost" Grid.Row="1" Grid.Column="1" Background="{DynamicResource LayerBrush}" CornerRadius="{StaticResource RadiusTopLeftCard}"
-                BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="{StaticResource StrokeTopLeft}">
-            <Grid x:Name="Pages">
+        <!-- Слой содержимого поверх стекла: страницы -->
+        <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource LayerBrush}" CornerRadius="{StaticResource RadiusTopLeftCard}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeTopLeft}">
+            <Grid>
                 <views:ScenePage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Scene}"/>
                 <views:ScenariosPage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Scenarios}"/>
                 <views:DevicesPage DataContext="{Binding Devices}"
@@ -73,7 +59,7 @@
             </Grid>
         </Border>
 
-        <!-- Модальные карточки поверх всего окна -->
-        <controls:ModalHost x:Name="Modal" Grid.RowSpan="2" Grid.ColumnSpan="2"/>
+        <!-- Модальные карточки поверх окна под заголовком: системные кнопки окна остаются видны -->
+        <controls:ModalHost x:Name="Modal" Grid.Row="1" Grid.ColumnSpan="2"/>
     </Grid>
 </Window>

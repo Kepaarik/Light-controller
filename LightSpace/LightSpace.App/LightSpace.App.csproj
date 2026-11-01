@@ -23,13 +23,6 @@
     <Resource Include="Assets\LightSpace.ico" />
   </ItemGroup>
 
-  <!-- Витрина компонентов есть только в отладочной сборке -->
-  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
-    <Page Remove="Views\ShowcasePage.xaml" />
-    <Compile Remove="Views\ShowcasePage.xaml.cs" />
-    <Compile Remove="ViewModels\ShowcaseViewModel.cs" />
-  </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
   </ItemGroup>

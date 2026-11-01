@@ -8,7 +8,7 @@
     <!-- Пустое состояние страницы: большой значок, заголовок, пояснение и главное действие -->
     <StackPanel MaxWidth="{StaticResource EmptyStateMaxWidth}">
         <TextBlock Text="{Binding Icon, ElementName=Root}" Style="{StaticResource Icon}" FontSize="{StaticResource FontSizeIconLarge}"
-                   Foreground="{DynamicResource TextTertiaryBrush}" HorizontalAlignment="Center" Margin="{StaticResource GapBottom16}"/>
+                   Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" Margin="{StaticResource GapBottom16}"/>
         <TextBlock Text="{Binding Title, ElementName=Root}" Style="{StaticResource Subtitle}" TextAlignment="Center"
                    Margin="{StaticResource GapBottom8}"/>
         <TextBlock Text="{Binding Hint, ElementName=Root}" Style="{StaticResource Hint}" TextAlignment="Center"/>

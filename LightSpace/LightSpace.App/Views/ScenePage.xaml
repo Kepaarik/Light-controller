@@ -48,7 +48,7 @@
                     <!-- Встроенный эффект устройство играет само, его цвета неизвестны — вместо них знак молнии -->
                     <Viewbox MaxHeight="{StaticResource IconButtonSize}" IsHitTestVisible="False"
                              Visibility="{Binding IsBuiltinPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <TextBlock Text="&#xE945;" Style="{StaticResource Icon}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        <TextBlock Text="&#xE945;" Style="{StaticResource Icon}" Foreground="{DynamicResource MutedBrush}"/>
                     </Viewbox>
                 </Grid>
             </Border>
@@ -63,7 +63,7 @@
                 <Canvas VerticalAlignment="Top" Height="0" IsHitTestVisible="False">
                     <TextBlock Canvas.Bottom="0" Style="{StaticResource MapLabel}">
                         <Run Text="{Binding Title, Mode=OneWay}"/>
-                        <Run Text="{Binding ActiveScenarioTitle, Mode=OneWay, StringFormat='▶ {0}'}" Foreground="{DynamicResource AccentTextBrush}"
+                        <Run Text="{Binding ActiveScenarioTitle, Mode=OneWay, StringFormat='▶ {0}'}" Foreground="{DynamicResource AccentHoverBrush}"
                              FontWeight="SemiBold"/>
                     </TextBlock>
                 </Canvas>
@@ -155,7 +155,7 @@
                                     Command="{Binding AutoArrangeCommand}" Margin="{StaticResource GapRight4}"/>
                             <Button Style="{StaticResource GhostButton}" Content="Повернуть" controls:Appearance.Icon="&#xE7AD;"
                                     Command="{Binding RotateDeviceCommand}" IsEnabled="{Binding HasEditedDevice}" Margin="{StaticResource GapRight4}"/>
-                            <TextBox Tag="Поворот, °" Text="{Binding EditedAngleText}" Width="{StaticResource NumberFieldWidth}"
+                            <TextBox Tag="Поворот, °" ToolTip="Поворот, °" Text="{Binding EditedAngleText}" Width="{StaticResource NumberFieldWidth}"
                                      VerticalAlignment="Center" Margin="{StaticResource GapRight12}"
                                      Visibility="{Binding HasEditedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                             <controls:ValueSlider Label="Размер" Minimum="4" Maximum="200" Step="1" Value="{Binding EditedSize}"
@@ -193,7 +193,8 @@
                         <StackPanel>
                             <!-- Группа: своё название и цвет обводки -->
                             <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
-                                <TextBox Tag="Название группы" Text="{Binding SelectedGroup.Name, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="Название группы" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                                <TextBox Text="{Binding SelectedGroup.Name, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBlock Text="Цвет обводки" Style="{StaticResource SectionLabel}"/>
                                 <ListBox Style="{StaticResource SwatchPalette}" ItemsSource="{StaticResource GroupPalette}"
                                          SelectedItem="{Binding SelectedGroup.OutlineColor}"/>
