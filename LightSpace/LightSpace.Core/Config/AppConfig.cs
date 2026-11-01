@@ -11,11 +11,6 @@ public sealed class AppConfig
     public const int CurrentVersion = 4;
 
     /// <summary>
-    /// Частоты кадров, из которых можно выбрать.
-    /// </summary>
-    public static readonly IReadOnlyList<int> FrameRates = new[] { 20, 30, 60 };
-
-    /// <summary>
     /// Версия формата, в котором записан файл настроек.
     /// </summary>
     public int Version { get; set; } = CurrentVersion;
@@ -26,34 +21,19 @@ public sealed class AppConfig
     public bool LightingEnabled { get; set; } = true;
 
     /// <summary>
-    /// Сколько кадров в секунду уходит на устройства: 20, 30 или 60.
-    /// </summary>
-    public int FrameRate { get; set; } = 30;
-
-    /// <summary>
-    /// Длительность плавного перехода между сценариями, в миллисекундах.
-    /// </summary>
-    public int TransitionMilliseconds { get; set; } = 400;
-
-    /// <summary>
-    /// Через сколько секунд после потери фокуса снимается фокусный сценарий.
-    /// </summary>
-    public double FocusReleaseDelaySeconds { get; set; } = 2;
-
-    /// <summary>
     /// Запускать приложение вместе с Windows.
     /// </summary>
     public bool StartWithWindows { get; set; }
 
     /// <summary>
-    /// Закрытие окна прячет его в трей, а не завершает приложение.
-    /// </summary>
-    public bool MinimizeToTrayOnClose { get; set; } = true;
-
-    /// <summary>
     /// Окно из прозрачного стекла (Acrylic); иначе — матовое (Mica).
     /// </summary>
     public bool UseAcrylic { get; set; } = true;
+
+    /// <summary>
+    /// Левое меню окна свёрнуто до значков.
+    /// </summary>
+    public bool IsMenuCollapsed { get; set; }
 
     /// <summary>
     /// Тонировка и прозрачность стекла окна.
@@ -71,15 +51,20 @@ public sealed class AppConfig
     public List<GroupConfig> Groups { get; set; } = new();
 
     /// <summary>
-    /// На всех устройствах играет одно и то же — сценарии и содержимое всей сцены; группы при этом сохраняются
-    /// и снова играют, когда сцена возвращается к группам.
+    /// Что играет на устройствах: вся сцена, группы или каждое устройство отдельно. Настройки остальных режимов
+    /// сохраняются и снова играют, когда к ним возвращаются.
     /// </summary>
-    public bool IsWholeScene { get; set; }
+    public SceneMode Mode { get; set; }
 
     /// <summary>
-    /// Сценарии, яркость и содержимое «По умолчанию» всей сцены. Своего списка устройств у неё нет: в неё входят все.
+    /// Яркость и содержимое всей сцены. Своего списка устройств у неё нет: в неё входят все.
     /// </summary>
     public GroupConfig Scene { get; set; } = NewScene();
+
+    /// <summary>
+    /// Яркость и содержимое каждого устройства в режиме «Устройства»: по одной группе-одиночке на устройство.
+    /// </summary>
+    public List<GroupConfig> DeviceLighting { get; set; } = new();
 
     /// <summary>
     /// Подсветка мониторов: ленты вокруг мониторов, повороты мониторов и раскладки лент.
@@ -87,20 +72,13 @@ public sealed class AppConfig
     public List<MonitorConfig> Monitors { get; set; } = new();
 
     /// <summary>
-    /// Все сценарии; группы ссылаются на них по идентификаторам.
-    /// </summary>
-    public List<ScenarioConfig> Scenarios { get; set; } = new();
-
-    /// <summary>
     /// Приводит значения к допустимым: файл могли поправить руками.
     /// </summary>
     public void Normalize()
     {
-        if (!FrameRates.Contains(FrameRate))
-            FrameRate = 30;
-
-        TransitionMilliseconds = Math.Clamp(TransitionMilliseconds, 0, 5000);
-        FocusReleaseDelaySeconds = Math.Clamp(FocusReleaseDelaySeconds, 0, 30);
+        // Режим, которого нет в этой сборке, мог попасть в файл из правки руками
+        if (!Enum.IsDefined(Mode))
+            Mode = SceneMode.Groups;
 
         // Пустой раздел стекла в файле дал бы null вместо настроек по умолчанию
         Glass ??= new GlassConfig();
@@ -117,17 +95,38 @@ public sealed class AppConfig
             device.Placement?.Normalize();
 
         // Пустые разделы в файле дали бы null вместо содержимого и настроек эффектов
-        NormalizeScenarios();
         NormalizeGroups();
+        NormalizeDeviceLighting();
         NormalizeMonitors();
     }
 
     /// <summary>
-    /// То, что сейчас играет на устройствах: вся сцена или группы.
+    /// То, что сейчас играет на устройствах: вся сцена, группы или каждое устройство отдельно.
     /// </summary>
     public IReadOnlyList<GroupConfig> PlayingGroups()
     {
-        return IsWholeScene ? new[] { Scene } : Groups;
+        return Mode switch
+        {
+            SceneMode.WholeScene => new[] { Scene },
+            SceneMode.Devices => DeviceLighting,
+            _ => Groups
+        };
+    }
+
+    /// <summary>
+    /// Яркость и содержимое устройства в режиме «Устройства»; у нового устройства они появляются при первом обращении.
+    /// </summary>
+    public GroupConfig EnsureDeviceLighting(string deviceId)
+    {
+        var lighting = DeviceLighting.FirstOrDefault(g => g.DeviceIds.Contains(deviceId));
+
+        if (lighting != null)
+            return lighting;
+
+        lighting = GroupConfig.Solo(deviceId, new ContentConfig(), 100);
+        DeviceLighting.Add(lighting);
+
+        return lighting;
     }
 
     /// <summary>
@@ -167,7 +166,7 @@ public sealed class AppConfig
 
     /// <summary>
     /// Собирает устройства в новую группу. Устройства уходят из прежних групп; новая группа играет то же,
-    /// что играла группа первого устройства, с той же яркостью и теми же сценариями.
+    /// что играла группа первого устройства, с той же яркостью.
     /// </summary>
     public GroupConfig MakeGroup(IReadOnlyCollection<string> deviceIds, string name, string color)
     {
@@ -179,7 +178,6 @@ public sealed class AppConfig
             Name = name,
             Color = color,
             Brightness = source?.Brightness ?? 100,
-            ScenarioIds = source?.ScenarioIds.ToList() ?? new List<string>(),
             DefaultContent = source?.DefaultContent.Clone() ?? new ContentConfig()
         };
 
@@ -219,19 +217,6 @@ public sealed class AppConfig
         Groups.Add(SoloCopyOf(group, deviceId));
     }
 
-    /// <summary>
-    /// Удаляет сценарий: он пропадает из списка сценариев и из всех групп, где стоял.
-    /// </summary>
-    public void RemoveScenario(ScenarioConfig scenario)
-    {
-        Scenarios.Remove(scenario);
-
-        foreach (var group in Groups)
-            group.ScenarioIds.Remove(scenario.Id);
-
-        Scene.ScenarioIds.Remove(scenario.Id);
-    }
-
     private static GroupConfig NewScene()
     {
         return new GroupConfig { Id = "scene", Name = "Вся сцена" };
@@ -261,50 +246,49 @@ public sealed class AppConfig
     }
 
     /// <summary>
-    /// Группа-одиночка с теми же содержимым, яркостью и сценариями, что у группы.
+    /// Группа-одиночка с теми же содержимым и яркостью, что у группы.
     /// </summary>
     private static GroupConfig SoloCopyOf(GroupConfig group, string deviceId)
     {
-        var solo = GroupConfig.Solo(deviceId, group.DefaultContent.Clone(), group.Brightness);
-
-        solo.ScenarioIds = group.ScenarioIds.ToList();
-
-        return solo;
+        return GroupConfig.Solo(deviceId, group.DefaultContent.Clone(), group.Brightness);
     }
 
-    private void NormalizeScenarios()
+    /// <summary>
+    /// В режиме «Устройства» у каждого известного устройства ровно одна запись, записей забытых устройств нет.
+    /// </summary>
+    private void NormalizeDeviceLighting()
     {
-        Scenarios ??= new List<ScenarioConfig>();
+        var devices = Devices.Select(d => d.Id).ToHashSet();
+        var taken = new HashSet<string>();
 
-        // Сценарий без идентификатора не найти из групп, а повтор идентификатора путал бы группы
-        Scenarios = Scenarios
-            .Where(s => s != null && !string.IsNullOrWhiteSpace(s.Id))
-            .GroupBy(s => s.Id)
-            .Select(g => g.First())
+        DeviceLighting = (DeviceLighting ?? new List<GroupConfig>())
+            .Where(g => g?.DeviceIds is { Count: 1 } && devices.Contains(g.DeviceIds[0]) && taken.Add(g.DeviceIds[0]))
             .ToList();
 
-        foreach (var scenario in Scenarios)
+        foreach (var lighting in DeviceLighting)
         {
-            scenario.Name ??= "";
-            scenario.Condition ??= new ScenarioCondition();
-            scenario.Condition.ExePath ??= "";
-            scenario.Content ??= new ContentConfig();
-            scenario.Content.Normalize();
+            if (string.IsNullOrWhiteSpace(lighting.Id))
+                lighting.Id = GroupConfig.NewId();
 
-            // Режим, которого нет в этой сборке, мог попасть в файл из другой версии или из правки руками
-            if (!Enum.IsDefined(scenario.Condition.Mode))
-                scenario.Condition.Mode = ConditionMode.Focused;
+            lighting.IsSolo = true;
+            lighting.Name = "";
+            lighting.Color = "";
+            lighting.Brightness = Math.Clamp(lighting.Brightness, 0, 100);
+            lighting.DefaultContent ??= new ContentConfig();
+            lighting.DefaultContent.Normalize();
         }
+
+        foreach (var device in Devices)
+            EnsureDeviceLighting(device.Id);
     }
 
     /// <summary>
     /// Каждое известное устройство — ровно в одной группе, в группе-одиночке — ровно одно устройство,
-    /// пустых групп и ссылок на неизвестные устройства и сценарии нет.
+    /// пустых групп и ссылок на неизвестные устройства нет.
     /// </summary>
     private void NormalizeGroups()
     {
         var devices = Devices.Select(d => d.Id).ToHashSet();
-        var scenarios = Scenarios.Select(s => s.Id).ToHashSet();
         var taken = new HashSet<string>();
         var ids = new HashSet<string>();
 
@@ -328,7 +312,6 @@ public sealed class AppConfig
                 group.DeviceIds.RemoveRange(1, group.DeviceIds.Count - 1);
             }
 
-            group.ScenarioIds = (group.ScenarioIds ?? new List<string>()).Where(scenarios.Contains).Distinct().ToList();
             group.Name ??= "";
             group.Color ??= "";
             group.Brightness = Math.Clamp(group.Brightness, 0, 100);
@@ -350,7 +333,6 @@ public sealed class AppConfig
         scene.Name = defaults.Name;
         scene.Color = "";
         scene.DeviceIds = new List<string>();
-        scene.ScenarioIds = (scene.ScenarioIds ?? new List<string>()).Where(scenarios.Contains).Distinct().ToList();
         scene.Brightness = Math.Clamp(scene.Brightness, 0, 100);
         scene.DefaultContent ??= new ContentConfig();
         scene.DefaultContent.Normalize();

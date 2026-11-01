@@ -15,8 +15,12 @@ namespace LightSpace.Engine.Frames;
 /// </summary>
 public sealed class FrameLoop : IDisposable
 {
-    // Окну цвета нужны не чаще 30 раз в секунду, даже если устройства получают 60 кадров.
-    // Порог чуть меньше 1/30 с: кадры приходят с разбросом, и при 30 к/с ровный порог пропускал бы каждый второй
+    // Кадры считаются 20 раз в секунду — ровно с той частотой, с какой их принимают устройства. Если считать чаще,
+    // устройство берёт то каждый второй, то каждый третий кадр, и анимация на нём идёт рывками
+    private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(50);
+
+    // Окну цвета нужны не чаще 30 раз в секунду.
+    // Порог чуть меньше 1/30 с: кадры приходят с разбросом, и ровный порог пропускал бы кадры
     private static readonly TimeSpan LiveColorsInterval = TimeSpan.FromMilliseconds(30);
 
     // Сколько остановка ждёт, пока досчитается последний кадр
@@ -91,7 +95,7 @@ public sealed class FrameLoop : IDisposable
 
     private void Run()
     {
-        // Обычный системный таймер Windows тикает раз в 15,6 мс — для 30 и 60 кадров нужен точный
+        // Обычный системный таймер Windows тикает раз в 15,6 мс — для ровных кадров нужен точный
         TimeBeginPeriod(1);
 
         try
@@ -101,8 +105,7 @@ public sealed class FrameLoop : IDisposable
             var lastLive = -LiveColorsInterval;
             var next = clock.Elapsed;
 
-            // Время эффекта у каждой группы своё; часы живут только в потоке кадров.
-            // Вместе с часами группа помнит, что играло до смены сценария, — для плавного перехода
+            // Время эффекта у каждой группы своё; часы живут только в потоке кадров
             var playbacks = new Dictionary<string, GroupPlayback>();
 
             while (true)
@@ -113,7 +116,7 @@ public sealed class FrameLoop : IDisposable
                 AdvanceClocks(playbacks, snapshot, (now - lastTick).TotalSeconds, _sources);
                 lastTick = now;
 
-                // Экран и звук снимаются, а события игр принимаются, только пока их играет хоть одна группа, в том числе уходящим сценарием
+                // Экран и звук снимаются, а события игр принимаются, только пока их играет хоть одна группа
                 _sources.Require(this, DemandOf(snapshot, playbacks));
 
                 var isLiveDue = _isLiveColorsWanted && now - lastLive >= LiveColorsInterval;
@@ -124,7 +127,7 @@ public sealed class FrameLoop : IDisposable
                 RenderFrame(snapshot, playbacks, isLiveDue);
 
                 // Отставший поток не догоняет пачкой кадров, а продолжает с текущего момента
-                next += TimeSpan.FromSeconds(1.0 / Math.Max(snapshot.FrameRate, 1));
+                next += FrameInterval;
 
                 var wait = next - clock.Elapsed;
 
@@ -148,8 +151,7 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Какие мониторы и входы звука и нужны ли события игр группам, у которых есть устройства: для того, что играет,
-    /// и того, что уходит.
+    /// Какие мониторы и входы звука и нужны ли события игр группам, у которых есть устройства.
     /// Выключенной подсветке не нужно ничего.
     /// </summary>
     private static SourceDemand DemandOf(FrameSnapshot snapshot, Dictionary<string, GroupPlayback> playbacks)
@@ -166,30 +168,29 @@ public sealed class FrameLoop : IDisposable
             if (group.Devices.Count == 0)
                 continue;
 
-            foreach (var content in playbacks[group.Id].Playing)
+            var content = playbacks[group.Id].Content;
+
+            if (content.Screen is { } screen)
             {
-                if (content.Screen is { } screen)
+                monitors.Add(screen.MonitorKey);
+
+                // Устройства, привязанные к монитору, берут цвета с краёв своего монитора
+                foreach (var device in group.Devices)
                 {
-                    monitors.Add(screen.MonitorKey);
-
-                    // Устройства, привязанные к монитору, берут цвета с краёв своего монитора
-                    foreach (var device in group.Devices)
-                    {
-                        if (device.Monitor is { } binding)
-                            monitors.Add(binding.MonitorKey);
-                    }
+                    if (device.Monitor is { } binding)
+                        monitors.Add(binding.MonitorKey);
                 }
+            }
 
-                if (content.Music is { } music)
-                    inputs.Add(music.Input);
+            if (content.Music is { } music)
+                inputs.Add(music.Input);
 
-                if (content.Game is { } game)
-                {
-                    if (game.NeedsScreen)
-                        monitors.Add(game.Screen.MonitorKey);
+            if (content.Game is { } game)
+            {
+                if (game.NeedsScreen)
+                    monitors.Add(game.Screen.MonitorKey);
 
-                    wantsGameState |= game.NeedsGameState;
-                }
+                wantsGameState |= game.NeedsGameState;
             }
         }
 
@@ -197,19 +198,16 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Двигает время эффекта каждой группы на seconds секунд с учётом его скорости; если в группе сменился сценарий,
-    /// начинает плавный переход от прежнего содержимого к новому.
+    /// Двигает время эффекта каждой группы на seconds секунд с учётом его скорости.
     /// </summary>
     private static void AdvanceClocks(Dictionary<string, GroupPlayback> playbacks, FrameSnapshot snapshot, double seconds, SourceHub sources)
     {
-        var transition = snapshot.TransitionMilliseconds / 1000.0;
-
         foreach (var group in snapshot.Groups)
         {
             if (!playbacks.TryGetValue(group.Id, out var playback))
                 playbacks[group.Id] = new GroupPlayback(group.Active);
             else
-                playback.Advance(group.Active, seconds, transition, sources);
+                playback.Advance(group.Active, seconds, sources);
         }
 
         // Часы распущенных и удалённых групп больше не нужны
@@ -221,8 +219,8 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Считает кадр для каждого устройства каждой группы её содержимым и отправляет его; во время перехода — смесь
-    /// уходящего и нового содержимого. isLiveDue — заодно собрать снимок цветов для окна.
+    /// Считает кадр для каждого устройства каждой группы её содержимым и отправляет его.
+    /// isLiveDue — заодно собрать снимок цветов для окна.
     /// </summary>
     private void RenderFrame(FrameSnapshot snapshot, Dictionary<string, GroupPlayback> playbacks, bool isLiveDue)
     {
@@ -367,18 +365,10 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Что играет в одной группе: содержимое и его часы, а во время плавного перехода — ещё уходящее содержимое
-    /// со своими часами, чтобы оно доигрывало, а не замирало.
+    /// Что играет в одной группе: содержимое и его часы.
     /// </summary>
     private sealed class GroupPlayback
     {
-        // Уходящее содержимое; null — перехода сейчас нет
-        private (FrameContent Content, EffectClock Clock)? _leaving;
-
-        // Сколько секунд идёт переход и сколько он длится всего
-        private double _transitionTime;
-        private double _transitionLength;
-
         public GroupPlayback(FrameContent content)
         {
             Content = content;
@@ -386,54 +376,22 @@ public sealed class FrameLoop : IDisposable
         }
 
         /// <summary>
-        /// Содержимое, которое играет в группе сейчас или к которому идёт переход.
+        /// Содержимое, которое играет в группе.
         /// </summary>
         public FrameContent Content { get; private set; }
 
         public EffectClock Clock { get; private set; }
 
         /// <summary>
-        /// Встроенный эффект, который устройства группы играют сами; null — играет что-то другое или идёт переход.
-        /// Переход к встроенному эффекту — уходящее содержимое плавно гаснет, и только потом устройства запускают эффект;
-        /// переход от него — новое содержимое плавно проявляется из темноты.
+        /// Встроенный эффект, который устройства группы играют сами; null — играет что-то другое.
         /// </summary>
-        public BuiltinSettings? Builtin => _leaving == null ? Content.Builtin : null;
+        public BuiltinSettings? Builtin => Content.Builtin;
 
         /// <summary>
-        /// Всё, что сейчас звучит в группе: содержимое и, во время перехода, уходящее содержимое.
+        /// Двигает время на seconds секунд. content — что должно играть по последнему снимку.
         /// </summary>
-        public IEnumerable<FrameContent> Playing
+        public void Advance(FrameContent content, double seconds, SourceHub sources)
         {
-            get
-            {
-                yield return Content;
-
-                if (_leaving is { } leaving)
-                    yield return leaving.Content;
-            }
-        }
-
-        /// <summary>
-        /// Двигает время на seconds секунд. content — что должно играть по последнему снимку; если это другой сценарий,
-        /// начинается переход длиной transition секунд (0 — смена сразу).
-        /// </summary>
-        public void Advance(FrameContent content, double seconds, double transition, SourceHub sources)
-        {
-            if (_leaving is { } leaving)
-            {
-                leaving.Clock.Advance(leaving.Content, seconds, sources);
-                _transitionTime += seconds;
-
-                if (_transitionTime >= _transitionLength)
-                    _leaving = null;
-            }
-
-            if (content.ScenarioId != Content.ScenarioId)
-            {
-                StartTransition(content, transition);
-                return;
-            }
-
             Content = content;
 
             // Новый эффект начинается с начала; у текущего время копится по шагам, чтобы смена скорости не давала скачка
@@ -444,43 +402,11 @@ public sealed class FrameLoop : IDisposable
         }
 
         /// <summary>
-        /// Цвета светодиодов пространства: кадр содержимого, во время перехода — плавно смешанный с кадром уходящего.
+        /// Цвета светодиодов пространства: кадр содержимого.
         /// </summary>
         public RgbColor[] Render(FrameDevice device)
         {
-            var colors = RenderContent(Content, Clock, device);
-
-            if (_leaving is not { } leaving)
-                return colors;
-
-            var previous = RenderContent(leaving.Content, leaving.Clock, device);
-            var progress = EffectMath.Smooth(_transitionTime / _transitionLength);
-
-            for (var i = 0; i < colors.Length; i++)
-                colors[i] = EffectMath.Mix(previous[i], colors[i], progress);
-
-            return colors;
-        }
-
-        private void StartTransition(FrameContent content, double transition)
-        {
-            // Сценарий вернулся, пока его ещё уводили: переход разворачивается с того же места, без скачка
-            if (_leaving is { } leaving && leaving.Content.ScenarioId == content.ScenarioId)
-            {
-                _leaving = (Content, Clock);
-                Content = content;
-                Clock = leaving.Clock;
-                _transitionTime = _transitionLength - _transitionTime;
-                return;
-            }
-
-            // Прежнее содержимое плавно уходит, новое начинается с начала
-            _leaving = transition > 0 ? (Content, Clock) : null;
-            _transitionTime = 0;
-            _transitionLength = transition;
-
-            Content = content;
-            Clock = new EffectClock(content.ClockId);
+            return RenderContent(Content, Clock, device);
         }
 
         /// <summary>
@@ -490,7 +416,7 @@ public sealed class FrameLoop : IDisposable
         /// </summary>
         private static RgbColor[] RenderContent(FrameContent content, EffectClock clock, FrameDevice device)
         {
-            // Встроенный эффект кадрами не показать: в переходах он — темнота, устройство без встроенных эффектов не светится
+            // Встроенный эффект кадрами не показать: устройство без встроенных эффектов не светится
             if (content.Builtin != null)
                 return new RgbColor[Math.Max(device.ScenePoints.Count, 1)];
 

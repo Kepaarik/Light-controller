@@ -10,17 +10,17 @@ using LightSpace.App.Services;
 using LightSpace.Core;
 using LightSpace.Core.Config;
 using LightSpace.Engine;
-using LightSpace.Engine.Apps;
 using LightSpace.Engine.Frames;
-using LightSpace.Engine.Scenarios;
+using LightSpace.Engine.Sources;
 using LightSpace.Engine.Space;
 
 namespace LightSpace.App.ViewModels;
 
 /// <summary>
-/// Вкладка «Сцена»: группы устройств с живыми цветами, выделение устройств и сборка их в группы, панель выбранной группы —
-/// название, цвет обводки, сценарии, яркость и содержимое «По умолчанию»: галерея плиток с живыми превью и настройки
-/// выбранного эффекта. Все правки сразу попадают в настройки группы и уходят движку новым снимком.
+/// Вкладка «Сцена»: устройства с живыми цветами и что на них играет — одно на всей сцене, своё у каждой группы
+/// или своё у каждого устройства. Панель выбранного — название и цвет обводки группы, яркость и содержимое: эффект,
+/// сцена, экран, музыка, игра или встроенный эффект с его настройками. Все правки сразу попадают в настройки
+/// и уходят движку новым снимком.
 /// </summary>
 public sealed partial class SceneViewModel : ObservableObject
 {
@@ -33,10 +33,7 @@ public sealed partial class SceneViewModel : ObservableObject
     private readonly AppConfig _config;
     private readonly DeviceManager _manager;
     private readonly FrameLoop _loop;
-    private readonly AppWatcher _apps;
     private readonly Action _contentChanged;
-    private readonly Action<GroupConfig> _addScenario;
-    private readonly Action<string> _openScenario;
     private readonly DispatcherTimer _liveTimer;
     private readonly Stopwatch _clock = new();
 
@@ -45,6 +42,9 @@ public sealed partial class SceneViewModel : ObservableObject
 
     // Панель всей сцены: в режиме «Вся сцена» она открыта всегда; null — устройств нет
     private SceneGroupViewModel? _sceneGroup;
+
+    // Панели устройств в режиме «Устройства», по идентификатору устройства
+    private readonly Dictionary<string, SceneGroupViewModel> _deviceLighting = new();
 
     // Места всех устройств перед каждым шагом в режиме редактирования расстановки, последний шаг — в конце.
     // Ползунок размера двигается мелкими шагами: подряд идущие изменения одного устройства — один шаг отмены
@@ -56,23 +56,22 @@ public sealed partial class SceneViewModel : ObservableObject
     private bool _isEditingLayout;
 
     /// <summary>
-    /// contentChanged вызывается после каждого изменения групп: их состава, названия, цвета, яркости, эффекта и его настроек,
-    /// порядка сценариев. addScenario создаёт новый сценарий в группе и открывает его, openScenario открывает сценарий
-    /// по идентификатору — оба на вкладке «Сценарии».
+    /// contentChanged вызывается после каждого изменения: режима сцены, состава групп, названия, цвета, яркости,
+    /// содержимого и его настроек. sources — откуда превью экрана, музыки и игры берут картинку, звук и события игр.
     /// </summary>
-    public SceneViewModel(AppConfig config, DeviceManager manager, FrameLoop loop, AppWatcher apps, Action contentChanged,
-        Action<GroupConfig> addScenario, Action<string> openScenario)
+    public SceneViewModel(AppConfig config, DeviceManager manager, FrameLoop loop, SourceHub sources, Action contentChanged)
     {
         _config = config;
         _manager = manager;
         _loop = loop;
-        _apps = apps;
         _contentChanged = contentChanged;
-        _addScenario = addScenario;
-        _openScenario = openScenario;
 
         Editor = new EffectEditorViewModel(contentChanged);
         SceneEditor = new SceneEditorViewModel(config, manager, contentChanged);
+        ScreenEditor = new ScreenEditorViewModel(sources, contentChanged);
+        MusicEditor = new MusicEditorViewModel(sources, contentChanged);
+        GameEditor = new GameEditorViewModel(sources, contentChanged);
+        BuiltinEditor = new BuiltinEditorViewModel(manager, contentChanged);
 
         _manager.DevicesChanged += (_, _) => SyncDevices();
         SyncDevices();
@@ -82,34 +81,68 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Галерея и настройки эффекта, который играет в выбранной группе «По умолчанию».
+    /// Галерея и настройки эффекта, который играет у выбранного.
     /// </summary>
     public EffectEditorViewModel Editor { get; }
 
     /// <summary>
-    /// Холст и слои, которые играют в выбранной группе «По умолчанию», если её содержимое — сцена.
+    /// Холст и слои, которые играют у выбранного, если его содержимое — сцена.
     /// </summary>
     public SceneEditorViewModel SceneEditor { get; }
 
     /// <summary>
-    /// Типы содержимого «По умолчанию» для сегментов: эффект или сцена.
+    /// Монитор и цвета, если содержимое выбранного — экран.
     /// </summary>
-    public IReadOnlyList<ContentKindOption> DefaultKinds { get; } = new[] { ContentKindOption.Effect, ContentKindOption.Scene };
+    public ScreenEditorViewModel ScreenEditor { get; }
 
     /// <summary>
-    /// Тип содержимого «По умолчанию» выбранной группы. Сцена без слоёв получает первый слой во всю сцену с эффектом,
-    /// который играл до этого.
+    /// Источник звука, режим и цвета, если содержимое выбранного — музыка.
     /// </summary>
-    public ContentKindOption? SelectedDefaultKind
+    public MusicEditorViewModel MusicEditor { get; }
+
+    /// <summary>
+    /// Игра, фон, полоски и события, если содержимое выбранного — игра.
+    /// </summary>
+    public GameEditorViewModel GameEditor { get; }
+
+    /// <summary>
+    /// Эффект каждого устройства, скорость и цвет, если содержимое выбранного — встроенный эффект.
+    /// </summary>
+    public BuiltinEditorViewModel BuiltinEditor { get; }
+
+    /// <summary>
+    /// Типы содержимого для сегментов: эффект, сцена, экран, музыка, игра, встроенный эффект.
+    /// </summary>
+    public IReadOnlyList<ContentKindOption> ContentKinds => ContentKindOption.All;
+
+    /// <summary>
+    /// Тип содержимого выбранного. Сцена без слоёв получает первый слой во всю сцену с эффектом, который играл до этого.
+    /// </summary>
+    public ContentKindOption? SelectedContentKind
     {
-        get => _selectedGroup == null ? null : IsDefaultScene ? ContentKindOption.Scene : ContentKindOption.Effect;
+        get => _selectedGroup?.Content.Kind switch
+        {
+            null => null,
+            ContentKind.Scene => ContentKindOption.Scene,
+            ContentKind.Screen => ContentKindOption.Screen,
+            ContentKind.Music => ContentKindOption.Music,
+            ContentKind.Game => ContentKindOption.Game,
+            ContentKind.Builtin => ContentKindOption.Builtin,
+            _ => ContentKindOption.Effect
+        };
         set
         {
             var content = _selectedGroup?.Content;
-            var kind = value == ContentKindOption.Scene ? ContentKind.Scene : ContentKind.Effect;
+
+            var kind = value == ContentKindOption.Scene ? ContentKind.Scene
+                : value == ContentKindOption.Screen ? ContentKind.Screen
+                : value == ContentKindOption.Music ? ContentKind.Music
+                : value == ContentKindOption.Game ? ContentKind.Game
+                : value == ContentKindOption.Builtin ? ContentKind.Builtin
+                : ContentKind.Effect;
 
             // Сегменты сбрасывают выбор в null, когда пересобираются
-            if (content == null || value == null || kind == content.Kind)
+            if (content == null || value == null || !value.IsAvailable || kind == content.Kind)
                 return;
 
             content.Kind = kind;
@@ -121,50 +154,60 @@ public sealed partial class SceneViewModel : ObservableObject
             }
 
             OnPropertyChanged();
-            OnPropertyChanged(nameof(IsDefaultScene));
+            OnContentKindChanged();
             _contentChanged();
         }
     }
 
-    /// <summary>
-    /// Содержимое «По умолчанию» выбранной группы — сцена со слоями.
-    /// </summary>
-    public bool IsDefaultScene => _selectedGroup?.Content.Kind == ContentKind.Scene;
+    public bool IsEffectContent => _selectedGroup?.Content.Kind == ContentKind.Effect;
+
+    public bool IsSceneContent => _selectedGroup?.Content.Kind == ContentKind.Scene;
+
+    public bool IsScreenContent => _selectedGroup?.Content.Kind == ContentKind.Screen;
+
+    public bool IsMusicContent => _selectedGroup?.Content.Kind == ContentKind.Music;
+
+    public bool IsGameContent => _selectedGroup?.Content.Kind == ContentKind.Game;
+
+    public bool IsBuiltinContent => _selectedGroup?.Content.Kind == ContentKind.Builtin;
 
     /// <summary>
-    /// На всех устройствах играет одно и то же — эффект и сценарии всей сцены; группы сохраняются до возврата к ним.
+    /// На всех устройствах играет одно и то же; группы и настройки устройств сохраняются до возврата к ним.
     /// </summary>
     public bool IsWholeScene
     {
-        get => _config.IsWholeScene;
+        get => _config.Mode == SceneMode.WholeScene;
         set
         {
-            if (_config.IsWholeScene == value)
-                return;
-
-            _config.IsWholeScene = value;
-
-            // Выделение относилось к прежнему режиму; во всей сцене сразу открывается её панель
-            foreach (var device in Devices)
-                device.IsSelected = false;
-
-            Select(null);
-
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsGroupsMode));
-            OnPropertyChanged(nameof(SceneHint));
-            OnSelectionCountChanged();
-            _contentChanged();
+            if (value)
+                SetMode(SceneMode.WholeScene);
         }
     }
 
     /// <summary>
-    /// У групп устройств свои эффекты и сценарии.
+    /// У групп устройств своё содержимое.
     /// </summary>
     public bool IsGroupsMode
     {
-        get => !IsWholeScene;
-        set => IsWholeScene = !value;
+        get => _config.Mode == SceneMode.Groups;
+        set
+        {
+            if (value)
+                SetMode(SceneMode.Groups);
+        }
+    }
+
+    /// <summary>
+    /// У каждого устройства своё содержимое, группы не действуют.
+    /// </summary>
+    public bool IsDevicesMode
+    {
+        get => _config.Mode == SceneMode.Devices;
+        set
+        {
+            if (value)
+                SetMode(SceneMode.Devices);
+        }
     }
 
     public ObservableCollection<SceneDeviceViewModel> Devices { get; } = new();
@@ -186,7 +229,7 @@ public sealed partial class SceneViewModel : ObservableObject
     /// <summary>
     /// Выделено несколько устройств — их можно сделать группой.
     /// </summary>
-    public bool CanMakeGroup => !IsWholeScene && SelectedDevices.Count >= 2;
+    public bool CanMakeGroup => IsGroupsMode && SelectedDevices.Count >= 2;
 
     /// <summary>
     /// Сколько устройств выделено, для карточки «Сделать группой».
@@ -203,7 +246,9 @@ public sealed partial class SceneViewModel : ObservableObject
     /// </summary>
     public string NoSelectionHint => CanMakeGroup
         ? "Соберите их в группу кнопкой «Сделать группой» внизу сцены — на всех устройствах группы будет играть одно и то же."
-        : "Выберите группу или устройство на сцене, чтобы настроить, что на нём играет. Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой.";
+        : IsDevicesMode
+            ? "Выберите устройство на сцене, чтобы настроить, что на нём играет."
+            : "Выберите группу или устройство на сцене, чтобы настроить, что на нём играет. Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой.";
 
     /// <summary>
     /// Показать карточку «Сделать группой»: выделено несколько устройств и расстановку сейчас не редактируют.
@@ -216,8 +261,10 @@ public sealed partial class SceneViewModel : ObservableObject
     public string SceneHint => IsEditingLayout
         ? "Перетаскивайте устройства мышью. Выделите одно устройство, чтобы повернуть его или поменять размер."
         : IsWholeScene
-            ? "Эффект и сценарии справа играют сразу на всех устройствах."
-            : "Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой.";
+            ? "То, что выбрано справа, играет сразу на всех устройствах."
+            : IsDevicesMode
+                ? "Кликните устройство, чтобы выбрать, что играет на нём."
+                : "Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой.";
 
     /// <summary>
     /// Устройство, которое поворачивают и меняют в размере: единственное выделенное в режиме редактирования расстановки.
@@ -374,6 +421,11 @@ public sealed partial class SceneViewModel : ObservableObject
         {
             _liveTimer.Stop();
             _clock.Stop();
+
+            // Пока превью не видно, монитор и звук для него не снимаются
+            ScreenEditor.StopPreview();
+            MusicEditor.StopPreview();
+            GameEditor.StopPreview();
             return;
         }
 
@@ -383,60 +435,6 @@ public sealed partial class SceneViewModel : ObservableObject
         _clock.Restart();
         _lastTick = TimeSpan.Zero;
         _liveTimer.Start();
-    }
-
-    /// <summary>
-    /// Обновляет списки сценариев групп: их названия, условия и какой сценарий сейчас играет.
-    /// </summary>
-    public void RefreshScenarios()
-    {
-        foreach (var group in Groups)
-            group.SetScenarios(ScenariosOf(group.Settings));
-
-        _sceneGroup?.SetScenarios(ScenariosOf(_config.Scene));
-    }
-
-    /// <summary>
-    /// Перетаскивание в списке сценариев выбранной группы: сценарий встаёт на новое место, важность меняется сразу.
-    /// </summary>
-    [RelayCommand]
-    private void MoveScenario(ReorderMove? move)
-    {
-        var group = _selectedGroup;
-
-        if (move == null || group == null || move.From >= group.Scenarios.Count || move.To >= group.Scenarios.Count)
-            return;
-
-        var moved = group.Scenarios[move.From].Id;
-        var target = group.Scenarios[move.To].Id;
-        var ids = group.Settings.ScenarioIds;
-
-        // Вниз сценарий встаёт после того, на чьё место его протащили, вверх — перед ним
-        ids.Remove(moved);
-        ids.Insert(ids.IndexOf(target) + (move.To > move.From ? 1 : 0), moved);
-
-        group.Scenarios.Move(move.From, move.To);
-        _contentChanged();
-    }
-
-    /// <summary>
-    /// Новый сценарий в выбранной группе: встаёт над «По умолчанию» и открывается на вкладке «Сценарии».
-    /// </summary>
-    [RelayCommand]
-    private void AddScenario()
-    {
-        if (_selectedGroup != null)
-            _addScenario(_selectedGroup.Settings);
-    }
-
-    /// <summary>
-    /// Открывает сценарий на вкладке «Сценарии».
-    /// </summary>
-    [RelayCommand]
-    private void OpenScenario(ScenarioRowViewModel? row)
-    {
-        if (row != null)
-            _openScenario(row.Id);
     }
 
     /// <summary>
@@ -637,14 +635,70 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Выделение устройств изменилось: одно устройство открывает панель своей группы, несколько — карточку «Сделать группой».
+    /// Выделение устройств изменилось: одно устройство открывает панель своей группы (в режиме «Устройства» — свою),
+    /// несколько — карточку «Сделать группой».
     /// </summary>
     private void OnDevicesSelected()
     {
         var selected = SelectedDevices;
+        SceneGroupViewModel? panel = null;
 
-        Select(selected.Count == 1 ? Groups.FirstOrDefault(g => g.Devices.Contains(selected[0])) : null);
+        if (selected.Count == 1)
+        {
+            panel = IsDevicesMode
+                ? _deviceLighting.GetValueOrDefault(selected[0].Id)
+                : Groups.FirstOrDefault(g => g.Devices.Contains(selected[0]));
+        }
+
+        Select(panel);
         OnSelectionCountChanged();
+    }
+
+    /// <summary>
+    /// Переключает, что играет на устройствах: вся сцена, группы или каждое устройство отдельно.
+    /// </summary>
+    private void SetMode(SceneMode mode)
+    {
+        if (_config.Mode == mode)
+            return;
+
+        _config.Mode = mode;
+
+        // Выделение относилось к прежнему режиму; во всей сцене сразу открывается её панель
+        foreach (var device in Devices)
+            device.IsSelected = false;
+
+        Select(null);
+
+        OnPropertyChanged(nameof(IsWholeScene));
+        OnPropertyChanged(nameof(IsGroupsMode));
+        OnPropertyChanged(nameof(IsDevicesMode));
+        OnPropertyChanged(nameof(SceneHint));
+        OnSelectionCountChanged();
+        _contentChanged();
+    }
+
+    /// <summary>
+    /// Сменился тип содержимого выбранного или само выбранное: показываются редактор и превью этого типа,
+    /// превью экрана, музыки и игры, которых больше не видно, отпускают свои источники.
+    /// </summary>
+    private void OnContentKindChanged()
+    {
+        OnPropertyChanged(nameof(IsEffectContent));
+        OnPropertyChanged(nameof(IsSceneContent));
+        OnPropertyChanged(nameof(IsScreenContent));
+        OnPropertyChanged(nameof(IsMusicContent));
+        OnPropertyChanged(nameof(IsGameContent));
+        OnPropertyChanged(nameof(IsBuiltinContent));
+
+        if (!IsScreenContent)
+            ScreenEditor.StopPreview();
+
+        if (!IsMusicContent)
+            MusicEditor.StopPreview();
+
+        if (!IsGameContent)
+            GameEditor.StopPreview();
     }
 
     private void OnSelectionCountChanged()
@@ -661,7 +715,7 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Открывает панель группы: галерея и настройки показывают её содержимое «По умолчанию».
+    /// Открывает панель группы или устройства: редакторы показывают его содержимое.
     /// </summary>
     private void Select(SceneGroupViewModel? group)
     {
@@ -676,21 +730,22 @@ public sealed partial class SceneViewModel : ObservableObject
 
         OnPropertyChanged(nameof(SelectedGroup));
         OnPropertyChanged(nameof(HasSelection));
-        OnPropertyChanged(nameof(SelectedDefaultKind));
-        OnPropertyChanged(nameof(IsDefaultScene));
+        OnPropertyChanged(nameof(SelectedContentKind));
 
-        if (group == null)
-        {
-            Editor.Edit(null);
-            SceneEditor.Edit(null);
-            return;
-        }
+        // Рамку на карте рисуют только группы; превью плиток рисуются с настройками эффектов выбранного
+        if (group != null)
+            group.IsSelected = true;
 
-        group.IsSelected = true;
+        var content = group?.Content;
 
-        // Превью плиток рисуются с настройками эффектов этой группы
-        Editor.Edit(group.Content);
-        SceneEditor.Edit(group.Content);
+        Editor.Edit(content);
+        SceneEditor.Edit(content);
+        ScreenEditor.Edit(content);
+        MusicEditor.Edit(content);
+        GameEditor.Edit(content);
+        BuiltinEditor.Edit(content);
+
+        OnContentKindChanged();
     }
 
     /// <summary>
@@ -775,14 +830,22 @@ public sealed partial class SceneViewModel : ObservableObject
         }
 
         foreach (var (group, members) in groups)
-            Groups.Add(new SceneGroupViewModel(group, members, ScenariosOf(group), _contentChanged));
+            Groups.Add(new SceneGroupViewModel(group, members, _contentChanged));
 
         _sceneGroup = Devices.Count > 0
-            ? new SceneGroupViewModel(_config.Scene, Devices.ToList(), ScenariosOf(_config.Scene), _contentChanged) { IsWholeScene = true }
+            ? new SceneGroupViewModel(_config.Scene, Devices.ToList(), _contentChanged) { IsWholeScene = true }
             : null;
 
+        _deviceLighting.Clear();
+
+        foreach (var device in Devices)
+        {
+            var lighting = _config.EnsureDeviceLighting(device.Id);
+            _deviceLighting[device.Id] = new SceneGroupViewModel(lighting, new[] { device }, _contentChanged) { IsDeviceLighting = true };
+        }
+
         _selectedGroup = null;
-        Select(Groups.FirstOrDefault(g => g.Id == selectedGroupId));
+        Select(Groups.Concat(_deviceLighting.Values).FirstOrDefault(g => g.Id == selectedGroupId));
 
         OnPropertyChanged(nameof(HasDevices));
         OnSelectionCountChanged();
@@ -822,21 +885,6 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Строки списка сценариев группы по важности, с отметкой того, который сейчас играет; «По умолчанию» в список не входит.
-    /// </summary>
-    private IReadOnlyList<ScenarioRowViewModel> ScenariosOf(GroupConfig group)
-    {
-        var playing = ScenarioSelector.Choose(_config, group, _apps).Scenario;
-
-        return group.ScenarioIds
-            .Select(id => _config.Scenarios.FirstOrDefault(s => s.Id == id))
-            .OfType<ScenarioConfig>()
-            .Select(s => new ScenarioRowViewModel(s.Id, ScenarioItemViewModel.TitleOf(s), ScenarioSelector.Describe(s.Condition),
-                s == playing))
-            .ToList();
-    }
-
-    /// <summary>
     /// Один кадр живой сцены: последние цвета устройств от движка и следующий кадр превью на плитках.
     /// </summary>
     private void OnLiveTick()
@@ -845,10 +893,16 @@ public sealed partial class SceneViewModel : ObservableObject
         var seconds = (now - _lastTick).TotalSeconds;
         _lastTick = now;
 
-        // У сцены «По умолчанию» свой холст и своя галерея — эффекта выбранного слоя
-        if (IsDefaultScene)
+        // У сцены свой холст и своя галерея — эффекта выбранного слоя
+        if (IsSceneContent)
             SceneEditor.Advance(seconds);
-        else
+        else if (IsScreenContent)
+            ScreenEditor.Advance(seconds);
+        else if (IsMusicContent)
+            MusicEditor.Advance(seconds);
+        else if (IsGameContent)
+            GameEditor.Advance(seconds);
+        else if (IsEffectContent)
             Editor.Advance(seconds);
 
         var live = _loop.LiveColors;

@@ -29,11 +29,6 @@ public sealed class SettingsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Частоты кадров для сегментов.
-    /// </summary>
-    public IReadOnlyList<int> FrameRates => AppConfig.FrameRates;
-
-    /// <summary>
     /// Тонировка и прозрачность стекла окна.
     /// </summary>
     public GlassViewModel Glass { get; }
@@ -58,24 +53,6 @@ public sealed class SettingsViewModel : ObservableObject
         set => Update(_config.LightingEnabled, value, (c, v) => c.LightingEnabled = v);
     }
 
-    public int FrameRate
-    {
-        get => _config.FrameRate;
-        set => Update(_config.FrameRate, value, (c, v) => c.FrameRate = v);
-    }
-
-    public double TransitionMilliseconds
-    {
-        get => _config.TransitionMilliseconds;
-        set => Update(_config.TransitionMilliseconds, (int)Math.Round(value), (c, v) => c.TransitionMilliseconds = v);
-    }
-
-    public double FocusReleaseDelaySeconds
-    {
-        get => _config.FocusReleaseDelaySeconds;
-        set => Update(_config.FocusReleaseDelaySeconds, Math.Round(value, 1), (c, v) => c.FocusReleaseDelaySeconds = v);
-    }
-
     public bool StartWithWindows
     {
         get => _config.StartWithWindows;
@@ -84,12 +61,6 @@ public sealed class SettingsViewModel : ObservableObject
             if (Update(_config.StartWithWindows, value, (c, v) => c.StartWithWindows = v))
                 StartupRegistration.Apply(value);
         }
-    }
-
-    public bool MinimizeToTrayOnClose
-    {
-        get => _config.MinimizeToTrayOnClose;
-        set => Update(_config.MinimizeToTrayOnClose, value, (c, v) => c.MinimizeToTrayOnClose = v);
     }
 
     /// <summary>

@@ -4,7 +4,6 @@ using LightSpace.Core;
 using LightSpace.Core.Config;
 using LightSpace.Devices.Tuya;
 using LightSpace.Engine.Effects;
-using LightSpace.Engine.Sources;
 
 namespace LightSpace.Engine.Import;
 
@@ -26,8 +25,8 @@ public sealed class LedHubImportResult
 
 /// <summary>
 /// Перенос настроек из файла старого приложения LedHub (%AppData%\LedHub\config.json) в настройки Light Space:
-/// известные устройства с именами и ключами Tuya, расстановка на сцене, группы, настройки эффектов и игровые режимы
-/// Dota 2 и CS2 как сценарии. Только добавляет: то, что уже настроено в Light Space, не меняется — кроме расстановки,
+/// известные устройства с именами и ключами Tuya, расстановка на сцене, группы и настройки эффектов.
+/// Только добавляет: то, что уже настроено в Light Space, не меняется — кроме расстановки,
 /// если её явно просят заменить. Файл LedHub только читается.
 /// </summary>
 public static class LedHubImport
@@ -40,9 +39,6 @@ public static class LedHubImport
 
     // Начала идентификаторов устройств, которые умеют драйверы Light Space; они такие же, как в LedHub
     private static readonly string[] DevicePrefixes = { "ble:", "govee:", "magichome:", "robobloq:", "rk:", "serial:", "tuya:" };
-
-    // Клавиатуры среди устройств LedHub — для игровой подсветки на клавиатурах
-    private const string KeyboardPrefix = "rk:";
 
     private const string MonitorPrefix = "monitor:";
 
@@ -86,10 +82,10 @@ public static class LedHubImport
         var effects = ReadEffects(root);
 
         ImportEffects(config, effects, result);
-        ImportGames(config, root, effects, result);
+        ImportGames(root, result);
         ReportLeftBehind(root, result);
 
-        // Группы, сценарии и места устройств приводятся к допустимым так же, как при загрузке файла
+        // Группы и места устройств приводятся к допустимым так же, как при загрузке файла
         config.Normalize();
 
         return result;
@@ -313,137 +309,19 @@ public static class LedHubImport
     }
 
     /// <summary>
-    /// Игровые режимы Dota 2 и CS2 становятся сценариями «запущен» с содержимым-игрой: фон, яркость фона, полоски
-    /// и выключенные события — как были в LedHub. Сценарий встаёт в группы, где LedHub показывал игру: во все, если
-    /// игра шла на всех лентах, иначе — в группы подсветки главного монитора и клавиатур.
+    /// Игровые режимы Dota 2 и CS2 в LedHub включались сами, пока игра запущена; в Light Space такого переключения нет,
+    /// поэтому они не переносятся — игру выбирают содержимым группы.
     /// </summary>
-    private static void ImportGames(AppConfig config, JsonObject root, Dictionary<string, EffectValuesConfig> effects,
-        LedHubImportResult result)
+    private static void ImportGames(JsonObject root, LedHubImportResult result)
     {
         if (root["Games"] is not JsonObject games)
             return;
 
-        var targets = GameGroups(config, root, games);
-
-        foreach (var (key, game, exe, title) in new[]
-                 {
-                     ("Dota", GameKind.Dota2, "dota2.exe", "Dota 2"),
-                     ("CounterStrike", GameKind.CounterStrike2, "cs2.exe", "Counter-Strike 2")
-                 })
+        foreach (var (key, title) in new[] { ("Dota", "Dota 2"), ("CounterStrike", "Counter-Strike 2"), ("OtherGames", "Другие игры") })
         {
-            var profile = games[key] as JsonObject;
-
-            if (profile == null || Flag(profile["IsEnabled"]) == false)
-                continue;
-
-            if (config.Scenarios.Any(s => string.Equals(s.Condition.ExeName, exe, StringComparison.OrdinalIgnoreCase)))
-            {
-                result.Skipped.Add($"Сценарий {title}: в Light Space уже есть сценарий для {exe}.");
-                continue;
-            }
-
-            var content = new ContentConfig();
-
-            AddEffects(content, effects);
-
-            // Вместо игровой подсветки LedHub мог включать пресет — цвета устройств; сценарий берёт цвет первого горящего
-            if (Text(profile["Preset"]) is { Length: > 0 } preset)
-            {
-                content.Kind = ContentKind.Effect;
-                content.EffectId = EffectLibrary.Solid.Id;
-                content.Effects[EffectLibrary.Solid.Id] = new EffectValuesConfig
-                {
-                    Colors = new Dictionary<string, string> { ["color"] = PresetColor(root, preset).ToHex() }
-                };
-
-                result.Skipped.Add($"Сценарий {title} включал пресет «{preset}»: в Light Space он стал одним цветом — первого горящего устройства пресета.");
-            }
-            else
-            {
-                content.Kind = ContentKind.Game;
-                content.Game = GameOf(game, games, root);
-            }
-
-            var scenario = new ScenarioConfig
-            {
-                Id = GroupConfig.NewId(),
-                Name = title,
-                Condition = new ScenarioCondition { ExePath = exe, Mode = ConditionMode.Running },
-                Content = content
-            };
-
-            config.Scenarios.Add(scenario);
-
-            foreach (var group in targets)
-                group.ScenarioIds.Add(scenario.Id);
-
-            result.Imported.Add(targets.Count > 0
-                ? $"Сценарий {title}: включается, пока игра запущена, в группах: {targets.Count}."
-                : $"Сценарий {title}: включается, пока игра запущена; группы для него отметьте сами.");
+            if (games[key] is JsonObject profile && Flag(profile["IsEnabled"]) != false)
+                result.Skipped.Add($"Игровая подсветка {title}: выберите «Игра» в содержимом группы на странице «Сцена».");
         }
-
-        if (games["OtherGames"] is JsonObject other && Flag(other["IsEnabled"]) != false)
-            result.Skipped.Add("Подсветка «Другие игры»: LedHub узнавал их по окну на весь экран, а сценарию Light Space нужен exe-файл игры — создайте сценарий «Игра → Другие игры» для каждой игры.");
-    }
-
-    /// <summary>
-    /// Группы, где LedHub показывал игру.
-    /// </summary>
-    private static List<GroupConfig> GameGroups(AppConfig config, JsonObject root, JsonObject games)
-    {
-        if (Flag(games["UseAllDevices"]) == true)
-            return config.Groups.ToList();
-
-        var ids = new List<string>();
-
-        // Подсветка главного монитора; без выбора — основного монитора Windows
-        var monitorKey = Monitors.Resolve(Text(root["MainMonitor"]) ?? "")?.Key;
-
-        if (monitorKey != null && Text((root["Monitors"] as JsonObject)?[monitorKey]?["DeviceId"]) is { } backlight)
-            ids.Add(backlight);
-
-        if (Flag(games["UseKeyboards"]) != false)
-            ids.AddRange(config.Devices.Select(d => d.Id).Where(id => id.StartsWith(KeyboardPrefix, StringComparison.Ordinal)));
-
-        return ids.Select(config.GroupOf).OfType<GroupConfig>().Distinct().ToList();
-    }
-
-    /// <summary>
-    /// Настройки содержимого-игры из общих игровых настроек LedHub.
-    /// </summary>
-    private static GameConfig GameOf(GameKind game, JsonObject games, JsonObject root)
-    {
-        var settings = new GameConfig
-        {
-            Game = game,
-            MonitorKey = Text(root["MainMonitor"]) ?? "",
-
-            // В LedHub полоски на клавиатуре выключались отдельным вариантом, остальные варианты — полоски на всю клавиатуру
-            KeyboardBars = Text(games["KeyboardHud"]) != "Off",
-            StripBars = Flag(games["BarsOnOtherDevices"]) ?? true,
-            DisabledEvents = Strings(games["DisabledTriggers"]).Where(e => e.StartsWith($"{game}:", StringComparison.Ordinal)).ToList()
-        };
-
-        if (Text(games["Background"]) is { } background && Enum.TryParse<GameBackground>(background, out var parsed))
-            settings.Background = parsed;
-
-        if (Number(games["BackgroundBrightness"]) is { } brightness)
-            settings.BackgroundBrightness = (int)Math.Round(brightness);
-
-        settings.Normalize();
-
-        return settings;
-    }
-
-    /// <summary>
-    /// Цвет первого горящего устройства пресета; если таких нет — чёрный.
-    /// </summary>
-    private static RgbColor PresetColor(JsonObject root, string preset)
-    {
-        var scene = Objects(root["Scenes"]).FirstOrDefault(s => Text(s["Name"]) == preset);
-        var lit = Objects(scene?["Devices"]).FirstOrDefault(d => Flag(d["IsOn"]) == true);
-
-        return lit != null && ColorOf(lit["Color"]) is { } color ? color : RgbColor.Black;
     }
 
     /// <summary>
@@ -454,16 +332,16 @@ public static class LedHubImport
         var presets = Objects(root["Scenes"]).Count();
 
         if (presets > 0)
-            result.Skipped.Add($"Пресеты (сохранённые цвета устройств): {presets} — в Light Space вместо них сценарии и «По умолчанию» групп.");
+            result.Skipped.Add($"Пресеты (сохранённые цвета устройств): {presets} — в Light Space вместо них содержимое групп и устройств.");
 
         if (Keys(root["HexLayouts"]).Any())
             result.Skipped.Add("Формы панелей из шестигранников — в Light Space панель светится как одно устройство на своём месте сцены.");
 
         if (Keys(root["ScreenLayouts"]).Any() || Objects(root["Monitors"] as JsonObject).Any())
-            result.Skipped.Add("Раскладки лент вокруг мониторов и повороты мониторов — в Light Space экран ложится на устройства по их местам на сцене.");
+            result.Skipped.Add("Раскладки лент вокруг мониторов и повороты мониторов — настройте их заново на странице «Мониторы».");
 
         if (Objects(root["SceneLayers"]).Any())
-            result.Skipped.Add("Слои эффектов сцены — создайте сценарий с содержимым «Сцена».");
+            result.Skipped.Add("Слои эффектов сцены — выберите содержимое «Сцена» у группы.");
     }
 
     /// <summary>
@@ -593,11 +471,6 @@ public static class LedHubImport
     private static bool? Flag(JsonNode? node)
     {
         return node is JsonValue value && value.TryGetValue<bool>(out var flag) ? flag : null;
-    }
-
-    private static IEnumerable<string> Strings(JsonNode? node)
-    {
-        return (node as JsonArray)?.Select(Text).OfType<string>() ?? Enumerable.Empty<string>();
     }
 
     private static IEnumerable<JsonObject> Objects(JsonNode? node)

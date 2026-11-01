@@ -40,10 +40,18 @@
             <TextBlock Text="Light Space" FontSize="{StaticResource FontSizeCaption}" Margin="{StaticResource GapLeft12}" VerticalAlignment="Center"/>
         </StackPanel>
 
-        <!-- Левое меню разделов; в нешироком окне — только значки -->
+        <!-- Левое меню разделов: кнопка сворачивает его до значков, в нешироком окне значки остаются всегда.
+             Настройки — внизу меню -->
         <Border x:Name="Nav" Grid.Row="1" Width="232" Padding="10,8,10,12">
-            <ListBox x:Name="NavList" Style="{StaticResource NavList}"
-                     ItemsSource="{Binding Pages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
+            <DockPanel>
+                <Button DockPanel.Dock="Top" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE700;"
+                        ToolTip="Свернуть или развернуть меню" Command="{Binding ToggleMenuCommand}"
+                        HorizontalAlignment="Left" Margin="5,0,0,8"/>
+                <ListBox x:Name="BottomNavList" DockPanel.Dock="Bottom" Style="{StaticResource NavList}"
+                         ItemsSource="{Binding BottomPages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
+                <ListBox x:Name="NavList" Style="{StaticResource NavList}"
+                         ItemsSource="{Binding Pages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
+            </DockPanel>
         </Border>
 
         <!-- Слой содержимого поверх стекла: страницы -->
@@ -51,7 +59,6 @@
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeTopLeft}">
             <Grid>
                 <views:ScenePage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Scene}"/>
-                <views:ScenariosPage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Scenarios}"/>
                 <views:DevicesPage DataContext="{Binding Devices}"
                                    Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Devices}"/>
                 <views:MonitorsPage DataContext="{Binding Monitors}"

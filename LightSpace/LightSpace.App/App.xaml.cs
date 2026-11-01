@@ -16,8 +16,11 @@ public partial class App : Application
     private MainWindow? _window;
     private TrayIcon? _tray;
 
-    // Выход из приложения, а не просто закрытие окна в трей
+    // Выход из приложения уже начался
     private bool _isExiting;
+
+    // В каком виде показать окно из трея: обычным или развёрнутым, как было до сворачивания
+    private WindowState _restoreState = WindowState.Normal;
 
     private void OnStartup(object sender, StartupEventArgs e)
     {
@@ -33,6 +36,7 @@ public partial class App : Application
         _viewModel = new MainViewModel(_config);
         _window = new MainWindow(_viewModel);
         _window.Closing += OnWindowClosing;
+        _window.StateChanged += OnWindowStateChanged;
 
         _tray = new TrayIcon(_viewModel, ShowWindow, ExitApplication);
 
@@ -56,16 +60,26 @@ public partial class App : Application
         if (_isExiting)
             return;
 
-        if (_config.MinimizeToTrayOnClose)
-        {
-            e.Cancel = true;
-            _window?.Hide();
-            return;
-        }
-
         // Окно уже закрывается само; повторный Close изнутри Closing недопустим, поэтому выходим следом
         _isExiting = true;
         Dispatcher.InvokeAsync(() => Shutdown());
+    }
+
+    /// <summary>
+    /// Свёрнутое окно уходит в трей; развёрнутое или обычное запоминается, чтобы из трея вернуться в нём же.
+    /// </summary>
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        if (_window is null)
+            return;
+
+        if (_window.WindowState != WindowState.Minimized)
+        {
+            _restoreState = _window.WindowState;
+            return;
+        }
+
+        _window.Hide();
     }
 
     private void ShowWindow()
@@ -76,7 +90,7 @@ public partial class App : Application
         _window.Show();
 
         if (_window.WindowState == WindowState.Minimized)
-            _window.WindowState = WindowState.Normal;
+            _window.WindowState = _restoreState;
 
         _window.Activate();
     }

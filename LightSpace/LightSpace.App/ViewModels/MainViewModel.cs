@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.Input;
 using LightSpace.App.Services;
 using LightSpace.Core.Config;
 using LightSpace.Engine;
-using LightSpace.Engine.Apps;
 using LightSpace.Engine.Frames;
 using LightSpace.Engine.Import;
 using LightSpace.Engine.Sources;
@@ -18,7 +17,6 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly AppConfig _config;
     private readonly DeviceManager _deviceManager;
-    private readonly AppWatcher _apps;
     private readonly FrameLoop _frameLoop;
     private readonly SourceHub _sources = new();
 
@@ -34,16 +32,13 @@ public sealed partial class MainViewModel : ObservableObject
         Settings = new SettingsViewModel(config, ImportFromLedHubAsync);
 
         _deviceManager = new DeviceManager(config);
-        _apps = new AppWatcher { FocusReleaseDelay = TimeSpan.FromSeconds(config.FocusReleaseDelaySeconds) };
-        _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices, _apps), _sources);
+        _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices), _sources);
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave);
-        Scenarios = new ScenariosViewModel(config, _deviceManager, _apps, _sources, OnContentChanged);
-        Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _apps, OnContentChanged, AddScenario, OpenScenario);
+        Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _sources, OnContentChanged);
         Monitors = new MonitorsViewModel(config, _deviceManager, OnContentChanged);
 
         Settings.PropertyChanged += OnSettingsChanged;
         _deviceManager.DevicesChanged += OnDevicesChanged;
-        _apps.Changed += OnAppsChanged;
     }
 
     /// <summary>
@@ -52,19 +47,40 @@ public sealed partial class MainViewModel : ObservableObject
     public IReadOnlyList<PageOption> Pages { get; } = new PageOption[]
     {
         new(AppPage.Scene, "Сцена", ""),
-        new(AppPage.Scenarios, "Сценарии", ""),
         new(AppPage.Devices, "Устройства", ""),
-        new(AppPage.Monitors, "Мониторы", ""),
+        new(AppPage.Monitors, "Мониторы", "")
+    };
+
+    /// <summary>
+    /// Разделы внизу левого меню.
+    /// </summary>
+    public IReadOnlyList<PageOption> BottomPages { get; } = new PageOption[]
+    {
         new(AppPage.Settings, "Настройки", "")
     };
+
+    /// <summary>
+    /// Левое меню свёрнуто до значков.
+    /// </summary>
+    public bool IsMenuCollapsed
+    {
+        get => _config.IsMenuCollapsed;
+        set
+        {
+            if (_config.IsMenuCollapsed == value)
+                return;
+
+            _config.IsMenuCollapsed = value;
+            OnPropertyChanged();
+            Settings.ScheduleSave();
+        }
+    }
 
     public SettingsViewModel Settings { get; }
 
     public DevicesViewModel Devices { get; }
 
     public SceneViewModel Scene { get; }
-
-    public ScenariosViewModel Scenarios { get; }
 
     public MonitorsViewModel Monitors { get; }
 
@@ -84,10 +100,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Settings.PropertyChanged -= OnSettingsChanged;
         _deviceManager.DevicesChanged -= OnDevicesChanged;
-        _apps.Changed -= OnAppsChanged;
-        _apps.Dispose();
         Scene.SetLive(false);
-        Scenarios.SetLive(false);
 
         // Сначала поток кадров: иначе он клал бы кадры в уже закрытые выводы устройств
         _frameLoop.Dispose();
@@ -102,6 +115,15 @@ public sealed partial class MainViewModel : ObservableObject
     private void ToggleLighting()
     {
         Settings.LightingEnabled = !Settings.LightingEnabled;
+    }
+
+    /// <summary>
+    /// Сворачивает левое меню до значков или разворачивает обратно.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleMenu()
+    {
+        IsMenuCollapsed = !IsMenuCollapsed;
     }
 
     /// <summary>
@@ -129,7 +151,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         // Свою расстановку от расставленной автоматически Light Space не отличает, поэтому заменить её можно только явно
         var (confirmed, replacesPlacements) = await Dialogs.ConfirmWithOptionAsync("Импортировать настройки LedHub?",
-            "Устройства, группы, расстановка, настройки эффектов и игровые режимы добавятся к текущим. То, что уже настроено в Light Space, не изменится. " +
+            "Устройства, группы, расстановка и настройки эффектов добавятся к текущим. То, что уже настроено в Light Space, не изменится. " +
             "Расстановка из LedHub переносится, только пока устройства на сцене не расставлены, — или если включить замену ниже.",
             "Заменить расстановку устройств на сцене", "Импортировать");
 
@@ -138,7 +160,6 @@ public sealed partial class MainViewModel : ObservableObject
 
         var result = LedHubImport.Run(_config, Scene.NextGroupName, Scene.NextGroupColor, replacesPlacements);
 
-        Scenarios.AddMissing();
         _deviceManager.SyncWithSettings();
         Settings.SaveNow();
 
@@ -159,67 +180,23 @@ public sealed partial class MainViewModel : ObservableObject
         if (e.PropertyName == nameof(SettingsViewModel.LightingEnabled))
             _deviceManager.SetLightingEnabled(Settings.LightingEnabled);
 
-        // Задержку снятия фокусного сценария держит слежение за приложениями; снимок обновится по его событию
-        if (e.PropertyName == nameof(SettingsViewModel.FocusReleaseDelaySeconds))
-            _apps.FocusReleaseDelay = TimeSpan.FromSeconds(Settings.FocusReleaseDelaySeconds);
-
-        // Выключенная подсветка, частота кадров и длительность перехода — тоже часть снимка для потока кадров
-        if (e.PropertyName is nameof(SettingsViewModel.LightingEnabled) or nameof(SettingsViewModel.FrameRate)
-            or nameof(SettingsViewModel.TransitionMilliseconds))
+        // Выключенная подсветка — тоже часть снимка для потока кадров
+        if (e.PropertyName == nameof(SettingsViewModel.LightingEnabled))
             UpdateFrames();
     }
 
     private void OnDevicesChanged(object? sender, EventArgs e)
     {
         UpdateFrames();
-        Scenarios.Refresh();
     }
 
     /// <summary>
-    /// Запустилось или закрылось приложение, сменилось окно в фокусе: в группах мог смениться активный сценарий.
-    /// </summary>
-    private void OnAppsChanged(object? sender, EventArgs e)
-    {
-        UpdateFrames();
-        RefreshScenarios();
-    }
-
-    /// <summary>
-    /// Группы, их эффект, настройки эффекта или яркость, сценарии или их порядок изменились: движку — новый снимок,
-    /// в файл — с задержкой, спискам сценариев — новые названия и отметки «играет».
+    /// Группы, режим сцены, эффект, настройки эффекта или яркость изменились: движку — новый снимок, в файл — с задержкой.
     /// </summary>
     private void OnContentChanged()
     {
         UpdateFrames();
         Settings.ScheduleSave();
-        RefreshScenarios();
-    }
-
-    /// <summary>
-    /// Обновляет, какой сценарий где играет, на сцене и на вкладке «Сценарии».
-    /// </summary>
-    private void RefreshScenarios()
-    {
-        Scene.RefreshScenarios();
-        Scenarios.Refresh();
-    }
-
-    /// <summary>
-    /// «+ сценарий» в панели группы: новый сценарий в этой группе открывается на вкладке «Сценарии».
-    /// </summary>
-    private void AddScenario(GroupConfig group)
-    {
-        SelectedPage = AppPage.Scenarios;
-        Scenarios.Create(group);
-    }
-
-    /// <summary>
-    /// Открывает сценарий на вкладке «Сценарии».
-    /// </summary>
-    private void OpenScenario(string scenarioId)
-    {
-        SelectedPage = AppPage.Scenarios;
-        Scenarios.Open(scenarioId);
     }
 
     /// <summary>
@@ -227,7 +204,7 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private void UpdateFrames()
     {
-        _frameLoop.Update(FrameSnapshot.Build(_config, _deviceManager.Devices, _apps));
+        _frameLoop.Update(FrameSnapshot.Build(_config, _deviceManager.Devices));
     }
 
     partial void OnSelectedPageChanged(AppPage value)
@@ -240,12 +217,10 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Живая сцена работает, только пока окно видно и открыта вкладка «Сцена»; живое превью сценария — пока открыта
-    /// вкладка «Сценарии».
+    /// Живая сцена работает, только пока окно видно и открыта вкладка «Сцена».
     /// </summary>
     private void UpdateLive()
     {
         Scene.SetLive(_isWindowShown && SelectedPage == AppPage.Scene);
-        Scenarios.SetLive(_isWindowShown && SelectedPage == AppPage.Scenarios);
     }
 }

@@ -6,7 +6,6 @@ namespace LightSpace.App.ViewModels;
 public enum AppPage
 {
     Scene,
-    Scenarios,
     Devices,
     Monitors,
     Settings

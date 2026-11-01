@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
@@ -9,16 +8,7 @@ using LightSpace.Core.Config;
 namespace LightSpace.App.ViewModels;
 
 /// <summary>
-/// Строка списка сценариев группы.
-/// </summary>
-/// <param name="Id">Идентификатор сценария.</param>
-/// <param name="Title">Название сценария.</param>
-/// <param name="ConditionText">Условие сценария словами: «dota2.exe · в фокусе».</param>
-/// <param name="IsPlaying">Сценарий сейчас играет в группе.</param>
-public sealed record ScenarioRowViewModel(string Id, string Title, string ConditionText, bool IsPlaying);
-
-/// <summary>
-/// Группа на сцене: её устройства, название, цвет обводки, яркость, сценарии и содержимое «По умолчанию».
+/// Группа на сцене: её устройства, название, цвет обводки, яркость и содержимое.
 /// Устройство без группы — группа-одиночка: на сцене это просто карточка устройства.
 /// Правки сразу попадают в настройки группы, движок получает их новым снимком.
 /// </summary>
@@ -36,12 +26,10 @@ public sealed partial class SceneGroupViewModel : ObservableObject
     /// <summary>
     /// changed вызывается после каждого изменения названия, цвета или яркости группы.
     /// </summary>
-    public SceneGroupViewModel(GroupConfig settings, IReadOnlyList<SceneDeviceViewModel> devices,
-        IReadOnlyList<ScenarioRowViewModel> scenarios, Action changed)
+    public SceneGroupViewModel(GroupConfig settings, IReadOnlyList<SceneDeviceViewModel> devices, Action changed)
     {
         Settings = settings;
         Devices = devices;
-        Scenarios = new ObservableCollection<ScenarioRowViewModel>(scenarios);
         _changed = changed;
 
         // Рамка группы следует за её устройствами, когда их двигают
@@ -65,6 +53,16 @@ public sealed partial class SceneGroupViewModel : ObservableObject
     /// Вся сцена: в неё входят все устройства, своего названия, обводки и состава у неё нет.
     /// </summary>
     public bool IsWholeScene { get; init; }
+
+    /// <summary>
+    /// Отдельное устройство в режиме «Устройства»: группы в нём не действуют.
+    /// </summary>
+    public bool IsDeviceLighting { get; init; }
+
+    /// <summary>
+    /// Устройство без группы в режиме «Группы»: его можно собрать в группу с другими.
+    /// </summary>
+    public bool IsUngroupedDevice => IsSolo && !IsDeviceLighting;
 
     /// <summary>
     /// Группа, собранная пользователем: со своим названием, обводкой и составом.
@@ -161,48 +159,7 @@ public sealed partial class SceneGroupViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Сценарии группы по убыванию важности; «По умолчанию» в список не входит, оно всегда ниже всех.
-    /// </summary>
-    public ObservableCollection<ScenarioRowViewModel> Scenarios { get; }
-
-    /// <summary>
-    /// Ни один сценарий группы не играет — играет «По умолчанию».
-    /// </summary>
-    public bool IsDefaultPlaying => !Scenarios.Any(s => s.IsPlaying);
-
-    /// <summary>
-    /// Название сценария, который сейчас играет в группе.
-    /// </summary>
-    public string ActiveScenarioTitle => Scenarios.FirstOrDefault(s => s.IsPlaying)?.Title ?? "По умолчанию";
-
-    /// <summary>
-    /// Обновляет список сценариев. Если состав и порядок те же, меняются только изменившиеся строки — так список
-    /// не пересобирается, пока сценарий в нём перетаскивают.
-    /// </summary>
-    public void SetScenarios(IReadOnlyList<ScenarioRowViewModel> rows)
-    {
-        if (Scenarios.Select(s => s.Id).SequenceEqual(rows.Select(r => r.Id)))
-        {
-            for (var i = 0; i < rows.Count; i++)
-            {
-                if (!Equals(Scenarios[i], rows[i]))
-                    Scenarios[i] = rows[i];
-            }
-        }
-        else
-        {
-            Scenarios.Clear();
-
-            foreach (var row in rows)
-                Scenarios.Add(row);
-        }
-
-        OnPropertyChanged(nameof(IsDefaultPlaying));
-        OnPropertyChanged(nameof(ActiveScenarioTitle));
-    }
-
-    /// <summary>
-    /// Содержимое «По умолчанию» группы: эффект и настройки эффектов.
+    /// Что играет на устройствах группы: тип содержимого и его настройки.
     /// </summary>
     public ContentConfig Content => Settings.DefaultContent;
 

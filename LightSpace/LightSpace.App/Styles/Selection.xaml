@@ -1,4 +1,4 @@
-<!-- Выбор из набора, как в LedHub: списки, сегменты, вариант-приложение, плитки-галерея, палитра, левое меню разделов -->
+<!-- Выбор из набора, как в LedHub: списки, сегменты, плитки-галерея, палитра, левое меню разделов -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
@@ -126,36 +126,6 @@
         </Setter>
         <Setter Property="ItemContainerStyle" Value="{StaticResource SegmentItem}"/>
     </Style>
-
-    <!-- Приложение в выпадающей панели выбора и на её кнопке: значок, название и имя exe-файла.
-         Вариант показывает Icon (картинка значка), Title и ExeName -->
-    <DataTemplate x:Key="AppOptionTemplate">
-        <DockPanel>
-            <Grid DockPanel.Dock="Left" Width="{StaticResource AppIconSize}" Height="{StaticResource AppIconSize}"
-                  Margin="{StaticResource GapRight12}" VerticalAlignment="Center">
-                <!-- Без значка — общий значок приложения -->
-                <TextBlock Text="&#xE737;" FontFamily="{StaticResource FontIcon}" FontSize="{StaticResource FontSizeIcon}"
-                           Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-                <Image Source="{Binding Icon}"/>
-            </Grid>
-            <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
-                <TextBlock Text="{Binding ExeName}" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource MutedBrush}"
-                           TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
-        </DockPanel>
-    </DataTemplate>
 
     <!-- Галерея плиток с картинкой, как галерея эффектов LedHub: эффекты, встроенные эффекты устройств.
          Своей прокрутки нет, чтобы колесо листало страницу. Плитка показывает Preview (кисть-превью) и Title -->
