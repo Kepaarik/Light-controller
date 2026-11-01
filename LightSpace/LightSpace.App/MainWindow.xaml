@@ -41,16 +41,28 @@
         </StackPanel>
 
         <!-- Левое меню разделов: кнопка сворачивает его до значков, в нешироком окне значки остаются всегда.
-             Настройки — внизу меню -->
+             Под разделами — найденные устройства, настройки — внизу меню -->
         <Border x:Name="Nav" Grid.Row="1" Width="232" Padding="10,8,10,12">
             <DockPanel>
                 <Button DockPanel.Dock="Top" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE700;"
                         ToolTip="Свернуть или развернуть меню" Command="{Binding ToggleMenuCommand}"
                         HorizontalAlignment="Left" Margin="5,0,0,8"/>
+                <ListBox x:Name="NavList" DockPanel.Dock="Top" Style="{StaticResource NavList}"
+                         ItemsSource="{Binding Pages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
                 <ListBox x:Name="BottomNavList" DockPanel.Dock="Bottom" Style="{StaticResource NavList}"
                          ItemsSource="{Binding BottomPages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
-                <ListBox x:Name="NavList" Style="{StaticResource NavList}"
-                         ItemsSource="{Binding Pages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
+                <!-- Устройств может быть много: они прокручиваются, а разделы и настройки остаются на месте.
+                     Панель списка — обычная, а не виртуализирующая: внутри чужой прокрутки та может не показать ни одного пункта -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,8">
+                    <ListBox x:Name="DeviceNavList" Style="{StaticResource NavList}"
+                             ItemsSource="{Binding DeviceNav}" SelectedValuePath="Id" SelectedValue="{Binding SelectedDeviceId}">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                    </ListBox>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 
@@ -58,7 +70,8 @@
         <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource LayerBrush}" CornerRadius="{StaticResource RadiusTopLeftCard}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeTopLeft}">
             <Grid>
-                <views:ScenePage Visibility="{Binding SelectedPage, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Scene}"/>
+                <views:DevicePage DataContext="{Binding Scene}"
+                                  Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Device}"/>
                 <views:DevicesPage DataContext="{Binding Devices}"
                                    Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Devices}"/>
                 <views:MonitorsPage DataContext="{Binding Monitors}"

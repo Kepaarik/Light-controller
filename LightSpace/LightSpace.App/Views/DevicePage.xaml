@@ -1,0 +1,76 @@
+<UserControl x:Class="LightSpace.App.Views.DevicePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             xmlns:views="clr-namespace:LightSpace.App.Views"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:SceneViewModel}">
+
+    <!-- Устройство, открытое в левом меню: яркость, монитор ленты и что на устройстве играет -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Left">
+            <TextBlock Text="{Binding SelectedGroup.Title}" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="{Binding SelectedGroup.Device.KindText}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                          Value="{Binding SelectedGroup.Brightness}"/>
+
+                    <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора -->
+                    <StackPanel Visibility="{Binding IsStripSelected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <TextBlock Text="Монитор" Style="{StaticResource SectionLabel}"/>
+                        <ListBox Style="{StaticResource Segments}" HorizontalAlignment="Left"
+                                 ItemsSource="{Binding MonitorOptions}" SelectedItem="{Binding SelectedMonitor}"/>
+                        <TextBlock Text="Лента за монитором в эффекте «Экран» повторяет цвета его краёв. Раскладку ленты по краям настройте на странице «Мониторы»."
+                                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <!-- Что играет: тип содержимого, ниже его настройки. Новый эффект останавливает и стирает прежний -->
+                    <TextBlock Text="Эффект" Style="{StaticResource CardTitle}"/>
+                    <ListBox Style="{StaticResource Segments}" HorizontalAlignment="Left"
+                             ItemsSource="{Binding ContentKinds}" SelectedItem="{Binding SelectedContentKind}"
+                             Margin="{StaticResource GapBottom16}">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource SegmentItem}">
+                                <Setter Property="IsEnabled" Value="{Binding IsAvailable}"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+
+                    <!-- Эффект: галерея, ниже настройки выбранного эффекта -->
+                    <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <views:EffectEditor DataContext="{Binding Editor}"/>
+                    </StackPanel>
+
+                    <!-- Сцена: холст со слоями и их границами, список слоёв и эффект выбранного слоя -->
+                    <StackPanel Visibility="{Binding IsSceneContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <views:SceneEditor DataContext="{Binding SceneEditor}"/>
+                    </StackPanel>
+
+                    <!-- Экран: живое превью картинки монитора, монитор и настройки цветов -->
+                    <StackPanel Visibility="{Binding IsScreenContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <views:ScreenEditor DataContext="{Binding ScreenEditor}"/>
+                    </StackPanel>
+
+                    <!-- Музыка: живое превью, источник звука, режим, цвета и отклик -->
+                    <StackPanel Visibility="{Binding IsMusicContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <views:MusicEditor DataContext="{Binding MusicEditor}"/>
+                    </StackPanel>
+
+                    <!-- Встроенный эффект: подсказка вместо превью, эффект устройства, скорость и цвет -->
+                    <StackPanel Visibility="{Binding IsBuiltinContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <views:BuiltinEditor DataContext="{Binding BuiltinEditor}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

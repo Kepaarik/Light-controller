@@ -37,6 +37,7 @@ public sealed class DeviceOutput : IDisposable
     private bool _isPendingRepeat;
     private OutputFrame? _latest;
     private bool? _pendingPower;
+    private bool _isPendingReset;
     private bool _isEnabled;
     private long _sentFrames;
     private long _droppedFrames;
@@ -150,6 +151,28 @@ public sealed class DeviceOutput : IDisposable
     }
 
     /// <summary>
+    /// Эффект сменился: прежний полностью останавливается и стирается с устройства, прежде чем уйдёт первый кадр
+    /// или запуск нового.
+    /// </summary>
+    public void Reset()
+    {
+        lock (_sync)
+        {
+            // Неотправленный кадр и запуск относятся к прежнему эффекту; встроенный эффект после сброса запустится заново
+            _pending = null;
+            _isPendingRepeat = false;
+            _builtin = null;
+            _pendingBuiltin = null;
+
+            if (!_isEnabled)
+                return;
+
+            _isPendingReset = true;
+            Signal();
+        }
+    }
+
+    /// <summary>
     /// Выключает подсветку устройства или включает её обратно с последним кадром.
     /// </summary>
     public void SetEnabled(bool isEnabled)
@@ -168,6 +191,10 @@ public sealed class DeviceOutput : IDisposable
 
             // Встроенный эффект после включения запускается заново вместо кадра; выключение отменяет его неотправленный запуск
             _pendingBuiltin = isEnabled ? _builtin : null;
+
+            // Выключенное устройство гаснет само — сбрасывать его незачем
+            if (!isEnabled)
+                _isPendingReset = false;
 
             if (_builtin != null)
                 _pending = null;
@@ -229,6 +256,7 @@ public sealed class DeviceOutput : IDisposable
     private async Task<bool> SendNextAsync(CancellationToken ct)
     {
         bool? power;
+        bool isReset;
         bool hasFrame;
         BuiltinEffectStart? builtin;
 
@@ -238,8 +266,14 @@ public sealed class DeviceOutput : IDisposable
             _pendingPower = null;
             hasFrame = _pending != null;
 
-            // Запуск встроенного эффекта уходит после включения, а не вместо него
-            builtin = power == null ? _pendingBuiltin : null;
+            // Сброс уходит после включения, но раньше запуска и кадра нового эффекта
+            isReset = power == null && _isPendingReset;
+
+            if (isReset)
+                _isPendingReset = false;
+
+            // Запуск встроенного эффекта уходит после включения и сброса, а не вместо них
+            builtin = power == null && !isReset ? _pendingBuiltin : null;
 
             if (builtin != null)
                 _pendingBuiltin = null;
@@ -248,6 +282,15 @@ public sealed class DeviceOutput : IDisposable
         if (power is { } isOn)
         {
             await RunCommandAsync(() => _device.SetPowerAsync(isOn, ct), isFrame: false, ct);
+            return true;
+        }
+
+        if (isReset)
+        {
+            // Клавиши нового эффекта не догасают из цветов прежнего
+            _smoothed = null;
+
+            await RunCommandAsync(() => _device.ResetAsync(ct), isFrame: false, ct);
             return true;
         }
 

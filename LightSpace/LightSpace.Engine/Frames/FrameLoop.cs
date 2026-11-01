@@ -198,16 +198,21 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Двигает время эффекта каждой группы на seconds секунд с учётом его скорости.
+    /// Двигает время эффекта каждой группы на seconds секунд с учётом его скорости. Если эффект группы сменился,
+    /// её устройства сбрасываются: прежний эффект останавливается и стирается, прежде чем придёт кадр нового.
     /// </summary>
     private static void AdvanceClocks(Dictionary<string, GroupPlayback> playbacks, FrameSnapshot snapshot, double seconds, SourceHub sources)
     {
         foreach (var group in snapshot.Groups)
         {
             if (!playbacks.TryGetValue(group.Id, out var playback))
+            {
                 playbacks[group.Id] = new GroupPlayback(group.Active);
-            else
-                playback.Advance(group.Active, seconds, sources);
+                continue;
+            }
+
+            if (playback.Advance(group.Active, seconds, sources))
+                ResetDevices(group);
         }
 
         // Часы распущенных и удалённых групп больше не нужны
@@ -215,6 +220,21 @@ public sealed class FrameLoop : IDisposable
         {
             foreach (var id in playbacks.Keys.Except(snapshot.Groups.Select(g => g.Id)).ToList())
                 playbacks.Remove(id);
+        }
+    }
+
+    private static void ResetDevices(FrameGroup group)
+    {
+        foreach (var device in group.Devices)
+        {
+            try
+            {
+                device.Output.Reset();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Устройство отключили в потоке окна; новый снимок без него придёт со следующим кадром
+            }
         }
     }
 
@@ -389,16 +409,22 @@ public sealed class FrameLoop : IDisposable
 
         /// <summary>
         /// Двигает время на seconds секунд. content — что должно играть по последнему снимку.
+        /// true — эффект сменился: прежний остановлен, его часы со всем, что они помнили, отпущены.
         /// </summary>
-        public void Advance(FrameContent content, double seconds, SourceHub sources)
+        public bool Advance(FrameContent content, double seconds, SourceHub sources)
         {
             Content = content;
 
             // Новый эффект начинается с начала; у текущего время копится по шагам, чтобы смена скорости не давала скачка
             if (Clock.EffectId != content.ClockId)
+            {
                 Clock = new EffectClock(content.ClockId);
-            else
-                Clock.Advance(content, seconds, sources);
+                return true;
+            }
+
+            Clock.Advance(content, seconds, sources);
+
+            return false;
         }
 
         /// <summary>

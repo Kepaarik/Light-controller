@@ -210,6 +210,59 @@ public sealed partial class SceneViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Мониторы, за которыми может висеть выбранная лента: «Без монитора» и все подключённые мониторы.
+    /// </summary>
+    public IReadOnlyList<DeviceMonitorOption> MonitorOptions { get; private set; } = Array.Empty<DeviceMonitorOption>();
+
+    /// <summary>
+    /// Выбрано отдельное устройство, и это адресная лента: её можно повесить за монитор.
+    /// </summary>
+    public bool IsStripSelected => _selectedGroup is { IsDeviceLighting: true } group
+        && group.Device.Geometry.IsAddressable && !group.Device.IsKeyboard;
+
+    /// <summary>
+    /// Монитор, за которым висит выбранная лента: пока она играет «Экран», она берёт цвета его краёв.
+    /// Монитор, который сейчас не подключён, показывается как «Без монитора», но в настройках не стирается.
+    /// </summary>
+    public DeviceMonitorOption? SelectedMonitor
+    {
+        get
+        {
+            var deviceId = _selectedGroup?.Device.Id;
+            var key = _config.Monitors.FirstOrDefault(m => m.DeviceId != null && m.DeviceId == deviceId)?.MonitorKey;
+
+            return MonitorOptions.FirstOrDefault(o => o.MonitorKey == key) ?? MonitorOptions.FirstOrDefault();
+        }
+        set
+        {
+            if (value == null || _selectedGroup is not { IsDeviceLighting: true } group)
+                return;
+
+            var deviceId = group.Device.Id;
+
+            // Лента висит только за одним монитором, а за монитором — только одна лента
+            foreach (var monitor in _config.Monitors.Where(m => m.DeviceId == deviceId))
+                monitor.DeviceId = null;
+
+            if (value.MonitorKey != null)
+            {
+                var monitor = _config.Monitors.FirstOrDefault(m => m.MonitorKey == value.MonitorKey);
+
+                if (monitor == null)
+                {
+                    monitor = new MonitorConfig { MonitorKey = value.MonitorKey };
+                    _config.Monitors.Add(monitor);
+                }
+
+                monitor.DeviceId = deviceId;
+            }
+
+            OnPropertyChanged();
+            _contentChanged();
+        }
+    }
+
     public ObservableCollection<SceneDeviceViewModel> Devices { get; } = new();
 
     public bool HasDevices => Devices.Count > 0;
@@ -365,6 +418,28 @@ public sealed partial class SceneViewModel : ObservableObject
         }
 
         OnDevicesSelected();
+    }
+
+    /// <summary>
+    /// Открывает панель устройства из бокового меню: у каждого устройства своё содержимое, и выбирается оно здесь.
+    /// </summary>
+    public void OpenDevice(string deviceId)
+    {
+        SetMode(SceneMode.Devices);
+
+        foreach (var device in Devices)
+            device.IsSelected = device.Id == deviceId;
+
+        // Мониторы могли подключить или отключить, пока панель была закрыта
+        MonitorOptions = new[] { new DeviceMonitorOption(null, "Без монитора") }
+            .Concat(Monitors.List().Select(m => new DeviceMonitorOption(m.Key,
+                m.IsPrimary ? $"Монитор {m.Number} · основной" : $"Монитор {m.Number}")))
+            .ToList();
+
+        OnPropertyChanged(nameof(MonitorOptions));
+
+        Select(_deviceLighting.GetValueOrDefault(deviceId));
+        OnSelectionCountChanged();
     }
 
     /// <summary>
@@ -731,6 +806,8 @@ public sealed partial class SceneViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedGroup));
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(SelectedContentKind));
+        OnPropertyChanged(nameof(IsStripSelected));
+        OnPropertyChanged(nameof(SelectedMonitor));
 
         // Рамку на карте рисуют только группы; превью плиток рисуются с настройками эффектов выбранного
         if (group != null)

@@ -38,6 +38,14 @@ public sealed record StartOption(ScreenCorner Corner, bool IsClockwise, string T
 }
 
 /// <summary>
+/// Монитор, за которым висит лента; MonitorKey null — «Без монитора».
+/// </summary>
+public sealed record DeviceMonitorOption(string? MonitorKey, string Title)
+{
+    public override string ToString() => Title;
+}
+
+/// <summary>
 /// Устройство, которое можно повесить вокруг монитора; Id null — «Без ленты».
 /// </summary>
 /// <param name="LedCount">Светодиодов у адресной ленты; 0 — устройство одного цвета или сейчас не подключено.</param>

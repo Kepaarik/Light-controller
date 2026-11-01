@@ -65,6 +65,7 @@ public partial class MainWindow : Window
 
         Nav.Width = compact ? CompactNavItemWidth : NavWidth;
         NavList.Tag = compact;
+        DeviceNavList.Tag = compact;
         BottomNavList.Tag = compact;
     }
 
