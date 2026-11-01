@@ -307,18 +307,20 @@ public sealed partial class ScenariosViewModel : ObservableObject
     /// </summary>
     public void Refresh()
     {
-        var choices = _config.Groups.Select(g => (Group: g, Choice: ScenarioSelector.Choose(_config, g, _apps))).ToList();
+        // На сцене играет либо вся сцена, либо группы — чипы и отметки «играет» показывают то, что играет
+        var groups = _config.PlayingGroups();
+        var choices = groups.Select(g => (Group: g, Choice: ScenarioSelector.Choose(_config, g, _apps))).ToList();
 
         foreach (var item in Items)
         {
             var playing = choices.Where(c => c.Choice.Scenario == item.Settings).Select(c => TitleOf(c.Group)).ToList();
-            var groupCount = _config.Groups.Count(g => g.ScenarioIds.Contains(item.Id));
+            var groupCount = groups.Count(g => g.ScenarioIds.Contains(item.Id));
 
             item.SetPlaying(playing, groupCount);
         }
 
         // Состав групп мог измениться на сцене — тогда чипы собираются заново
-        if (!GroupChips.Select(c => c.Group).SequenceEqual(_config.Groups) ||
+        if (!GroupChips.Select(c => c.Group).SequenceEqual(groups) ||
             GroupChips.Any(c => c.Title != TitleOf(c.Group)))
             BuildGroupChips();
 
@@ -410,7 +412,7 @@ public sealed partial class ScenariosViewModel : ObservableObject
         if (_selectedItem == null)
             return;
 
-        foreach (var group in _config.Groups)
+        foreach (var group in _config.PlayingGroups())
             GroupChips.Add(new ScenarioGroupChipViewModel(group, TitleOf(group), group.ScenarioIds.Contains(_selectedItem.Id), OnChipToggled));
     }
 

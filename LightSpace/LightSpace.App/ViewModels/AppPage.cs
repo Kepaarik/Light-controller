@@ -8,6 +8,7 @@ public enum AppPage
     Scene,
     Scenarios,
     Devices,
+    Monitors,
     Settings
 }
 

@@ -13,7 +13,14 @@ namespace LightSpace.Engine.Frames;
 /// </summary>
 /// <param name="ScenePoints">Места светодиодов на сцене в единицах сцены, с теми же номерами, что в Geometry;
 /// у устройства одного цвета — одна точка в его середине.</param>
-public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry Geometry, IReadOnlyList<EffectPixel?> ScenePoints);
+public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry Geometry, IReadOnlyList<EffectPixel?> ScenePoints)
+{
+    /// <summary>
+    /// Монитор, вокруг которого висит устройство: экран оно играет по краям этого монитора, а не по месту на сцене.
+    /// null — устройство ни к какому монитору не привязано.
+    /// </summary>
+    public MonitorBinding? Monitor { get; init; }
+}
 
 /// <summary>
 /// Содержимое, которое играет в группе: эффект с его настройками.
@@ -115,6 +122,7 @@ public sealed record FrameSnapshot(
     {
         var ready = new Dictionary<string, FrameDevice>();
         var groups = new List<FrameGroup>();
+        var screens = config.Monitors.Count > 0 ? Monitors.List() : Array.Empty<MonitorInfo>();
 
         foreach (var device in devices)
         {
@@ -126,17 +134,39 @@ public sealed record FrameSnapshot(
             // Устройство, которое ещё не расставили, стоит в середине сцены
             var points = SceneProjection.Project(geometry, device.Settings.Placement ?? new DevicePlacement());
 
-            ready[device.Id] = new FrameDevice(device.Id, output, geometry, points);
+            ready[device.Id] = new FrameDevice(device.Id, output, geometry, points)
+            {
+                Monitor = BindingOf(config, device.Id, geometry, screens)
+            };
         }
 
-        foreach (var group in config.Groups)
+        foreach (var group in config.PlayingGroups())
         {
-            var targets = group.DeviceIds.Where(ready.ContainsKey).Select(id => ready[id]).ToList();
+            // Вся сцена играет на всех готовых устройствах
+            var targets = config.IsWholeScene
+                ? ready.Values.ToList()
+                : group.DeviceIds.Where(ready.ContainsKey).Select(id => ready[id]).ToList();
 
             groups.Add(new FrameGroup(group.Id, ActiveContentOf(config, group, apps), group.Brightness, targets));
         }
 
         return new FrameSnapshot(config.LightingEnabled, config.FrameRate, config.TransitionMilliseconds, groups);
+    }
+
+    /// <summary>
+    /// Подсветка монитора, к которому привязано устройство; null — устройство не привязано.
+    /// </summary>
+    private static MonitorBinding? BindingOf(AppConfig config, string deviceId, DeviceGeometry geometry, IReadOnlyList<MonitorInfo> screens)
+    {
+        var monitor = config.Monitors.FirstOrDefault(m => m.DeviceId == deviceId);
+
+        if (monitor == null)
+            return null;
+
+        // Отключённый сейчас монитор считаем обычным 16:9 — картинки у него всё равно не будет
+        var screen = screens.FirstOrDefault(s => s.Key == monitor.MonitorKey);
+
+        return ScreenEdges.Bind(monitor, geometry.Points.Count, screen?.Width ?? 16, screen?.Height ?? 9);
     }
 
     /// <summary>

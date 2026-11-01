@@ -57,8 +57,8 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice, IBuiltinEffec
 
     private const int KeyLedCount = 126;
 
-    // Клавиатура по проводу принимает до 60 кадров в секунду — сколько выбрано в настройках эффектов
-    private static readonly TimeSpan FrameInterval = TimeSpan.FromSeconds(1.0 / 60);
+    // Не шлём кадры чаще 20 раз в секунду: на 30 и 60 кадрах анимация на клавиатуре дёргается и запаздывает
+    private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(50);
 
     /// <summary>
     /// Эффекты прошивки S98 под их номерами режимов; названия переведены с внутренних имён режимов настройщика RK.

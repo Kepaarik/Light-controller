@@ -71,6 +71,22 @@ public sealed class AppConfig
     public List<GroupConfig> Groups { get; set; } = new();
 
     /// <summary>
+    /// На всех устройствах играет одно и то же — сценарии и содержимое всей сцены; группы при этом сохраняются
+    /// и снова играют, когда сцена возвращается к группам.
+    /// </summary>
+    public bool IsWholeScene { get; set; }
+
+    /// <summary>
+    /// Сценарии, яркость и содержимое «По умолчанию» всей сцены. Своего списка устройств у неё нет: в неё входят все.
+    /// </summary>
+    public GroupConfig Scene { get; set; } = NewScene();
+
+    /// <summary>
+    /// Подсветка мониторов: ленты вокруг мониторов, повороты мониторов и раскладки лент.
+    /// </summary>
+    public List<MonitorConfig> Monitors { get; set; } = new();
+
+    /// <summary>
     /// Все сценарии; группы ссылаются на них по идентификаторам.
     /// </summary>
     public List<ScenarioConfig> Scenarios { get; set; } = new();
@@ -103,6 +119,15 @@ public sealed class AppConfig
         // Пустые разделы в файле дали бы null вместо содержимого и настроек эффектов
         NormalizeScenarios();
         NormalizeGroups();
+        NormalizeMonitors();
+    }
+
+    /// <summary>
+    /// То, что сейчас играет на устройствах: вся сцена или группы.
+    /// </summary>
+    public IReadOnlyList<GroupConfig> PlayingGroups()
+    {
+        return IsWholeScene ? new[] { Scene } : Groups;
     }
 
     /// <summary>
@@ -203,6 +228,36 @@ public sealed class AppConfig
 
         foreach (var group in Groups)
             group.ScenarioIds.Remove(scenario.Id);
+
+        Scene.ScenarioIds.Remove(scenario.Id);
+    }
+
+    private static GroupConfig NewScene()
+    {
+        return new GroupConfig { Id = "scene", Name = "Вся сцена" };
+    }
+
+    /// <summary>
+    /// У монитора одна запись, а у ленты — один монитор; ссылки на забытые устройства убираются.
+    /// </summary>
+    private void NormalizeMonitors()
+    {
+        var devices = Devices.Select(d => d.Id).ToHashSet();
+        var bound = new HashSet<string>();
+
+        Monitors = (Monitors ?? new List<MonitorConfig>())
+            .Where(m => m != null && !string.IsNullOrWhiteSpace(m.MonitorKey))
+            .GroupBy(m => m.MonitorKey)
+            .Select(g => g.First())
+            .ToList();
+
+        foreach (var monitor in Monitors)
+        {
+            monitor.Normalize();
+
+            if (monitor.DeviceId != null && (!devices.Contains(monitor.DeviceId) || !bound.Add(monitor.DeviceId)))
+                monitor.DeviceId = null;
+        }
     }
 
     /// <summary>
@@ -285,5 +340,21 @@ public sealed class AppConfig
 
         foreach (var device in Devices)
             EnsureGroup(device.Id);
+
+        // Вся сцена — не группа из списка: у неё постоянный идентификатор, нет своих устройств и обводки
+        var scene = Scene ?? NewScene();
+        var defaults = NewScene();
+
+        scene.Id = defaults.Id;
+        scene.IsSolo = false;
+        scene.Name = defaults.Name;
+        scene.Color = "";
+        scene.DeviceIds = new List<string>();
+        scene.ScenarioIds = (scene.ScenarioIds ?? new List<string>()).Where(scenarios.Contains).Distinct().ToList();
+        scene.Brightness = Math.Clamp(scene.Brightness, 0, 100);
+        scene.DefaultContent ??= new ContentConfig();
+        scene.DefaultContent.Normalize();
+
+        Scene = scene;
     }
 }
