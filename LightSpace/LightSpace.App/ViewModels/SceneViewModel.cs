@@ -43,6 +43,9 @@ public sealed partial class SceneViewModel : ObservableObject
     private SceneGroupViewModel? _selectedGroup;
     private TimeSpan _lastTick;
 
+    // Панель всей сцены: в режиме «Вся сцена» она открыта всегда; null — устройств нет
+    private SceneGroupViewModel? _sceneGroup;
+
     // Места всех устройств перед каждым шагом в режиме редактирования расстановки, последний шаг — в конце.
     // Ползунок размера двигается мелкими шагами: подряд идущие изменения одного устройства — один шаг отмены
     private readonly LinkedList<Dictionary<string, DevicePlacement?>> _undo = new();
@@ -128,6 +131,42 @@ public sealed partial class SceneViewModel : ObservableObject
     /// </summary>
     public bool IsDefaultScene => _selectedGroup?.Content.Kind == ContentKind.Scene;
 
+    /// <summary>
+    /// На всех устройствах играет одно и то же — эффект и сценарии всей сцены; группы сохраняются до возврата к ним.
+    /// </summary>
+    public bool IsWholeScene
+    {
+        get => _config.IsWholeScene;
+        set
+        {
+            if (_config.IsWholeScene == value)
+                return;
+
+            _config.IsWholeScene = value;
+
+            // Выделение относилось к прежнему режиму; во всей сцене сразу открывается её панель
+            foreach (var device in Devices)
+                device.IsSelected = false;
+
+            Select(null);
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsGroupsMode));
+            OnPropertyChanged(nameof(SceneHint));
+            OnSelectionCountChanged();
+            _contentChanged();
+        }
+    }
+
+    /// <summary>
+    /// У групп устройств свои эффекты и сценарии.
+    /// </summary>
+    public bool IsGroupsMode
+    {
+        get => !IsWholeScene;
+        set => IsWholeScene = !value;
+    }
+
     public ObservableCollection<SceneDeviceViewModel> Devices { get; } = new();
 
     public bool HasDevices => Devices.Count > 0;
@@ -147,7 +186,7 @@ public sealed partial class SceneViewModel : ObservableObject
     /// <summary>
     /// Выделено несколько устройств — их можно сделать группой.
     /// </summary>
-    public bool CanMakeGroup => SelectedDevices.Count >= 2;
+    public bool CanMakeGroup => !IsWholeScene && SelectedDevices.Count >= 2;
 
     /// <summary>
     /// Сколько устройств выделено, для карточки «Сделать группой».
@@ -176,7 +215,9 @@ public sealed partial class SceneViewModel : ObservableObject
     /// </summary>
     public string SceneHint => IsEditingLayout
         ? "Перетаскивайте устройства мышью. Выделите одно устройство, чтобы повернуть его или поменять размер."
-        : "Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой.";
+        : IsWholeScene
+            ? "Эффект и сценарии справа играют сразу на всех устройствах."
+            : "Ctrl+клик или рамка мышью выделяют несколько устройств — их можно сделать группой.";
 
     /// <summary>
     /// Устройство, которое поворачивают и меняют в размере: единственное выделенное в режиме редактирования расстановки.
@@ -351,6 +392,8 @@ public sealed partial class SceneViewModel : ObservableObject
     {
         foreach (var group in Groups)
             group.SetScenarios(ScenariosOf(group.Settings));
+
+        _sceneGroup?.SetScenarios(ScenariosOf(_config.Scene));
     }
 
     /// <summary>
@@ -622,6 +665,10 @@ public sealed partial class SceneViewModel : ObservableObject
     /// </summary>
     private void Select(SceneGroupViewModel? group)
     {
+        // Во всей сцене панель одна — её собственная, что бы ни выбрали на карте
+        if (IsWholeScene)
+            group = _sceneGroup;
+
         if (_selectedGroup != null)
             _selectedGroup.IsSelected = false;
 
@@ -729,6 +776,10 @@ public sealed partial class SceneViewModel : ObservableObject
 
         foreach (var (group, members) in groups)
             Groups.Add(new SceneGroupViewModel(group, members, ScenariosOf(group), _contentChanged));
+
+        _sceneGroup = Devices.Count > 0
+            ? new SceneGroupViewModel(_config.Scene, Devices.ToList(), ScenariosOf(_config.Scene), _contentChanged) { IsWholeScene = true }
+            : null;
 
         _selectedGroup = null;
         Select(Groups.FirstOrDefault(g => g.Id == selectedGroupId));

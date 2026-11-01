@@ -169,7 +169,16 @@ public sealed class FrameLoop : IDisposable
             foreach (var content in playbacks[group.Id].Playing)
             {
                 if (content.Screen is { } screen)
+                {
                     monitors.Add(screen.MonitorKey);
+
+                    // Устройства, привязанные к монитору, берут цвета с краёв своего монитора
+                    foreach (var device in group.Devices)
+                    {
+                        if (device.Monitor is { } binding)
+                            monitors.Add(binding.MonitorKey);
+                    }
+                }
 
                 if (content.Music is { } music)
                     inputs.Add(music.Input);
@@ -347,7 +356,7 @@ public sealed class FrameLoop : IDisposable
                 Layers.Advance(content.Layers, seconds);
 
             if (content.Screen is { } screen)
-                Screen.Advance(screen, sources.PictureOf(screen.MonitorKey), seconds);
+                Screen.Advance(screen, sources.PictureOf(screen.MonitorKey), seconds, sources.PictureOf);
 
             if (content.Music is { } music)
                 Music.Advance(music, sources.LevelsOf(music.Input), seconds);
@@ -520,10 +529,12 @@ public sealed class FrameLoop : IDisposable
 
                 if (content.Game is { } game)
                     colors = clock.Game.Render(device.Id, game, device.Geometry, device.ScenePoints, SceneArea.Width, SceneArea.Height);
+                else if (content.Screen is { } screen)
+                    colors = device.Monitor is { } binding
+                        ? clock.Screen.RenderBound(device.Id, screen, binding)
+                        : clock.Screen.Render(device.Id, screen, device.ScenePoints, SceneArea.Width, SceneArea.Height);
                 else
-                    colors = content.Screen is { } screen
-                        ? clock.Screen.Render(device.Id, screen, device.ScenePoints, SceneArea.Width, SceneArea.Height)
-                        : clock.Music.Render(content.Music!, device.Geometry);
+                    colors = clock.Music.Render(content.Music!, device.Geometry);
 
                 clock.FailingDevices.Remove(device.Id);
 

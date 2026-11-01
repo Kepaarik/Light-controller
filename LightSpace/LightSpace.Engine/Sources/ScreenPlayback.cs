@@ -38,14 +38,20 @@ public sealed class ScreenPlayback
 
     private ScreenPicture _picture = ScreenPicture.Empty;
 
+    // Картинки других мониторов — для устройств, привязанных к своему монитору
+    private Func<string, ScreenPicture>? _pictureOf;
+
     // Доля нового цвета в этом кадре
     private double _follow = 1;
 
     /// <summary>
     /// Берёт для следующего кадра картинку монитора, прошло seconds секунд с прошлого кадра.
+    /// pictureOf — картинка любого монитора по его системному имени, для устройств, привязанных к монитору.
     /// </summary>
-    public void Advance(ScreenSettings settings, ScreenPicture picture, double seconds)
+    public void Advance(ScreenSettings settings, ScreenPicture picture, double seconds, Func<string, ScreenPicture>? pictureOf = null)
     {
+        _pictureOf = pictureOf;
+
         if (_states.Count > _rendered.Count)
         {
             foreach (var key in _states.Keys.Where(k => !_rendered.Contains(k)).ToList())
@@ -87,6 +93,54 @@ public sealed class ScreenPlayback
 
             // Первый кадр сразу показывает картинку, дальше цвет плавно догоняет её
             var follow = isNew ? 1 : _follow;
+            var state = states![i];
+
+            state = (
+                state.R + (target.R - state.R) * follow,
+                state.G + (target.G - state.G) * follow,
+                state.B + (target.B - state.B) * follow);
+
+            states[i] = state;
+            colors[i] = new RgbColor(ToByte(state.R), ToByte(state.G), ToByte(state.B));
+        }
+
+        return colors;
+    }
+
+    /// <summary>
+    /// Цвета устройства, привязанного к монитору: каждый светодиод берёт цвет края картинки своего монитора,
+    /// устройство одного цвета — средний цвет картинки. key — чьи это цвета: по нему помнятся прежние цвета.
+    /// </summary>
+    public RgbColor[] RenderBound(string key, ScreenSettings settings, MonitorBinding binding)
+    {
+        var picture = _pictureOf?.Invoke(binding.MonitorKey) ?? _picture;
+        var count = Math.Max(binding.Points.Count, 1);
+        var colors = new RgbColor[count];
+        var isNew = !_states.TryGetValue(key, out var states) || states.Length != count;
+
+        _rendered.Add(key);
+
+        if (isNew)
+        {
+            states = new (double R, double G, double B)[count];
+            _states[key] = states;
+        }
+
+        // Первый кадр сразу показывает картинку, дальше цвет плавно догоняет её
+        var follow = isNew ? 1 : _follow;
+
+        for (var i = 0; i < count; i++)
+        {
+            RgbColor raw;
+
+            if (binding.Points.Count == 0)
+                raw = ScreenEdges.Average(picture);
+            else if (binding.Points[i] is { } point)
+                raw = ScreenEdges.Sample(picture, point, binding);
+            else
+                continue;
+
+            var target = Adjust(raw, settings);
             var state = states![i];
 
             state = (

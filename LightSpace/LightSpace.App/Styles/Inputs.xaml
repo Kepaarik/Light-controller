@@ -17,7 +17,7 @@
                 <ControlTemplate TargetType="CheckBox">
                     <DockPanel x:Name="Root" Background="Transparent">
                         <Border x:Name="Track" DockPanel.Dock="Right" Width="{StaticResource ToggleWidth}" Height="{StaticResource ToggleHeight}"
-                                CornerRadius="{StaticResource RadiusPill}" Margin="{StaticResource GapLeft12}"
+                                CornerRadius="10" Margin="{StaticResource GapLeft12}"
                                 Background="Transparent" BorderBrush="{DynamicResource MutedBrush}" BorderThickness="1.5" VerticalAlignment="Center">
                             <Ellipse x:Name="Knob" Width="10" Height="10" Fill="{DynamicResource MutedBrush}"
                                      HorizontalAlignment="Left" Margin="{StaticResource ToggleKnobMargin}"/>
@@ -139,7 +139,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RepeatButton">
                     <Border Background="Transparent">
-                        <Border Height="{StaticResource SliderTrackHeight}" CornerRadius="{StaticResource RadiusPill}"
+                        <Border Height="{StaticResource SliderTrackHeight}" CornerRadius="3"
                                 Background="{TemplateBinding Background}" VerticalAlignment="Center"/>
                     </Border>
                 </ControlTemplate>
@@ -157,7 +157,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Slider">
                     <Grid x:Name="Root" Background="Transparent">
-                        <Border Height="{StaticResource SliderTrackHeight}" CornerRadius="{StaticResource RadiusPill}"
+                        <Border Height="{StaticResource SliderTrackHeight}" CornerRadius="3"
                                 Background="{TemplateBinding Background}" VerticalAlignment="Center"/>
                         <Track x:Name="PART_Track">
                             <Track.DecreaseRepeatButton>

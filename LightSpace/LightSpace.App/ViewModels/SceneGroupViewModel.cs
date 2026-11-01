@@ -62,6 +62,16 @@ public sealed partial class SceneGroupViewModel : ObservableObject
     public bool IsSolo => Settings.IsSolo;
 
     /// <summary>
+    /// Вся сцена: в неё входят все устройства, своего названия, обводки и состава у неё нет.
+    /// </summary>
+    public bool IsWholeScene { get; init; }
+
+    /// <summary>
+    /// Группа, собранная пользователем: со своим названием, обводкой и составом.
+    /// </summary>
+    public bool IsNamedGroup => !IsSolo && !IsWholeScene;
+
+    /// <summary>
     /// Устройства группы в порядке списка устройств.
     /// </summary>
     public IReadOnlyList<SceneDeviceViewModel> Devices { get; }

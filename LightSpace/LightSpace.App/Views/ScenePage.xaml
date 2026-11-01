@@ -108,6 +108,11 @@
                                   IsChecked="{Binding IsEditingLayout}" VerticalAlignment="Top"/>
                     <TextBlock Text="Сцена" Style="{StaticResource PageTitle}"/>
                 </DockPanel>
+                <!-- Что играет на устройствах: один эффект на всей сцене или у каждой группы свой -->
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource GapBottom8}">
+                    <RadioButton GroupName="SceneMode" Content="Вся сцена" IsChecked="{Binding IsWholeScene}" Margin="{StaticResource GapRight4}"/>
+                    <RadioButton GroupName="SceneMode" Content="Группы" IsChecked="{Binding IsGroupsMode}"/>
+                </StackPanel>
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}" Text="{Binding SceneHint}"/>
                 <Grid>
                     <!-- Пустое место вокруг карты тоже ловит мышь: с него начинается рамка выделения -->
@@ -121,8 +126,10 @@
                                 <Border Style="{StaticResource SceneSurface}" controls:SceneMap.Place="{x:Static controls:SceneMap.WholeScene}"/>
                             </controls:SceneMap>
 
+                            <!-- Рамки групп видны, только пока у групп свои эффекты -->
                             <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource MapGroupTemplate}"
-                                          ItemContainerStyle="{StaticResource MapItem}">
+                                          ItemContainerStyle="{StaticResource MapItem}"
+                                          Visibility="{Binding IsGroupsMode, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <controls:SceneMap/>
@@ -148,7 +155,8 @@
                     <!-- Режим редактирования расстановки: автокомпоновка, поворот и размер выбранного устройства -->
                     <Border Style="{StaticResource FlyoutCard}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
                             Visibility="{Binding IsEditingLayout, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <StackPanel Orientation="Horizontal">
+                        <!-- В узкой колонке карты кнопки переносятся на следующую строку, а не обрезаются краем -->
+                        <WrapPanel>
                             <Button Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE7A7;" ToolTip="Отменить (Ctrl+Z)"
                                     Command="{Binding UndoCommand}" Margin="{StaticResource GapRight4}"/>
                             <Button Style="{StaticResource GhostButton}" Content="Автокомпоновка" controls:Appearance.Icon="&#xE8A9;"
@@ -163,7 +171,7 @@
                                                   Visibility="{Binding HasEditedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                             <Button Style="{StaticResource AccentButton}" Content="Готово" controls:Appearance.Icon="&#xE8FB;"
                                     Command="{Binding FinishEditingCommand}"/>
-                        </StackPanel>
+                        </WrapPanel>
                     </Border>
 
                     <!-- Выделено несколько устройств: всплывающая карточка с действием «Сделать группой» -->
@@ -192,12 +200,19 @@
                                   Visibility="{Binding HasSelection, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                         <StackPanel>
                             <!-- Группа: своё название и цвет обводки -->
-                            <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                            <StackPanel Visibility="{Binding SelectedGroup.IsNamedGroup, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                 <TextBlock Text="Название группы" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
                                 <TextBox Text="{Binding SelectedGroup.Name, UpdateSourceTrigger=PropertyChanged}"/>
                                 <TextBlock Text="Цвет обводки" Style="{StaticResource SectionLabel}"/>
                                 <ListBox Style="{StaticResource SwatchPalette}" ItemsSource="{StaticResource GroupPalette}"
                                          SelectedItem="{Binding SelectedGroup.OutlineColor}"/>
+                            </StackPanel>
+
+                            <!-- Вся сцена: одно содержимое на всех устройствах -->
+                            <StackPanel Visibility="{Binding SelectedGroup.IsWholeScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                <TextBlock Text="Вся сцена" Style="{StaticResource Subtitle}"/>
+                                <TextBlock Text="Эффект и сценарии играют сразу на всех устройствах. Чтобы дать устройствам свои эффекты, переключитесь на «Группы»."
+                                           Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                             </StackPanel>
 
                             <!-- Устройство без группы: его название вместо названия группы -->
@@ -261,7 +276,7 @@
                             </StackPanel>
 
                             <!-- Устройства группы и действия с ней -->
-                            <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                            <StackPanel Visibility="{Binding SelectedGroup.IsNamedGroup, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                 <TextBlock Text="Устройства группы" Style="{StaticResource SectionLabel}"/>
                                 <ItemsControl ItemsSource="{Binding SelectedGroup.Devices}">
                                     <ItemsControl.ItemTemplate>

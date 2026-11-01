@@ -39,6 +39,7 @@ public sealed partial class MainViewModel : ObservableObject
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave);
         Scenarios = new ScenariosViewModel(config, _deviceManager, _apps, _sources, OnContentChanged);
         Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _apps, OnContentChanged, AddScenario, OpenScenario);
+        Monitors = new MonitorsViewModel(config, _deviceManager, OnContentChanged);
 
         Settings.PropertyChanged += OnSettingsChanged;
         _deviceManager.DevicesChanged += OnDevicesChanged;
@@ -53,6 +54,7 @@ public sealed partial class MainViewModel : ObservableObject
         new(AppPage.Scene, "Сцена", ""),
         new(AppPage.Scenarios, "Сценарии", ""),
         new(AppPage.Devices, "Устройства", ""),
+        new(AppPage.Monitors, "Мониторы", ""),
         new(AppPage.Settings, "Настройки", "")
     };
 
@@ -63,6 +65,8 @@ public sealed partial class MainViewModel : ObservableObject
     public SceneViewModel Scene { get; }
 
     public ScenariosViewModel Scenarios { get; }
+
+    public MonitorsViewModel Monitors { get; }
 
     /// <summary>
     /// Сообщает, видно ли окно: живые цвета и превью считаются, только пока на них можно посмотреть.
@@ -228,6 +232,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedPageChanged(AppPage value)
     {
+        // Мониторы и устройства могли подключить или отключить, пока страница была закрыта
+        if (value == AppPage.Monitors)
+            Monitors.Refresh();
+
         UpdateLive();
     }
 
