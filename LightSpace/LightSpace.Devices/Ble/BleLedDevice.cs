@@ -51,6 +51,8 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
 
     public IReadOnlyList<BuiltinEffect> BuiltinEffects => _model?.Effects ?? Array.Empty<BuiltinEffect>();
 
+    public bool HasBuiltinColor => false;
+
     public override string Address => string.Join(":", Enumerable.Range(0, 6).Reverse().Select(i => ((_device.BluetoothAddress >> (i * 8)) & 0xFF).ToString("X2")));
 
     public override Task SetPowerAsync(bool isOn, CancellationToken ct = default)

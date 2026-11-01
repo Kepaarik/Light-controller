@@ -8,7 +8,7 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:BuiltinEditorViewModel}">
 
-    <!-- Содержимое — встроенный эффект: вместо превью подсказка, эффект каждого устройства, скорость и цвет -->
+    <!-- Содержимое — встроенный эффект: вместо превью подсказка, эффект устройства, скорость и цвет -->
     <StackPanel>
         <!-- Эффект играет само устройство, поэтому живого превью нет -->
         <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
@@ -16,46 +16,49 @@
                 <TextBlock DockPanel.Dock="Left" Text="&#xE946;" Style="{StaticResource Icon}" Foreground="{DynamicResource MutedBrush}"
                            VerticalAlignment="Top" Margin="{StaticResource GapRight12}"/>
                 <TextBlock Style="{StaticResource Hint}"
-                           Text="Встроенный эффект играет сам контроллер устройства, поэтому показать его здесь нельзя — посмотрите на само устройство. Пока он играет, на сцене у устройства нет живых цветов."/>
+                           Text="Встроенный эффект играет сам контроллер устройства, поэтому показать его здесь нельзя — посмотрите на само устройство. Приложение при этом ничего на устройство не отправляет."/>
             </DockPanel>
         </Border>
 
-        <!-- Какой эффект играет каждое устройство -->
-        <TextBlock Text="Устройства" Style="{StaticResource SectionLabel}"/>
-        <ItemsControl ItemsSource="{Binding Devices}">
+        <!-- Какой эффект играет каждое устройство; открытое в меню устройство — без своего названия.
+             Варианты одного эффекта — одной строкой в списке, вариант выбирается ползунком -->
+        <TextBlock Text="Устройства" Style="{StaticResource SectionLabel}"
+                   Visibility="{Binding IsOneDevice, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+        <ItemsControl ItemsSource="{Binding Devices}" Margin="{StaticResource GapTop8}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="vm:BuiltinDeviceViewModel">
-                    <Border Style="{StaticResource SettingRow}">
-                        <StackPanel>
+                    <StackPanel>
+                        <StackPanel Visibility="{Binding DataContext.IsOneDevice, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
                             <TextBlock Text="{Binding Name}" Style="{StaticResource Body}"/>
                             <TextBlock Text="{Binding Protocol}" Style="{StaticResource Hint}"/>
-                            <controls:SearchPicker ItemsSource="{Binding Effects}" SelectedItem="{Binding SelectedEffect}"
-                                                   DisplayMemberPath="Title" Placeholder="Выберите эффект"
-                                                   Margin="{StaticResource GapTop8}"/>
                         </StackPanel>
-                    </Border>
+                        <controls:SearchPicker ItemsSource="{Binding EffectGroups}" SelectedItem="{Binding SelectedGroup}"
+                                               DisplayMemberPath="Title" Placeholder="Выберите эффект"
+                                               Margin="{StaticResource GapTop8}"/>
+                        <controls:ValueSlider Label="Вариант" Minimum="1" Maximum="{Binding VariantCount}" Step="1"
+                                              Value="{Binding Variant}" Margin="{StaticResource GapTop8}"
+                                              Visibility="{Binding HasVariants, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                    </StackPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
         <TextBlock Text="Сейчас не подключено ни одного устройства со встроенными эффектами. Они есть у лент ELK/MELK с известной моделью, подсветки Robobloq и клавиатуры RK S98 — найдите их на вкладке «Устройства»."
                    Style="{StaticResource Hint}"
                    Visibility="{Binding HasDevices, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
-        <TextBlock Text="Устройство, которому эффект не выбран, играет свой первый эффект. Устройства группы без встроенных эффектов, пока он играет, не светятся."
-                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
-        <!-- Скорость и цвет общие для всех устройств -->
+        <!-- Скорость; цвет — только у устройств, которые умеют играть эффект одним цветом -->
         <TextBlock Text="Скорость" Style="{StaticResource SectionLabel}"/>
         <controls:ValueSlider Label="Скорость эффекта" Unit="%" Minimum="0" Maximum="100" Step="5"
                               Value="{Binding Speed}"/>
 
-        <TextBlock Text="Цвета" Style="{StaticResource SectionLabel}"/>
-        <DockPanel>
-            <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}" VerticalAlignment="Center"
-                                  Visibility="{Binding UseColor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ColorOptions}" SelectedItem="{Binding SelectedColors}"
-                     HorizontalAlignment="Left"/>
-        </DockPanel>
-        <TextBlock Text="Свой цвет и яркость группы меняют эффекты клавиатуры; ленты играют эффекты своими цветами и со своей яркостью."
-                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
+        <StackPanel Visibility="{Binding IsColorShown, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <TextBlock Text="Цвета" Style="{StaticResource SectionLabel}"/>
+            <DockPanel>
+                <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}" VerticalAlignment="Center"
+                                      Visibility="{Binding UseColor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ColorOptions}" SelectedItem="{Binding SelectedColors}"
+                         HorizontalAlignment="Left"/>
+            </DockPanel>
+        </StackPanel>
     </StackPanel>
 </UserControl>

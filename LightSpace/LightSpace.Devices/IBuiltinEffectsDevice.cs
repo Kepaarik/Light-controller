@@ -6,7 +6,9 @@ namespace LightSpace.Devices;
 /// Эффект, встроенный в устройство: его играет сам контроллер или прошивка устройства.
 /// </summary>
 /// <param name="Id">Номер эффекта у устройства.</param>
-public sealed record BuiltinEffect(int Id, string Title);
+/// <param name="Title">Название эффекта; у вариантов одного эффекта оно общее.</param>
+/// <param name="Variant">Номер варианта с 1 среди эффектов с тем же названием; 0 — у эффекта нет вариантов.</param>
+public sealed record BuiltinEffect(int Id, string Title, int Variant = 0);
 
 /// <summary>
 /// Устройство со встроенными эффектами: они идут сами, без кадров от приложения, и работают даже при закрытом приложении,
@@ -18,6 +20,11 @@ public interface IBuiltinEffectsDevice
     /// Встроенные эффекты устройства; пусто, если эффекты этой модели неизвестны.
     /// </summary>
     IReadOnlyList<BuiltinEffect> BuiltinEffects { get; }
+
+    /// <summary>
+    /// Встроенные эффекты можно играть одним выбранным цветом; иначе устройство играет их только своими цветами.
+    /// </summary>
+    bool HasBuiltinColor { get; }
 
     /// <summary>
     /// Запускает встроенный эффект со скоростью и яркостью 0–100 % и цветом; без цвета эффект играет своими цветами.

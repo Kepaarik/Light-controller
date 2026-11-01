@@ -9,6 +9,7 @@ using LightSpace.App.Controls;
 using LightSpace.App.Services;
 using LightSpace.Core;
 using LightSpace.Core.Config;
+using LightSpace.Devices;
 using LightSpace.Engine;
 using LightSpace.Engine.Frames;
 using LightSpace.Engine.Sources;
@@ -40,6 +41,9 @@ public sealed partial class SceneViewModel : ObservableObject
     private SceneGroupViewModel? _selectedGroup;
     private TimeSpan _lastTick;
 
+    // Открытая вкладка типа содержимого; null — та, что играет
+    private ContentKindOption? _viewedKind;
+
     // Панель всей сцены: в режиме «Вся сцена» она открыта всегда; null — устройств нет
     private SceneGroupViewModel? _sceneGroup;
 
@@ -66,12 +70,13 @@ public sealed partial class SceneViewModel : ObservableObject
         _loop = loop;
         _contentChanged = contentChanged;
 
-        Editor = new EffectEditorViewModel(contentChanged);
-        SceneEditor = new SceneEditorViewModel(config, manager, contentChanged);
-        ScreenEditor = new ScreenEditorViewModel(sources, contentChanged);
-        MusicEditor = new MusicEditorViewModel(sources, contentChanged);
-        GameEditor = new GameEditorViewModel(sources, contentChanged);
-        BuiltinEditor = new BuiltinEditorViewModel(manager, contentChanged);
+        // Выбор в редакторе вкладки включает её тип содержимого: само переключение вкладок ничего не меняет
+        Editor = new EffectEditorViewModel(() => OnEditorChanged(ContentKindOption.Effect));
+        SceneEditor = new SceneEditorViewModel(config, manager, () => OnEditorChanged(ContentKindOption.Scene));
+        ScreenEditor = new ScreenEditorViewModel(sources, () => OnEditorChanged(ContentKindOption.Screen));
+        MusicEditor = new MusicEditorViewModel(sources, () => OnEditorChanged(ContentKindOption.Music));
+        GameEditor = new GameEditorViewModel(sources, () => OnEditorChanged(ContentKindOption.Game));
+        BuiltinEditor = new BuiltinEditorViewModel(manager, () => OnEditorChanged(ContentKindOption.Builtin));
 
         _manager.DevicesChanged += (_, _) => SyncDevices();
         SyncDevices();
@@ -111,65 +116,122 @@ public sealed partial class SceneViewModel : ObservableObject
     public BuiltinEditorViewModel BuiltinEditor { get; }
 
     /// <summary>
-    /// Типы содержимого для сегментов: эффект, сцена, экран, музыка, игра, встроенный эффект.
+    /// Типы содержимого для сегментов. У отдельного устройства без встроенных эффектов «Встроенный» не показывается.
     /// </summary>
-    public IReadOnlyList<ContentKindOption> ContentKinds => ContentKindOption.All;
+    public IReadOnlyList<ContentKindOption> ContentKinds =>
+        _selectedGroup is { IsDeviceLighting: true } group && !HasBuiltinEffects(group.Device.Id)
+            ? ContentKindOption.All.Where(k => k != ContentKindOption.Builtin).ToList()
+            : ContentKindOption.All;
 
     /// <summary>
-    /// Тип содержимого выбранного. Сцена без слоёв получает первый слой во всю сцену с эффектом, который играл до этого.
+    /// Тип содержимого, который сейчас играет у выбранного.
+    /// </summary>
+    public ContentKindOption? PlayingContentKind => _selectedGroup?.Content.Kind switch
+    {
+        null => null,
+        ContentKind.Scene => ContentKindOption.Scene,
+        ContentKind.Screen => ContentKindOption.Screen,
+        ContentKind.Music => ContentKindOption.Music,
+        ContentKind.Game => ContentKindOption.Game,
+        ContentKind.Builtin => ContentKindOption.Builtin,
+        _ => ContentKindOption.Effect
+    };
+
+    /// <summary>
+    /// Открытая вкладка типа содержимого. Переключение вкладок только показывает их настройки: играет прежнее,
+    /// пока во вкладке не выберут новый эффект или не нажмут «Включить».
     /// </summary>
     public ContentKindOption? SelectedContentKind
     {
-        get => _selectedGroup?.Content.Kind switch
-        {
-            null => null,
-            ContentKind.Scene => ContentKindOption.Scene,
-            ContentKind.Screen => ContentKindOption.Screen,
-            ContentKind.Music => ContentKindOption.Music,
-            ContentKind.Game => ContentKindOption.Game,
-            ContentKind.Builtin => ContentKindOption.Builtin,
-            _ => ContentKindOption.Effect
-        };
+        get => _selectedGroup == null ? null : _viewedKind ?? PlayingContentKind;
         set
         {
-            var content = _selectedGroup?.Content;
-
-            var kind = value == ContentKindOption.Scene ? ContentKind.Scene
-                : value == ContentKindOption.Screen ? ContentKind.Screen
-                : value == ContentKindOption.Music ? ContentKind.Music
-                : value == ContentKindOption.Game ? ContentKind.Game
-                : value == ContentKindOption.Builtin ? ContentKind.Builtin
-                : ContentKind.Effect;
-
             // Сегменты сбрасывают выбор в null, когда пересобираются
-            if (content == null || value == null || !value.IsAvailable || kind == content.Kind)
+            if (_selectedGroup == null || value == null || !value.IsAvailable || value == SelectedContentKind)
                 return;
 
-            content.Kind = kind;
-
-            if (kind == ContentKind.Scene && content.Layers.Count == 0)
-            {
-                content.Layers.Add(SceneLayerConfig.Covering(content));
-                SceneEditor.Edit(content);
-            }
+            _viewedKind = value;
 
             OnPropertyChanged();
             OnContentKindChanged();
-            _contentChanged();
         }
     }
 
-    public bool IsEffectContent => _selectedGroup?.Content.Kind == ContentKind.Effect;
+    /// <summary>
+    /// Открытая вкладка — не та, что играет: видна кнопка «Включить».
+    /// </summary>
+    public bool IsViewedKindIdle => SelectedContentKind != null && SelectedContentKind != PlayingContentKind;
 
-    public bool IsSceneContent => _selectedGroup?.Content.Kind == ContentKind.Scene;
+    /// <summary>
+    /// Что сейчас играет, для подписи над вкладкой, которая не играет.
+    /// </summary>
+    public string PlayingText => PlayingContentKind is { } kind ? $"Сейчас играет: {kind.Title}" : "";
 
-    public bool IsScreenContent => _selectedGroup?.Content.Kind == ContentKind.Screen;
+    public bool IsEffectContent => SelectedContentKind == ContentKindOption.Effect;
 
-    public bool IsMusicContent => _selectedGroup?.Content.Kind == ContentKind.Music;
+    public bool IsSceneContent => SelectedContentKind == ContentKindOption.Scene;
 
-    public bool IsGameContent => _selectedGroup?.Content.Kind == ContentKind.Game;
+    public bool IsScreenContent => SelectedContentKind == ContentKindOption.Screen;
 
-    public bool IsBuiltinContent => _selectedGroup?.Content.Kind == ContentKind.Builtin;
+    public bool IsMusicContent => SelectedContentKind == ContentKindOption.Music;
+
+    public bool IsGameContent => SelectedContentKind == ContentKindOption.Game;
+
+    public bool IsBuiltinContent => SelectedContentKind == ContentKindOption.Builtin;
+
+    /// <summary>
+    /// «Включить» на вкладке, которая не играет: у выбранного начинает играть её тип содержимого с её настройками.
+    /// </summary>
+    [RelayCommand]
+    private void PlayViewedKind()
+    {
+        if (SelectedContentKind is { } kind)
+            Play(kind);
+    }
+
+    /// <summary>
+    /// В редакторе вкладки что-то выбрали или поменяли: у выбранного начинает играть тип этой вкладки.
+    /// </summary>
+    private void OnEditorChanged(ContentKindOption kind)
+    {
+        if (_selectedGroup != null && PlayingContentKind != kind)
+        {
+            Play(kind);
+            return;
+        }
+
+        _contentChanged();
+    }
+
+    /// <summary>
+    /// Включает у выбранного тип содержимого kind. Сцена без слоёв получает первый слой во всю сцену с эффектом,
+    /// который играл до этого.
+    /// </summary>
+    private void Play(ContentKindOption kind)
+    {
+        var content = _selectedGroup?.Content;
+
+        var contentKind = kind == ContentKindOption.Scene ? ContentKind.Scene
+            : kind == ContentKindOption.Screen ? ContentKind.Screen
+            : kind == ContentKindOption.Music ? ContentKind.Music
+            : kind == ContentKindOption.Game ? ContentKind.Game
+            : kind == ContentKindOption.Builtin ? ContentKind.Builtin
+            : ContentKind.Effect;
+
+        if (content == null || contentKind == content.Kind)
+            return;
+
+        content.Kind = contentKind;
+
+        if (contentKind == ContentKind.Scene && content.Layers.Count == 0)
+        {
+            content.Layers.Add(SceneLayerConfig.Covering(content));
+            SceneEditor.Edit(content);
+        }
+
+        OnContentKindChanged();
+        _contentChanged();
+    }
 
     /// <summary>
     /// На всех устройствах играет одно и то же; группы и настройки устройств сохраняются до возврата к ним.
@@ -765,6 +827,9 @@ public sealed partial class SceneViewModel : ObservableObject
         OnPropertyChanged(nameof(IsMusicContent));
         OnPropertyChanged(nameof(IsGameContent));
         OnPropertyChanged(nameof(IsBuiltinContent));
+        OnPropertyChanged(nameof(PlayingContentKind));
+        OnPropertyChanged(nameof(IsViewedKindIdle));
+        OnPropertyChanged(nameof(PlayingText));
 
         if (!IsScreenContent)
             ScreenEditor.StopPreview();
@@ -803,8 +868,14 @@ public sealed partial class SceneViewModel : ObservableObject
 
         _selectedGroup = group;
 
+        // Открывается вкладка того, что у выбранного играет
+        _viewedKind = null;
+
         OnPropertyChanged(nameof(SelectedGroup));
         OnPropertyChanged(nameof(HasSelection));
+
+        // Список типов меняется раньше выбора в нём, иначе пересборка сегментов сбросила бы выбор
+        OnPropertyChanged(nameof(ContentKinds));
         OnPropertyChanged(nameof(SelectedContentKind));
         OnPropertyChanged(nameof(IsStripSelected));
         OnPropertyChanged(nameof(SelectedMonitor));
@@ -820,9 +891,19 @@ public sealed partial class SceneViewModel : ObservableObject
         ScreenEditor.Edit(content);
         MusicEditor.Edit(content);
         GameEditor.Edit(content);
-        BuiltinEditor.Edit(content);
+
+        // Отдельному устройству — только его встроенные эффекты
+        BuiltinEditor.Edit(content, group is { IsDeviceLighting: true } ? group.Device.Id : null);
 
         OnContentKindChanged();
+    }
+
+    /// <summary>
+    /// У подключённого устройства есть встроенные эффекты.
+    /// </summary>
+    private bool HasBuiltinEffects(string deviceId)
+    {
+        return _manager.Devices.FirstOrDefault(d => d.Id == deviceId)?.Device is IBuiltinEffectsDevice { BuiltinEffects.Count: > 0 };
     }
 
     /// <summary>

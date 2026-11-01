@@ -111,7 +111,7 @@ public sealed class ElkModel
         return new string(name.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
     }
 
-    // У многих эффектов есть варианты под соседними номерами — они получают общее название с номером варианта
+    // У многих эффектов есть варианты под соседними номерами — они получают общее название и номер варианта
     private static IReadOnlyList<BuiltinEffect> BuildEffects((string Title, int[] Ids)[] groups)
     {
         var effects = new List<BuiltinEffect>();
@@ -119,7 +119,7 @@ public sealed class ElkModel
         foreach (var (title, ids) in groups)
         {
             for (var i = 0; i < ids.Length; i++)
-                effects.Add(new BuiltinEffect(ids[i], ids.Length > 1 ? $"{title} {i + 1}" : title));
+                effects.Add(new BuiltinEffect(ids[i], title, ids.Length > 1 ? i + 1 : 0));
         }
 
         return effects;
