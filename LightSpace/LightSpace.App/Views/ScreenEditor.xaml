@@ -11,7 +11,7 @@
     <!-- Содержимое-экран: живое превью картинки монитора, ниже монитор и настройки цветов -->
     <StackPanel>
         <Border Style="{StaticResource LivePreview}" Background="{Binding Preview}" Margin="{StaticResource GapTop16}"/>
-        <TextBlock Text="Живое превью: так сценарий будет выглядеть, когда включится. Каждый светодиод берёт цвет экрана под своим местом на сцене."
+        <TextBlock Text="Живое превью: так это будет выглядеть на устройствах. Каждый светодиод берёт цвет экрана под своим местом на сцене."
                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
         <TextBlock Text="Монитор" Style="{StaticResource SectionLabel}"/>

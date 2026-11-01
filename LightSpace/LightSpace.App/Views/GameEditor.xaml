@@ -11,7 +11,7 @@
     <!-- Содержимое-игра: живое превью, игра и её подключение, фон, полоски и события -->
     <StackPanel>
         <Border Style="{StaticResource LivePreview}" Background="{Binding Preview}" Margin="{StaticResource GapTop16}"/>
-        <TextBlock Text="Живое превью: так сценарий будет выглядеть, когда включится. Сверху — здоровье, снизу — мана или броня, как на клавиатуре."
+        <TextBlock Text="Живое превью: так это будет выглядеть на устройствах. Сверху — здоровье, снизу — мана или броня, как на клавиатуре."
                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
         <TextBlock Text="Игра сейчас не в матче — превью показывает пример с придуманными здоровьем и маной или бронёй. Устройства ждут начала матча."
                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"

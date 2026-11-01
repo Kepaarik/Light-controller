@@ -34,7 +34,9 @@ public partial class MainWindow : Window
         StateChanged += (_, _) => UpdateShown();
         IsVisibleChanged += (_, _) => UpdateShown();
         _viewModel.Settings.PropertyChanged += OnSettingsPropertyChanged;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         Closed += (_, _) => _viewModel.Settings.PropertyChanged -= OnSettingsPropertyChanged;
+        Closed += (_, _) => _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
     }
 
     private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -48,15 +50,22 @@ public partial class MainWindow : Window
         WindowBackdrop.Apply(this, _viewModel.Settings.UseAcrylic);
     }
 
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.IsMenuCollapsed))
+            UpdateAdaptiveLayout();
+    }
+
     /// <summary>
-    /// В нешироком окне меню разделов сворачивается до значков.
+    /// Меню разделов сворачивается до значков кнопкой или само, когда окно нешироко.
     /// </summary>
     private void UpdateAdaptiveLayout()
     {
-        var compact = ActualWidth < CompactNavWidth;
+        var compact = _viewModel.IsMenuCollapsed || ActualWidth < CompactNavWidth;
 
         Nav.Width = compact ? CompactNavItemWidth : NavWidth;
         NavList.Tag = compact;
+        BottomNavList.Tag = compact;
     }
 
     /// <summary>

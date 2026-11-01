@@ -54,18 +54,14 @@
             </Border>
         </DataTemplate>
 
-        <!-- Группа на карте сцены: рамка её цвета вокруг её устройств, над рамкой название и играющий сценарий.
+        <!-- Группа на карте сцены: рамка её цвета вокруг её устройств, над рамкой название.
              У устройства без группы рамки нет, только подпись. Имя GroupFrame ищет мышь в ScenePage.xaml.cs -->
         <DataTemplate x:Key="MapGroupTemplate" DataType="vm:SceneGroupViewModel">
             <Grid>
                 <Border x:Name="GroupFrame" Style="{StaticResource MapGroupFrame}" BorderBrush="{Binding OutlineBrush}"
                         controls:Appearance.IsSelected="{Binding IsSelected}"/>
                 <Canvas VerticalAlignment="Top" Height="0" IsHitTestVisible="False">
-                    <TextBlock Canvas.Bottom="0" Style="{StaticResource MapLabel}">
-                        <Run Text="{Binding Title, Mode=OneWay}"/>
-                        <Run Text="{Binding ActiveScenarioTitle, Mode=OneWay, StringFormat='▶ {0}'}" Foreground="{DynamicResource AccentHoverBrush}"
-                             FontWeight="SemiBold"/>
-                    </TextBlock>
+                    <TextBlock Canvas.Bottom="0" Text="{Binding Title, Mode=OneWay}" Style="{StaticResource MapLabel}"/>
                 </Canvas>
             </Grid>
             <DataTemplate.Triggers>
@@ -108,10 +104,11 @@
                                   IsChecked="{Binding IsEditingLayout}" VerticalAlignment="Top"/>
                     <TextBlock Text="Сцена" Style="{StaticResource PageTitle}"/>
                 </DockPanel>
-                <!-- Что играет на устройствах: один эффект на всей сцене или у каждой группы свой -->
+                <!-- Что играет на устройствах: одно на всей сцене, своё у каждой группы или своё у каждого устройства -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource GapBottom8}">
                     <RadioButton GroupName="SceneMode" Content="Вся сцена" IsChecked="{Binding IsWholeScene}" Margin="{StaticResource GapRight4}"/>
-                    <RadioButton GroupName="SceneMode" Content="Группы" IsChecked="{Binding IsGroupsMode}"/>
+                    <RadioButton GroupName="SceneMode" Content="Группы" IsChecked="{Binding IsGroupsMode}" Margin="{StaticResource GapRight4}"/>
+                    <RadioButton GroupName="SceneMode" Content="Устройства" IsChecked="{Binding IsDevicesMode}"/>
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}" Text="{Binding SceneHint}"/>
                 <Grid>
@@ -189,7 +186,7 @@
                 </Grid>
             </DockPanel>
 
-            <!-- Панель выбранной группы: название и цвет, сценарии, яркость, содержимое «По умолчанию», действия группы.
+            <!-- Панель выбранной группы или устройства: название и цвет, яркость, содержимое, действия группы.
                  Пока ничего не выбрано — подсказка -->
             <Border Grid.Column="1" Style="{StaticResource Card}" Margin="{StaticResource GapLeft24}" d:DataContext="{d:DesignInstance vm:SceneViewModel}">
                 <Grid>
@@ -211,68 +208,66 @@
                             <!-- Вся сцена: одно содержимое на всех устройствах -->
                             <StackPanel Visibility="{Binding SelectedGroup.IsWholeScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                 <TextBlock Text="Вся сцена" Style="{StaticResource Subtitle}"/>
-                                <TextBlock Text="Эффект и сценарии играют сразу на всех устройствах. Чтобы дать устройствам свои эффекты, переключитесь на «Группы»."
+                                <TextBlock Text="То, что выбрано ниже, играет сразу на всех устройствах. Чтобы дать устройствам свои эффекты, переключитесь на «Группы» или «Устройства»."
                                            Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                             </StackPanel>
 
                             <!-- Устройство без группы: его название вместо названия группы -->
-                            <StackPanel Visibility="{Binding SelectedGroup.IsSolo, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                            <StackPanel Visibility="{Binding SelectedGroup.IsUngroupedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                 <TextBlock Text="{Binding SelectedGroup.Title}" Style="{StaticResource Subtitle}"/>
                                 <TextBlock Text="Устройство без группы. Выделите его вместе с другими устройствами, чтобы сделать группу."
                                            Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                             </StackPanel>
 
-                            <!-- Сценарии группы по важности: строки перетаскиваются мышью, внизу всегда «По умолчанию» -->
-                            <TextBlock Text="Сценарии" Style="{StaticResource SectionLabel}"/>
-                            <ItemsControl ItemsSource="{Binding SelectedGroup.Scenarios}"
-                                          controls:DragReorder.MoveCommand="{Binding MoveScenarioCommand}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="vm:ScenarioRowViewModel">
-                                        <Border Style="{StaticResource ReorderRow}">
-                                            <DockPanel VerticalAlignment="Center">
-                                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource GripIcon}"/>
-                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE70F;"
-                                                        ToolTip="Открыть сценарий" CommandParameter="{Binding}" Margin="{StaticResource GapLeft8}"
-                                                        Command="{Binding DataContext.Scene.OpenScenarioCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                                                <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"
-                                                           Visibility="{Binding IsPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Title}" Style="{StaticResource Body}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding ConditionText}" Style="{StaticResource Caption}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                                                </StackPanel>
-                                            </DockPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <!-- Режим «Устройства»: своё содержимое у этого устройства, группы не действуют -->
+                            <StackPanel Visibility="{Binding SelectedGroup.IsDeviceLighting, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                <TextBlock Text="{Binding SelectedGroup.Title}" Style="{StaticResource Subtitle}"/>
+                                <TextBlock Text="То, что выбрано ниже, играет только на этом устройстве."
+                                           Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+                            </StackPanel>
 
-                            <Border Style="{StaticResource SettingRow}">
-                                <DockPanel VerticalAlignment="Center">
-                                    <TextBlock DockPanel.Dock="Right" Text="▶ играет" Style="{StaticResource PlayingMark}"
-                                               Visibility="{Binding SelectedGroup.IsDefaultPlaying, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-                                    <TextBlock Text="По умолчанию" Style="{StaticResource Body}" VerticalAlignment="Center"/>
-                                </DockPanel>
-                            </Border>
-
-                            <Button Style="{StaticResource GhostButton}" Content="Сценарий" controls:Appearance.Icon="&#xE710;"
-                                    HorizontalAlignment="Left" Command="{Binding AddScenarioCommand}"/>
-                            <TextBlock Text="Играет верхний сценарий, у которого выполнено условие; перетащите строку, чтобы поменять важность."
-                                       Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
-
-                            <controls:ValueSlider Label="Яркость группы" Unit="%" Minimum="0" Maximum="100" Step="1"
+                            <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
                                                   Value="{Binding SelectedGroup.Brightness}" Margin="{StaticResource GapTop16}"/>
 
-                            <!-- Содержимое «По умолчанию»: галерея, ниже настройки выбранного эффекта -->
-                            <TextBlock Text="По умолчанию" Style="{StaticResource SectionLabel}"/>
-                            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding DefaultKinds}" SelectedItem="{Binding SelectedDefaultKind}"
-                                     Margin="{StaticResource GapBottom16}"/>
-                            <StackPanel Visibility="{Binding IsDefaultScene, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                            <!-- Что играет: тип содержимого, ниже его настройки -->
+                            <TextBlock Text="Содержимое" Style="{StaticResource SectionLabel}"/>
+                            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ContentKinds}" SelectedItem="{Binding SelectedContentKind}"
+                                     Margin="{StaticResource GapBottom16}">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource SegmentItem}">
+                                        <Setter Property="IsEnabled" Value="{Binding IsAvailable}"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+
+                            <!-- Эффект: галерея, ниже настройки выбранного эффекта -->
+                            <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                 <views:EffectEditor DataContext="{Binding Editor}"/>
                             </StackPanel>
 
-                            <!-- Сцена «По умолчанию»: холст со слоями и их границами, список слоёв и эффект выбранного слоя -->
-                            <StackPanel Visibility="{Binding IsDefaultScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                            <!-- Сцена: холст со слоями и их границами, список слоёв и эффект выбранного слоя -->
+                            <StackPanel Visibility="{Binding IsSceneContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                 <views:SceneEditor DataContext="{Binding SceneEditor}"/>
+                            </StackPanel>
+
+                            <!-- Экран: живое превью картинки монитора, монитор и настройки цветов -->
+                            <StackPanel Visibility="{Binding IsScreenContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                <views:ScreenEditor DataContext="{Binding ScreenEditor}"/>
+                            </StackPanel>
+
+                            <!-- Музыка: живое превью, источник звука, режим, цвета и отклик -->
+                            <StackPanel Visibility="{Binding IsMusicContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                <views:MusicEditor DataContext="{Binding MusicEditor}"/>
+                            </StackPanel>
+
+                            <!-- Игра: живое превью, игра и её подключение, фон, полоски и события -->
+                            <StackPanel Visibility="{Binding IsGameContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                <views:GameEditor DataContext="{Binding GameEditor}"/>
+                            </StackPanel>
+
+                            <!-- Встроенный эффект: подсказка вместо превью, эффект каждого устройства, скорость и цвет -->
+                            <StackPanel Visibility="{Binding IsBuiltinContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                <views:BuiltinEditor DataContext="{Binding BuiltinEditor}"/>
                             </StackPanel>
 
                             <!-- Устройства группы и действия с ней -->

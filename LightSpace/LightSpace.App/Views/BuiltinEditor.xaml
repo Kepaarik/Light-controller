@@ -16,7 +16,7 @@
                 <TextBlock DockPanel.Dock="Left" Text="&#xE946;" Style="{StaticResource Icon}" Foreground="{DynamicResource MutedBrush}"
                            VerticalAlignment="Top" Margin="{StaticResource GapRight12}"/>
                 <TextBlock Style="{StaticResource Hint}"
-                           Text="Встроенный эффект играет сам контроллер устройства, поэтому показать его здесь нельзя — посмотрите на устройство, когда сценарий включится. Пока он играет, на сцене у устройства нет живых цветов."/>
+                           Text="Встроенный эффект играет сам контроллер устройства, поэтому показать его здесь нельзя — посмотрите на само устройство. Пока он играет, на сцене у устройства нет живых цветов."/>
             </DockPanel>
         </Border>
 
@@ -40,7 +40,7 @@
         <TextBlock Text="Сейчас не подключено ни одного устройства со встроенными эффектами. Они есть у лент ELK/MELK с известной моделью, подсветки Robobloq и клавиатуры RK S98 — найдите их на вкладке «Устройства»."
                    Style="{StaticResource Hint}"
                    Visibility="{Binding HasDevices, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
-        <TextBlock Text="Устройство, которому эффект не выбран, играет свой первый эффект. Устройства группы без встроенных эффектов, пока играет сценарий, не светятся."
+        <TextBlock Text="Устройство, которому эффект не выбран, играет свой первый эффект. Устройства группы без встроенных эффектов, пока он играет, не светятся."
                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
         <!-- Скорость и цвет общие для всех устройств -->

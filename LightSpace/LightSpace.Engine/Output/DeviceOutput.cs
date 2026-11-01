@@ -13,6 +13,9 @@ public sealed class DeviceOutput : IDisposable
     // Таймер срабатывает с небольшим разбросом — без запаса устройство с тем же интервалом пропускало бы каждый второй кадр
     private static readonly TimeSpan FrameTolerance = TimeSpan.FromMilliseconds(5);
 
+    // Сколько повтор кадра для догасания клавиш ждёт свежего кадра, прежде чем уйти сам
+    private static readonly TimeSpan RepeatGrace = TimeSpan.FromMilliseconds(15);
+
     // Сколько остановка ждёт, пока уйдёт последняя команда
     private static readonly TimeSpan StopTimeout = TimeSpan.FromMilliseconds(500);
 
@@ -266,6 +269,17 @@ public sealed class DeviceOutput : IDisposable
             var wait = _device.MinFrameInterval - FrameTolerance - (_clock.Elapsed - last);
             if (wait > TimeSpan.Zero)
                 await Task.Delay(wait, ct);
+
+            // Повтор уступает свежему кадру: свежий приходит как раз к этому моменту, и если бы повтор ушёл раньше,
+            // свежий ждал бы ещё целый интервал — анимация запаздывала бы и дёргалась
+            if (IsRepeatPending())
+            {
+                // Сигнал от уже отправленного кадра не должен оборвать ожидание сразу
+                _signal.Wait(0);
+
+                if (IsRepeatPending())
+                    await _signal.WaitAsync(RepeatGrace, ct);
+            }
         }
 
         OutputFrame? frame;
@@ -287,6 +301,15 @@ public sealed class DeviceOutput : IDisposable
         await RunCommandAsync(() => SendFrameAsync(frame, since, ct), isFrame: true, ct);
 
         return true;
+    }
+
+    /// <summary>
+    /// В ящике лежит повтор последнего кадра для догасания клавиш, а не свежий кадр.
+    /// </summary>
+    private bool IsRepeatPending()
+    {
+        lock (_sync)
+            return _pending != null && _isPendingRepeat;
     }
 
     private Task StartBuiltinAsync(BuiltinEffectStart start, CancellationToken ct)

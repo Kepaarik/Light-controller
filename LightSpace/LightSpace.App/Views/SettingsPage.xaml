@@ -90,28 +90,6 @@
                                        Style="{StaticResource Hint}" Margin="0,2,0,0"/>
                         </StackPanel>
                     </CheckBox>
-
-                    <TextBlock Text="Частота кадров" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
-                    <ListBox Style="{StaticResource Segments}" HorizontalAlignment="Left"
-                             ItemsSource="{Binding FrameRates}" SelectedItem="{Binding FrameRate}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding StringFormat='{}{0} к/с'}"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <TextBlock Text="Сколько раз в секунду обновляются цвета на устройствах" Style="{StaticResource Hint}" Margin="0,6,0,0"/>
-
-                    <controls:ValueSlider Label="Плавный переход между сценариями" Unit="мс"
-                                          Minimum="0" Maximum="2000" Step="50"
-                                          Value="{Binding TransitionMilliseconds}" Margin="0,16,0,0"/>
-                    <TextBlock Text="0 — сценарий сменяется мгновенно" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
-
-                    <controls:ValueSlider Label="Задержка снятия фокусного сценария" Unit="с" Decimals="1"
-                                          Minimum="0" Maximum="10" Step="0.5"
-                                          Value="{Binding FocusReleaseDelaySeconds}" Margin="0,16,0,0"/>
-                    <TextBlock Text="Сколько ждать после переключения на другое окно, прежде чем вернуть предыдущий сценарий; включение — сразу"
-                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                 </StackPanel>
             </Border>
 
@@ -125,12 +103,8 @@
                             <TextBlock Text="Light Space стартует сразу в трей, без окна" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
                         </StackPanel>
                     </CheckBox>
-                    <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}" Margin="0,14,0,0">
-                        <StackPanel>
-                            <TextBlock Text="Сворачивать в трей при закрытии" Style="{StaticResource Body}"/>
-                            <TextBlock Text="Подсветка продолжает работать; выйти можно из меню значка в трее" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </CheckBox>
+                    <TextBlock Text="Свернуть — окно прячется в трей, подсветка продолжает работать. Закрыть — приложение завершается."
+                               Style="{StaticResource Hint}" Margin="0,14,0,0"/>
                 </StackPanel>
             </Border>
 

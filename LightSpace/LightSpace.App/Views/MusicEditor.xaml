@@ -11,7 +11,7 @@
     <!-- Содержимое-музыка: живое превью, откуда звук, режим, цвета, чувствительность и сглаживание -->
     <StackPanel>
         <Border Style="{StaticResource LivePreview}" Background="{Binding Preview}" Margin="{StaticResource GapTop16}"/>
-        <TextBlock Text="Живое превью: так сценарий будет выглядеть, когда включится. На ленте спектр идёт вдоль неё, на клавиатуре — столбиками."
+        <TextBlock Text="Живое превью: так это будет выглядеть на устройствах. На ленте спектр идёт вдоль неё, на клавиатуре — столбиками."
                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
         <!-- Откуда звук: источник и устройство -->

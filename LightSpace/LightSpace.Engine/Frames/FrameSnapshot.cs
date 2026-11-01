@@ -1,8 +1,6 @@
 using LightSpace.Core.Config;
-using LightSpace.Engine.Apps;
 using LightSpace.Engine.Effects;
 using LightSpace.Engine.Output;
-using LightSpace.Engine.Scenarios;
 using LightSpace.Engine.Sources;
 using LightSpace.Engine.Space;
 
@@ -25,9 +23,8 @@ public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry 
 /// <summary>
 /// Содержимое, которое играет в группе: эффект с его настройками.
 /// </summary>
-/// <param name="ScenarioId">Сценарий, которому принадлежит содержимое; null — «По умолчанию» группы.</param>
 /// <param name="Layers">Видимые слои сцены снизу вверх; null — содержимое-эффект.</param>
-public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, EffectValues Values, IReadOnlyList<SceneLayer>? Layers)
+public sealed record FrameContent(EffectDefinition Effect, EffectValues Values, IReadOnlyList<SceneLayer>? Layers)
 {
     // Часы сцены считают время каждого её слоя отдельно, поэтому у всей сцены свой постоянный «эффект» для часов
     private const string SceneClockId = "scene";
@@ -79,12 +76,12 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
     /// <summary>
     /// Неизменяемая копия сохранённого содержимого.
     /// </summary>
-    public static FrameContent From(string? scenarioId, ContentConfig content)
+    public static FrameContent From(ContentConfig content)
     {
         var effect = EffectLibrary.FindOrSolid(content.EffectId);
         var layers = content.Kind == ContentKind.Scene ? SceneLayer.ListOf(content) : null;
 
-        return new FrameContent(scenarioId, effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)), layers)
+        return new FrameContent(effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)), layers)
         {
             Screen = content.Kind == ContentKind.Screen ? ScreenSettings.From(content.Screen) : null,
             Music = content.Kind == ContentKind.Music ? MusicSettings.From(content.Music) : null,
@@ -97,28 +94,22 @@ public sealed record FrameContent(string? ScenarioId, EffectDefinition Effect, E
 /// <summary>
 /// Группа в снимке: что в ней сейчас играет, с какой яркостью и на каких устройствах.
 /// </summary>
-/// <param name="Active">Содержимое активного сценария группы.</param>
+/// <param name="Active">Содержимое группы.</param>
 /// <param name="Brightness">Яркость устройств группы, 0–100 %.</param>
 /// <param name="Devices">Подключённые устройства группы, готовые принимать кадры.</param>
 public sealed record FrameGroup(string Id, FrameContent Active, int Brightness, IReadOnlyList<FrameDevice> Devices);
 
 /// <summary>
 /// Неизменяемый снимок всего, что нужно потоку кадров: какие группы есть, что в каждой играет, с какими настройками
-/// и яркостью, на каких устройствах и как часто. Окно меняет настройки у себя и отдаёт движку новый снимок целиком.
+/// и яркостью, на каких устройствах. Окно меняет настройки у себя и отдаёт движку новый снимок целиком.
 /// </summary>
-/// <param name="TransitionMilliseconds">Длительность плавного перехода, когда в группе сменился сценарий; 0 — сразу.</param>
-public sealed record FrameSnapshot(
-    bool IsLightingEnabled,
-    int FrameRate,
-    int TransitionMilliseconds,
-    IReadOnlyList<FrameGroup> Groups)
+public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGroup> Groups)
 {
     /// <summary>
-    /// Снимок текущих настроек и подключённых устройств, готовых принимать кадры; в каждой группе — её активный сценарий
-    /// по тому, какие приложения запущены и в фокусе сейчас.
+    /// Снимок текущих настроек и подключённых устройств, готовых принимать кадры.
     /// Вызывается в потоке окна: копирует всё, что потом может поменяться в настройках.
     /// </summary>
-    public static FrameSnapshot Build(AppConfig config, IEnumerable<ManagedDevice> devices, AppWatcher apps)
+    public static FrameSnapshot Build(AppConfig config, IEnumerable<ManagedDevice> devices)
     {
         var ready = new Dictionary<string, FrameDevice>();
         var groups = new List<FrameGroup>();
@@ -143,14 +134,14 @@ public sealed record FrameSnapshot(
         foreach (var group in config.PlayingGroups())
         {
             // Вся сцена играет на всех готовых устройствах
-            var targets = config.IsWholeScene
+            var targets = config.Mode == SceneMode.WholeScene
                 ? ready.Values.ToList()
                 : group.DeviceIds.Where(ready.ContainsKey).Select(id => ready[id]).ToList();
 
-            groups.Add(new FrameGroup(group.Id, ActiveContentOf(config, group, apps), group.Brightness, targets));
+            groups.Add(new FrameGroup(group.Id, FrameContent.From(group.DefaultContent), group.Brightness, targets));
         }
 
-        return new FrameSnapshot(config.LightingEnabled, config.FrameRate, config.TransitionMilliseconds, groups);
+        return new FrameSnapshot(config.LightingEnabled, groups);
     }
 
     /// <summary>
@@ -167,18 +158,5 @@ public sealed record FrameSnapshot(
         var screen = screens.FirstOrDefault(s => s.Key == monitor.MonitorKey);
 
         return ScreenEdges.Bind(monitor, geometry.Points.Count, screen?.Width ?? 16, screen?.Height ?? 9);
-    }
-
-    /// <summary>
-    /// Содержимое активного сценария группы: первого из её списка, у которого выполнено условие, а если таких нет —
-    /// «По умолчанию».
-    /// </summary>
-    private static FrameContent ActiveContentOf(AppConfig config, GroupConfig group, AppWatcher apps)
-    {
-        var scenario = ScenarioSelector.Choose(config, group, apps).Scenario;
-
-        return scenario == null
-            ? FrameContent.From(null, group.DefaultContent)
-            : FrameContent.From(scenario.Id, scenario.Content);
     }
 }
