@@ -79,6 +79,8 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
     public IReadOnlyList<BuiltinEffect> BuiltinEffects => DynamicEffects;
 
+    public bool HasBuiltinColor => false;
+
     public override string? StatusText => IsReady
         ? null
         : "Не удалось прочитать параметры ленты. Закройте SyncLight и повторите поиск";

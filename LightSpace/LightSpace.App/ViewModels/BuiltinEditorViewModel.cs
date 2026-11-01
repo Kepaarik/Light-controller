@@ -22,7 +22,16 @@ public sealed record BuiltinColorsOption(bool UseColor, string Title)
 }
 
 /// <summary>
-/// Устройство со встроенными эффектами в редакторе: его эффекты и тот, который оно играет в сценарии.
+/// Встроенный эффект со всеми его вариантами: в списке он один, вариант выбирается ползунком.
+/// </summary>
+/// <param name="Variants">Варианты эффекта по порядку; у эффекта без вариантов — он сам.</param>
+public sealed record BuiltinEffectGroup(string Title, IReadOnlyList<BuiltinEffect> Variants)
+{
+    public override string ToString() => Title;
+}
+
+/// <summary>
+/// Устройство со встроенными эффектами в редакторе: его эффекты и тот, который оно играет.
 /// </summary>
 public sealed class BuiltinDeviceViewModel : ObservableObject
 {
@@ -33,7 +42,7 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
     /// <summary>
     /// effects — встроенные эффекты устройства, хотя бы один; changed вызывается, когда устройству выбирают эффект.
     /// </summary>
-    public BuiltinDeviceViewModel(BuiltinConfig builtin, ManagedDevice device, IReadOnlyList<BuiltinEffect> effects, Action changed)
+    public BuiltinDeviceViewModel(BuiltinConfig builtin, ManagedDevice device, IBuiltinEffectsDevice effects, Action changed)
     {
         _builtin = builtin;
         _deviceId = device.Id;
@@ -41,7 +50,14 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
 
         Name = device.Name;
         Protocol = device.Protocol;
-        Effects = effects;
+        Effects = effects.BuiltinEffects;
+        HasColor = effects.HasBuiltinColor;
+
+        // Варианты одного эффекта идут под общим названием — в списке они одной строкой
+        EffectGroups = Effects
+            .GroupBy(e => e.Title)
+            .Select(g => new BuiltinEffectGroup(g.Key, g.ToList()))
+            .ToList();
     }
 
     public string Name { get; }
@@ -57,7 +73,17 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
     public IReadOnlyList<BuiltinEffect> Effects { get; }
 
     /// <summary>
-    /// Эффект, который устройство играет в сценарии; пока его не выбирали — первый эффект устройства.
+    /// Эффекты для списка: варианты одного эффекта собраны в одну строку.
+    /// </summary>
+    public IReadOnlyList<BuiltinEffectGroup> EffectGroups { get; }
+
+    /// <summary>
+    /// Устройство играет встроенные эффекты и одним выбранным цветом.
+    /// </summary>
+    public bool HasColor { get; }
+
+    /// <summary>
+    /// Эффект, который играет устройство; пока его не выбирали — первый эффект устройства.
     /// </summary>
     public BuiltinEffect? SelectedEffect
     {
@@ -75,8 +101,62 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
 
             _builtin.Effects[_deviceId] = value.Id;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(SelectedGroup));
+            OnPropertyChanged(nameof(HasVariants));
+            OnPropertyChanged(nameof(VariantCount));
+            OnPropertyChanged(nameof(Variant));
             _changed();
         }
+    }
+
+    /// <summary>
+    /// Эффект в списке, который играет устройство; другой эффект начинается со своего первого варианта.
+    /// </summary>
+    public BuiltinEffectGroup? SelectedGroup
+    {
+        get => SelectedEffect is { } effect ? EffectGroups.FirstOrDefault(g => g.Variants.Contains(effect)) : null;
+        set
+        {
+            if (value == null || value == SelectedGroup)
+                return;
+
+            SelectedEffect = value.Variants[0];
+        }
+    }
+
+    /// <summary>
+    /// У выбранного эффекта несколько вариантов — виден ползунок варианта.
+    /// </summary>
+    public bool HasVariants => VariantCount > 1;
+
+    public int VariantCount => SelectedGroup?.Variants.Count ?? 0;
+
+    /// <summary>
+    /// Номер варианта выбранного эффекта с 1; ползунок отдаёт дробное число.
+    /// </summary>
+    public double Variant
+    {
+        get => SelectedGroup is { } group && SelectedEffect is { } effect ? IndexOf(group, effect) + 1 : 1;
+        set
+        {
+            if (SelectedGroup is not { } group)
+                return;
+
+            var index = Math.Clamp((int)Math.Round(value) - 1, 0, group.Variants.Count - 1);
+
+            SelectedEffect = group.Variants[index];
+        }
+    }
+
+    private static int IndexOf(BuiltinEffectGroup group, BuiltinEffect effect)
+    {
+        for (var i = 0; i < group.Variants.Count; i++)
+        {
+            if (group.Variants[i] == effect)
+                return i;
+        }
+
+        return 0;
     }
 }
 
@@ -91,6 +171,9 @@ public sealed class BuiltinEditorViewModel : ObservableObject
 
     private BuiltinConfig? _builtin;
     private IReadOnlyList<BuiltinDeviceViewModel> _devices = Array.Empty<BuiltinDeviceViewModel>();
+
+    // Открытое устройство: редактор показывает только его; null — все устройства со встроенными эффектами
+    private string? _deviceId;
 
     /// <summary>
     /// manager — откуда берутся подключённые устройства и их эффекты; changed вызывается после каждой правки.
@@ -113,11 +196,24 @@ public sealed class BuiltinEditorViewModel : ObservableObject
         private set
         {
             if (SetProperty(ref _devices, value))
+            {
                 OnPropertyChanged(nameof(HasDevices));
+                OnPropertyChanged(nameof(IsColorShown));
+            }
         }
     }
 
     public bool HasDevices => _devices.Count > 0;
+
+    /// <summary>
+    /// Редактор открыт для одного устройства: его название и подсказки про другие устройства не нужны.
+    /// </summary>
+    public bool IsOneDevice => _deviceId != null;
+
+    /// <summary>
+    /// Выбор цвета виден, только если его понимает хоть одно показанное устройство.
+    /// </summary>
+    public bool IsColorShown => _devices.Any(d => d.HasColor);
 
     public IReadOnlyList<BuiltinColorsOption> ColorOptions => BuiltinColorsOption.All;
 
@@ -163,13 +259,16 @@ public sealed class BuiltinEditorViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Открывает содержимое для правки; null — ничего не открыто.
+    /// Открывает содержимое для правки; null — ничего не открыто. deviceId — показывать только это устройство;
+    /// null — все устройства со встроенными эффектами.
     /// </summary>
-    public void Edit(ContentConfig? content)
+    public void Edit(ContentConfig? content, string? deviceId = null)
     {
         _builtin = content?.Builtin;
+        _deviceId = deviceId;
 
         RefreshDevices();
+        OnPropertyChanged(nameof(IsOneDevice));
         OnPropertyChanged(nameof(SelectedColors));
         OnPropertyChanged(nameof(UseColor));
         OnPropertyChanged(nameof(Color));
@@ -190,8 +289,8 @@ public sealed class BuiltinEditorViewModel : ObservableObject
         var builtin = _builtin;
 
         Devices = _manager.Devices
-            .Where(d => d.Device is IBuiltinEffectsDevice { BuiltinEffects.Count: > 0 })
-            .Select(d => new BuiltinDeviceViewModel(builtin, d, ((IBuiltinEffectsDevice)d.Device!).BuiltinEffects, _changed))
+            .Where(d => d.Device is IBuiltinEffectsDevice { BuiltinEffects.Count: > 0 } && (_deviceId == null || d.Id == _deviceId))
+            .Select(d => new BuiltinDeviceViewModel(builtin, d, (IBuiltinEffectsDevice)d.Device!, _changed))
             .ToList();
     }
 

@@ -20,8 +20,9 @@
                     <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
                                           Value="{Binding SelectedGroup.Brightness}"/>
 
-                    <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора -->
-                    <StackPanel Visibility="{Binding IsStripSelected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                    <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора.
+                         «Экрана» пока нет — без него выбор монитора ничего не меняет, поэтому скрыт -->
+                    <StackPanel Visibility="Collapsed">
                         <TextBlock Text="Монитор" Style="{StaticResource SectionLabel}"/>
                         <ListBox Style="{StaticResource Segments}" HorizontalAlignment="Left"
                                  ItemsSource="{Binding MonitorOptions}" SelectedItem="{Binding SelectedMonitor}"/>
@@ -45,19 +46,17 @@
                         </ListBox.ItemContainerStyle>
                     </ListBox>
 
+                    <!-- Вкладку только открыли: играет прежнее, пока здесь не выберут эффект или не нажмут «Включить» -->
+                    <DockPanel Margin="{StaticResource GapBottom16}"
+                               Visibility="{Binding IsViewedKindIdle, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <Button DockPanel.Dock="Right" Content="Включить" Style="{StaticResource AccentButton}"
+                                Command="{Binding PlayViewedKindCommand}"/>
+                        <TextBlock Text="{Binding PlayingText}" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
+                    </DockPanel>
+
                     <!-- Эффект: галерея, ниже настройки выбранного эффекта -->
                     <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                         <views:EffectEditor DataContext="{Binding Editor}"/>
-                    </StackPanel>
-
-                    <!-- Сцена: холст со слоями и их границами, список слоёв и эффект выбранного слоя -->
-                    <StackPanel Visibility="{Binding IsSceneContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <views:SceneEditor DataContext="{Binding SceneEditor}"/>
-                    </StackPanel>
-
-                    <!-- Экран: живое превью картинки монитора, монитор и настройки цветов -->
-                    <StackPanel Visibility="{Binding IsScreenContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <views:ScreenEditor DataContext="{Binding ScreenEditor}"/>
                     </StackPanel>
 
                     <!-- Музыка: живое превью, источник звука, режим, цвета и отклик -->

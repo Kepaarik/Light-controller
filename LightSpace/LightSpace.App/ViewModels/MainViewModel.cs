@@ -42,6 +42,14 @@ public sealed partial class MainViewModel : ObservableObject
         // Страницы «Сцена» пока нет: у каждого устройства своё содержимое, оно выбирается на странице устройства
         config.Mode = SceneMode.Devices;
 
+        // Сцену, экран и игру пока не выбрать — устройство, которое их играло, переходит на обычный эффект,
+        // и экран не снимается впустую
+        foreach (var lighting in config.DeviceLighting)
+        {
+            if (lighting.DefaultContent.Kind is ContentKind.Scene or ContentKind.Screen or ContentKind.Game)
+                lighting.DefaultContent.Kind = ContentKind.Effect;
+        }
+
         _deviceManager = new DeviceManager(config);
         _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices), _sources);
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave);

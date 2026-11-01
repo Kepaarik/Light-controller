@@ -22,6 +22,9 @@ public sealed class DeviceOutput : IDisposable
     // Через сколько повторяется запуск встроенного эффекта, который не дошёл до устройства
     private static readonly TimeSpan BuiltinRetryDelay = TimeSpan.FromSeconds(5);
 
+    // Как часто повторяется кадр, который не меняется: устройство, потерявшее его, всё равно его получит
+    private static readonly TimeSpan SameFrameResendInterval = TimeSpan.FromSeconds(2);
+
     // Какая доля разницы гасится за 50 мс, когда клавиша на клавиатуре темнеет; при другой частоте шаг пересчитывается
     private const double FadePer50Ms = 0.6;
 
@@ -54,6 +57,12 @@ public sealed class DeviceOutput : IDisposable
     // Эти поля трогает только поток отправки
     private TimeSpan? _lastFrameAt;
     private RgbColor[]? _smoothed;
+
+    // Последний кадр, который дошёл до устройства; такой же следующий не отправляется. null — отправлять обязательно
+    private OutputFrame? _lastSent;
+
+    // Клавиши ещё догасают: такой же кадр всё равно уходит, иначе они застыли бы на полпути
+    private bool _isSmoothing;
 
     public DeviceOutput(LedDevice device, bool isEnabled)
     {
@@ -279,6 +288,10 @@ public sealed class DeviceOutput : IDisposable
                 _pendingBuiltin = null;
         }
 
+        // После включения, сброса и встроенного эффекта на устройстве уже не последний кадр
+        if (power != null || isReset || builtin != null)
+            _lastSent = null;
+
         if (power is { } isOn)
         {
             await RunCommandAsync(() => _device.SetPowerAsync(isOn, ct), isFrame: false, ct);
@@ -326,10 +339,12 @@ public sealed class DeviceOutput : IDisposable
         }
 
         OutputFrame? frame;
+        bool isRepeat;
 
         lock (_sync)
         {
             frame = _pending;
+            isRepeat = _isPendingRepeat;
             _pending = null;
             _isPendingRepeat = false;
         }
@@ -338,12 +353,33 @@ public sealed class DeviceOutput : IDisposable
             return true;
 
         var now = _clock.Elapsed;
+
+        // Неподвижный эффект не гоняет по проводу и радио одно и то же 20 раз в секунду
+        if (!isRepeat && !_isSmoothing && _lastSent is { } sent && _lastFrameAt is { } sentAt
+            && now - sentAt < SameFrameResendInterval && IsSameFrame(frame, sent))
+            return true;
+
         var since = _lastFrameAt is { } previous ? now - previous : _device.MinFrameInterval;
         _lastFrameAt = now;
 
-        await RunCommandAsync(() => SendFrameAsync(frame, since, ct), isFrame: true, ct);
+        // Не дошедший кадр следующий такой же повторит
+        _lastSent = await RunCommandAsync(() => SendFrameAsync(frame, since, ct), isFrame: true, ct) ? frame : null;
 
         return true;
+    }
+
+    /// <summary>
+    /// Кадры зажигают устройство одинаково.
+    /// </summary>
+    private static bool IsSameFrame(OutputFrame a, OutputFrame b)
+    {
+        if (a.Brightness != b.Brightness || a.Color != b.Color)
+            return false;
+
+        if (a.Leds == null || b.Leds == null)
+            return a.Leds == null && b.Leds == null;
+
+        return a.Leds.SequenceEqual(b.Leds);
     }
 
     /// <summary>
@@ -406,6 +442,7 @@ public sealed class DeviceOutput : IDisposable
 
             // После сплошного цвета сглаживание начинается заново, а не от давно ушедшего кадра
             _smoothed = null;
+            _isSmoothing = false;
         }
 
         return _device.SetColorAsync(frame.Color, frame.Brightness, ct);
@@ -420,6 +457,7 @@ public sealed class DeviceOutput : IDisposable
         if (_smoothed == null || _smoothed.Length != leds.Count)
         {
             _smoothed = leds.ToArray();
+            _isSmoothing = false;
             return leds;
         }
 
@@ -436,6 +474,8 @@ public sealed class DeviceOutput : IDisposable
             if (_smoothed[i] != target)
                 isSettled = false;
         }
+
+        _isSmoothing = !isSettled;
 
         // Клавиши ещё не догасли: кадр остаётся в ящике и повторится, даже если новых кадров больше не будет
         if (!isSettled)

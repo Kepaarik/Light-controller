@@ -132,6 +132,8 @@ public sealed class RkKeyboardDevice : LedDevice, IKeyboardDevice, IBuiltinEffec
 
     public IReadOnlyList<BuiltinEffect> BuiltinEffects => FirmwareEffects;
 
+    public bool HasBuiltinColor => true;
+
     /// <summary>
     /// Принимает ли интерфейс команды настройщика: в его описании есть feature-отчёт 9 нужной длины.
     /// </summary>
