@@ -46,14 +46,14 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Вкладки в заголовке окна.
+    /// Пункты левого меню разделов.
     /// </summary>
     public IReadOnlyList<PageOption> Pages { get; } = new PageOption[]
     {
-        new(AppPage.Scene, "Сцена"),
-        new(AppPage.Scenarios, "Сценарии"),
-        new(AppPage.Devices, "Устройства"),
-        new(AppPage.Settings, "Настройки")
+        new(AppPage.Scene, "Сцена", ""),
+        new(AppPage.Scenarios, "Сценарии", ""),
+        new(AppPage.Devices, "Устройства", ""),
+        new(AppPage.Settings, "Настройки", "")
     };
 
     public SettingsViewModel Settings { get; }

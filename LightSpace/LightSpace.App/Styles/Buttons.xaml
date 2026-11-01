@@ -104,10 +104,10 @@
         <Setter Property="Template" Value="{StaticResource ButtonTemplate}"/>
     </Style>
 
-    <!-- Главное действие: заливка системным акцентным цветом и мягкое свечение акцентом вокруг -->
+    <!-- Главное действие: заливка акцентным градиентом и мягкое свечение акцентом вокруг -->
     <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}"/>
-        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource AccentGradientBrush}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="controls:Appearance.HoverBrush" Value="{DynamicResource AccentStateHoverBrush}"/>
         <Setter Property="controls:Appearance.PressedBrush" Value="{DynamicResource AccentStatePressedBrush}"/>

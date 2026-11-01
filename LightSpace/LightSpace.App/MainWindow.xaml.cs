@@ -6,7 +6,7 @@ using LightSpace.App.ViewModels;
 namespace LightSpace.App;
 
 /// <summary>
-/// Главное окно приложения: свой заголовок с вкладками на фоне Mica и страницы под ним.
+/// Главное окно приложения на стеклянном фоне Acrylic: свой заголовок, меню разделов слева и страницы справа.
 /// </summary>
 public partial class MainWindow : Window
 {

@@ -17,9 +17,9 @@ public enum AppPage
 }
 
 /// <summary>
-/// Вкладка в заголовке окна.
+/// Пункт левого меню разделов: страница, подпись и значок из Segoe Fluent Icons.
 /// </summary>
-public sealed record PageOption(AppPage Page, string Title)
+public sealed record PageOption(AppPage Page, string Title, string Icon)
 {
     public override string ToString() => Title;
 }

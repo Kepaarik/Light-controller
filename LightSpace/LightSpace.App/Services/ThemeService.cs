@@ -1,15 +1,12 @@
 using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Effects;
 using LightSpace.Core.Config;
 using Microsoft.Win32;
-using Windows.UI.ViewManagement;
 
 namespace LightSpace.App.Services;
 
 /// <summary>
-/// Тема оформления приложения: по умолчанию тёмная, по выбору — светлая или как в Windows; акцентный цвет — системный.
-/// При смене темы или акцента в Windows приложение перекрашивается на лету.
+/// Тема оформления приложения: по умолчанию тёмная, по выбору — светлая или как в Windows; акцентный цвет — свой, фиолетовый.
+/// При смене темы в Windows приложение перекрашивается на лету.
 /// </summary>
 public static class ThemeService
 {
@@ -17,17 +14,6 @@ public static class ThemeService
 
     private static readonly Uri LightUri = new("/LightSpace;component/Themes/Light.xaml", UriKind.Relative);
     private static readonly Uri DarkUri = new("/LightSpace;component/Themes/Dark.xaml", UriKind.Relative);
-
-    // Свечение акцентом вокруг активных элементов: размытие и непрозрачность в тёмной и светлой теме
-    private const double DarkGlowBlur = 16;
-    private const double DarkGlowOpacity = 0.55;
-    private const double LightGlowBlur = 12;
-    private const double LightGlowOpacity = 0.35;
-
-    // Акцентный цвет на случай, если Windows его не отдала
-    private static readonly Color FallbackAccent = Color.FromRgb(0x00, 0x78, 0xD4);
-
-    private static UISettings? _uiSettings;
 
     /// <summary>
     /// Сейчас показана тёмная тема.
@@ -82,7 +68,6 @@ public static class ThemeService
 
         // Первый словарь в App.xaml — цвета темы; подменяем его целиком, всё на DynamicResource перекрашивается
         resources.MergedDictionaries[0] = new ResourceDictionary { Source = dark ? DarkUri : LightUri };
-        ApplyAccent(resources, dark);
 
         IsDark = dark;
         ThemeChanged?.Invoke(null, EventArgs.Empty);
@@ -94,57 +79,5 @@ public static class ThemeService
 
         // Нет значения — в Windows светлая тема по умолчанию
         return key?.GetValue("AppsUseLightTheme") is int value && value == 0;
-    }
-
-    /// <summary>
-    /// Кладёт акцентные кисти прямо в ресурсы приложения: они перекрывают запасные из словаря темы.
-    /// Как в Windows 11: в тёмной теме акцент светлее, в светлой — темнее, чтобы хватало контраста.
-    /// </summary>
-    private static void ApplyAccent(ResourceDictionary resources, bool dark)
-    {
-        var accent = ReadAccent(dark ? UIColorType.AccentLight2 : UIColorType.AccentDark1);
-        var accentText = ReadAccent(dark ? UIColorType.AccentLight3 : UIColorType.AccentDark2);
-
-        resources["AccentBrush"] = Freeze(new SolidColorBrush(accent));
-        resources["AccentHoverBrush"] = Freeze(new SolidColorBrush(WithAlpha(accent, 0xE6)));
-        resources["AccentPressedBrush"] = Freeze(new SolidColorBrush(WithAlpha(accent, 0xCC)));
-        resources["AccentSoftBrush"] = Freeze(new SolidColorBrush(WithAlpha(accent, 0x33)));
-        resources["AccentTextBrush"] = Freeze(new SolidColorBrush(accentText));
-        resources["OnAccentBrush"] = Freeze(new SolidColorBrush(dark ? Colors.Black : Colors.White));
-
-        // Свечение акцентом: в тёмной теме заметнее, в светлой — едва видно
-        resources["ShadowAccentGlow"] = Freeze(new DropShadowEffect
-        {
-            Color = accent,
-            ShadowDepth = 0,
-            BlurRadius = dark ? DarkGlowBlur : LightGlowBlur,
-            Opacity = dark ? DarkGlowOpacity : LightGlowOpacity
-        });
-    }
-
-    private static Color ReadAccent(UIColorType type)
-    {
-        try
-        {
-            _uiSettings ??= new UISettings();
-            var color = _uiSettings.GetColorValue(type);
-
-            return Color.FromArgb(color.A, color.R, color.G, color.B);
-        }
-        catch (Exception e) when (e is System.Runtime.InteropServices.COMException or InvalidCastException or TypeLoadException)
-        {
-            return FallbackAccent;
-        }
-    }
-
-    private static Color WithAlpha(Color color, byte alpha)
-    {
-        return Color.FromArgb(alpha, color.R, color.G, color.B);
-    }
-
-    private static T Freeze<T>(T freezable) where T : Freezable
-    {
-        freezable.Freeze();
-        return freezable;
     }
 }
