@@ -135,10 +135,22 @@
             <!-- Точные границы слоя числами, в единицах сцены -->
             <TextBlock Text="Границы" Style="{StaticResource Body}" Margin="{StaticResource GapTop16}"/>
             <UniformGrid Columns="4" Margin="{StaticResource GapTop8}">
-                <TextBox Tag="Слева" Text="{Binding SelectedLayer.LeftText}" Margin="{StaticResource GapRight8}"/>
-                <TextBox Tag="Сверху" Text="{Binding SelectedLayer.TopText}" Margin="{StaticResource GapRight8}"/>
-                <TextBox Tag="Ширина" Text="{Binding SelectedLayer.WidthText}" Margin="{StaticResource GapRight8}"/>
-                <TextBox Tag="Высота" Text="{Binding SelectedLayer.HeightText}"/>
+                <StackPanel Margin="{StaticResource GapRight8}">
+                    <TextBlock Text="Слева" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                    <TextBox Text="{Binding SelectedLayer.LeftText}"/>
+                </StackPanel>
+                <StackPanel Margin="{StaticResource GapRight8}">
+                    <TextBlock Text="Сверху" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                    <TextBox Text="{Binding SelectedLayer.TopText}"/>
+                </StackPanel>
+                <StackPanel Margin="{StaticResource GapRight8}">
+                    <TextBlock Text="Ширина" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                    <TextBox Text="{Binding SelectedLayer.WidthText}"/>
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="Высота" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                    <TextBox Text="{Binding SelectedLayer.HeightText}"/>
+                </StackPanel>
             </UniformGrid>
             <TextBlock Text="{Binding SceneSizeText}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 

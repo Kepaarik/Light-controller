@@ -64,7 +64,7 @@
                                 <Grid DockPanel.Dock="Left" Width="{StaticResource AppIconSize}" Height="{StaticResource AppIconSize}"
                                       Margin="{StaticResource GapRight12}" VerticalAlignment="Top">
                                     <!-- Без значка — общий значок сценария -->
-                                    <TextBlock Text="&#xE8FD;" Style="{StaticResource Icon}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                    <TextBlock Text="&#xE8FD;" Style="{StaticResource Icon}" Foreground="{DynamicResource MutedBrush}"
                                                HorizontalAlignment="Center"
                                                Visibility="{Binding Icon, Converter={x:Static controls:NullToVisibilityConverter.Instance}}"/>
                                     <Image Source="{Binding Icon}"/>
@@ -77,7 +77,7 @@
                                             <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                                        <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentHoverBrush}"/>
                                                         <Setter Property="FontWeight" Value="SemiBold"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
@@ -103,7 +103,10 @@
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Удалить" controls:Appearance.Icon="&#xE74D;"
                                     VerticalAlignment="Center" Margin="{StaticResource GapLeft12}" Command="{Binding DeleteCommand}"/>
-                            <TextBox Tag="Название сценария" Text="{Binding SelectedItem.Name, UpdateSourceTrigger=PropertyChanged}"/>
+                            <StackPanel>
+                                <TextBlock Text="Название сценария" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                                <TextBox Text="{Binding SelectedItem.Name, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
                         </DockPanel>
 
                         <!-- Когда: приложение из запущенных или exe-файл, и режим -->

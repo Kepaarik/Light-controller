@@ -13,7 +13,7 @@
         <!-- Эффект играет само устройство, поэтому живого превью нет -->
         <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Left" Text="&#xE946;" Style="{StaticResource Icon}" Foreground="{DynamicResource TextSecondaryBrush}"
+                <TextBlock DockPanel.Dock="Left" Text="&#xE946;" Style="{StaticResource Icon}" Foreground="{DynamicResource MutedBrush}"
                            VerticalAlignment="Top" Margin="{StaticResource GapRight12}"/>
                 <TextBlock Style="{StaticResource Hint}"
                            Text="Встроенный эффект играет сам контроллер устройства, поэтому показать его здесь нельзя — посмотрите на устройство, когда сценарий включится. Пока он играет, на сцене у устройства нет живых цветов."/>

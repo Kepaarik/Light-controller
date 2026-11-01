@@ -25,7 +25,6 @@ public partial class App : Application
         FileLog.Start();
 
         _config = ConfigStore.Load();
-        ThemeService.Initialize(_config.Theme);
 
         // Путь к exe мог поменяться с прошлого запуска — запись автозапуска обновляем
         if (_config.StartWithWindows)
@@ -50,7 +49,6 @@ public partial class App : Application
         _tray?.Dispose();
         _viewModel?.Shutdown();
         _viewModel?.Settings.SaveNow();
-        ThemeService.Shutdown();
     }
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)

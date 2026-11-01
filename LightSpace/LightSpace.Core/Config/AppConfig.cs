@@ -51,9 +51,14 @@ public sealed class AppConfig
     public bool MinimizeToTrayOnClose { get; set; } = true;
 
     /// <summary>
-    /// Тема оформления: тёмная, светлая или как в Windows.
+    /// Окно из прозрачного стекла (Acrylic); иначе — матовое (Mica).
     /// </summary>
-    public ThemePreference Theme { get; set; } = ThemePreference.Dark;
+    public bool UseAcrylic { get; set; } = true;
+
+    /// <summary>
+    /// Тонировка и прозрачность стекла окна.
+    /// </summary>
+    public GlassConfig Glass { get; set; } = new();
 
     /// <summary>
     /// Устройства, которые уже находились хотя бы раз, в порядке их появления.
@@ -81,9 +86,9 @@ public sealed class AppConfig
         TransitionMilliseconds = Math.Clamp(TransitionMilliseconds, 0, 5000);
         FocusReleaseDelaySeconds = Math.Clamp(FocusReleaseDelaySeconds, 0, 30);
 
-        // Тема, которой нет в этой сборке, могла попасть в файл из правки руками
-        if (!Enum.IsDefined(Theme))
-            Theme = ThemePreference.Dark;
+        // Пустой раздел стекла в файле дал бы null вместо настроек по умолчанию
+        Glass ??= new GlassConfig();
+        Glass.Normalize();
 
         // Устройство без идентификатора не узнать при поиске, а повторы одного устройства путали бы его настройки
         Devices = Devices

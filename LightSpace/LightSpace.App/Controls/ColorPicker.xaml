@@ -10,7 +10,7 @@
                       IsHitTestVisible="{Binding IsOpen, ElementName=Flyout, Converter={x:Static controls:InverseBooleanConverter.Instance}}">
             <StackPanel Orientation="Horizontal">
                 <Border x:Name="Swatch" Width="{StaticResource SwatchSmallSize}" Height="{StaticResource SwatchSmallSize}"
-                        CornerRadius="{StaticResource RadiusSmall}" BorderBrush="{DynamicResource StrokeBrush}"
+                        CornerRadius="{StaticResource RadiusSmall}" BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="{StaticResource StrokeThin}" VerticalAlignment="Center"/>
                 <TextBlock x:Name="HexText" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}"/>
             </StackPanel>
