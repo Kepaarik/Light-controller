@@ -29,7 +29,7 @@
             </ListBox>
         </StackPanel>
 
-        <controls:ValueSlider Label="Скорость эффекта" Unit="%" Minimum="0" Maximum="100" Step="5"
+        <controls:ValueSlider Label="Скорость эффекта" Unit="%" Minimum="0" Maximum="100" Step="1"
                               Value="{Binding Speed}"/>
 
         <!-- Цвет — только у устройств, которые умеют играть эффект одним цветом -->
