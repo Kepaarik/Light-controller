@@ -150,9 +150,7 @@ public sealed partial class EffectEditorViewModel : ObservableObject
         {
             EffectParameterViewModel item = parameter.Kind switch
             {
-                // У сплошного цвета цвет — вся суть эффекта, поэтому у него есть готовые цвета
-                EffectParameterKind.Color => new ColorParameterViewModel(parameter, values, OnParameterChanged,
-                    _selectedTile.Definition == EffectLibrary.Solid),
+                EffectParameterKind.Color => new ColorParameterViewModel(parameter, values, OnParameterChanged),
                 EffectParameterKind.Choice => new ChoiceParameterViewModel(parameter, values, OnParameterChanged),
                 EffectParameterKind.Toggle => new ToggleParameterViewModel(parameter, values, OnParameterChanged),
                 _ => new NumberParameterViewModel(parameter, values, OnParameterChanged)
