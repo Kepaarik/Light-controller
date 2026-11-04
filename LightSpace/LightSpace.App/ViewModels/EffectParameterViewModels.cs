@@ -150,13 +150,9 @@ public sealed class ColorParameterViewModel : EffectParameterViewModel
         new("Розовый", new RgbColor(255, 40, 120))
     };
 
-    /// <summary>
-    /// showsPresets — под выбором цвета показать готовые цвета, например у сплошного цвета.
-    /// </summary>
-    public ColorParameterViewModel(EffectParameter parameter, EffectValuesConfig values, Action changed, bool showsPresets = false)
+    public ColorParameterViewModel(EffectParameter parameter, EffectValuesConfig values, Action changed)
         : base(parameter, values, changed)
     {
-        Presets = showsPresets ? AllPresets : Array.Empty<ColorPreset>();
         ApplyPresetCommand = new RelayCommand<ColorPreset>(preset =>
         {
             if (preset != null)
@@ -167,9 +163,7 @@ public sealed class ColorParameterViewModel : EffectParameterViewModel
     /// <summary>
     /// Готовые цвета: щелчок сразу ставит цвет.
     /// </summary>
-    public IReadOnlyList<ColorPreset> Presets { get; }
-
-    public bool HasPresets => Presets.Count > 0;
+    public IReadOnlyList<ColorPreset> Presets => AllPresets;
 
     public IRelayCommand<ColorPreset> ApplyPresetCommand { get; }
 

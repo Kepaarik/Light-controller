@@ -26,8 +26,7 @@
                 </DockPanel>
 
                 <!-- Готовые цвета: круглые образцы, щелчок сразу ставит цвет -->
-                <ItemsControl ItemsSource="{Binding Presets}" Margin="{StaticResource GapTop8}"
-                              Visibility="{Binding HasPresets, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                <ItemsControl ItemsSource="{Binding Presets}" Margin="{StaticResource GapTop8}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel/>
