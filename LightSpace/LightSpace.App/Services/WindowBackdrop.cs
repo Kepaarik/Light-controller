@@ -12,7 +12,11 @@ namespace LightSpace.App.Services;
 public static class WindowBackdrop
 {
     private const int DwmUseImmersiveDarkMode = 20;
+    private const int DwmBorderColor = 34;
     private const int DwmSystemBackdropType = 38;
+
+    // DWMWA_COLOR_NONE: рамка окна не рисуется вовсе
+    private const int ColorNone = unchecked((int)0xFFFFFFFE);
     private const int BackdropMica = 2;
     private const int BackdropAcrylic = 3;
 
@@ -46,6 +50,7 @@ public static class WindowBackdrop
 
         var margins = new Margins { Left = -1, Right = -1, Top = -1, Bottom = -1 };
         var backdrop = useAcrylic ? BackdropAcrylic : BackdropMica;
+        var borderColor = ColorNone;
 
         // Окно должно быть прозрачным насквозь, иначе стекло закроет заливка WPF
         window.Background = Brushes.Transparent;
@@ -53,6 +58,9 @@ public static class WindowBackdrop
 
         DwmExtendFrameIntoClientArea(handle, ref margins);
         DwmSetWindowAttribute(handle, DwmSystemBackdropType, ref backdrop, sizeof(int));
+
+        // У активного окна Windows 11 рисует рамку цветом акцента — сверху она видна полоской над стеклом
+        DwmSetWindowAttribute(handle, DwmBorderColor, ref borderColor, sizeof(int));
     }
 
     [DllImport("dwmapi.dll")]
