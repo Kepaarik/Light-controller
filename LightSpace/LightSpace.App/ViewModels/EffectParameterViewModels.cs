@@ -133,7 +133,10 @@ public sealed class NumberParameterViewModel : EffectParameterViewModel
 /// </summary>
 public sealed class ColorParameterViewModel : EffectParameterViewModel
 {
-    private static readonly IReadOnlyList<ColorPreset> AllPresets = new ColorPreset[]
+    /// <summary>
+    /// Готовые цвета для всех выборов цвета: в эффектах приложения и во встроенных эффектах.
+    /// </summary>
+    public static readonly IReadOnlyList<ColorPreset> AllPresets = new ColorPreset[]
     {
         new("Белый", new RgbColor(255, 255, 255)),
         new("Тёплый белый", new RgbColor(255, 180, 100)),

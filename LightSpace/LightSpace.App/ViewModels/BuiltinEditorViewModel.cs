@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using LightSpace.Core;
 using LightSpace.Core.Config;
 using LightSpace.Devices;
@@ -184,7 +185,7 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
 /// Редактор содержимого — встроенного эффекта: эффект каждого подключённого устройства, которое их умеет, скорость
 /// и цвет. Показать сам эффект в окне нельзя — его играет устройство. Все правки сразу попадают в содержимое.
 /// </summary>
-public sealed class BuiltinEditorViewModel : ObservableObject
+public sealed partial class BuiltinEditorViewModel : ObservableObject
 {
     private readonly DeviceManager _manager;
     private readonly Action _changed;
@@ -328,6 +329,21 @@ public sealed class BuiltinEditorViewModel : ObservableObject
             OnPropertyChanged();
             _changed();
         }
+    }
+
+    /// <summary>
+    /// Готовые цвета: щелчок сразу ставит цвет эффекта.
+    /// </summary>
+    public IReadOnlyList<ColorPreset> ColorPresets => ColorParameterViewModel.AllPresets;
+
+    /// <summary>
+    /// Ставит готовый цвет.
+    /// </summary>
+    [RelayCommand]
+    private void ApplyColorPreset(ColorPreset? preset)
+    {
+        if (preset != null)
+            Color = preset.Color;
     }
 
     public double Speed

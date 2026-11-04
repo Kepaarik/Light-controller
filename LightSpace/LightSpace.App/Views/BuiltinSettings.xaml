@@ -42,6 +42,26 @@
                 <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}"/>
                 <TextBlock Text="Цвет" Style="{StaticResource Body}" VerticalAlignment="Center"/>
             </DockPanel>
+
+            <!-- Готовые цвета: круглые образцы, щелчок сразу ставит цвет -->
+            <ItemsControl ItemsSource="{Binding ColorPresets}" Margin="{StaticResource GapTop8}"
+                          Visibility="{Binding UseColor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource ChipButton}" Margin="0,0,6,6" ToolTip="{Binding Title}"
+                                Command="{Binding DataContext.ApplyColorPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}">
+                            <Border Width="18" Height="18" CornerRadius="9" Background="{Binding Swatch}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
     </StackPanel>
 </UserControl>
