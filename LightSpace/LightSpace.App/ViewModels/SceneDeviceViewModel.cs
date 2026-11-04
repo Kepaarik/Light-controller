@@ -42,6 +42,7 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
 
         Id = device.Id;
         Name = device.Name;
+        IsConnected = device.Device != null;
         Keys = capabilities?.Keys ?? Array.Empty<KeyboardKey>();
         Geometry = device.Geometry;
         _settings = device.Settings;
@@ -62,6 +63,11 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     public string Id { get; }
 
     public string Name { get; }
+
+    /// <summary>
+    /// Устройство подключено; неподключённому настраивать нечего — команды до него не дойдут.
+    /// </summary>
+    public bool IsConnected { get; }
 
     /// <summary>
     /// Что это за устройство, или что оно не подключено.

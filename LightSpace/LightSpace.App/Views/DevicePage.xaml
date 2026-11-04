@@ -22,6 +22,12 @@
             <TextBlock Text="{Binding SelectedGroup.Title}" Style="{StaticResource PageTitle}"/>
             <TextBlock Text="{Binding SelectedGroup.Device.KindText}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
+            <!-- Неподключённому устройству настраивать нечего: команды до него не дойдут -->
+            <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop16}"
+                       Text="Устройство не подключено. Включите его и нажмите «Найти» на странице «Устройства» — настройки появятся здесь."
+                       Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+            <StackPanel Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
                     <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
@@ -91,11 +97,13 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 
         <!-- Панель настроек эффекта: только у «Эффекта», выезжает справа -->
-        <Grid Grid.Column="1" Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+        <Grid Grid.Column="1" Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+        <Grid Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
             <Border Width="{StaticResource EffectPanelWidth}" Margin="0,16,16,16" Padding="0"
                     Visibility="{Binding IsChecked, ElementName=SettingsToggle, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                 <Border.RenderTransform>
@@ -141,6 +149,7 @@
                     </ScrollViewer>
                 </DockPanel>
             </Border>
+        </Grid>
         </Grid>
     </Grid>
 </UserControl>
