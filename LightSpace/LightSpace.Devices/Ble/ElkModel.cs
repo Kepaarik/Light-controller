@@ -6,8 +6,8 @@ namespace LightSpace.Devices.Ble;
 /// </summary>
 public sealed class ElkModel
 {
-    // Самая высокая скорость, при которой эффекты ещё идут (проверено на MELK-OA21)
-    private const int MaxSpeedByte = 0x80;
+    // Самая высокая скорость, при которой идут все эффекты (проверено на MELK-OA21: часть эффектов замирает уже с 0x76)
+    private const int MaxSpeedByte = 0x74;
 
     private static readonly IReadOnlyList<BuiltinEffect> StripXEffects = BuildEffects(new (string, int[])[]
     {
@@ -99,8 +99,8 @@ public sealed class ElkModel
     }
 
     /// <summary>
-    /// Скорость встроенного эффекта 0–100 %. Выше байта 0x80 контроллер MELK-OA21 замирает,
-    /// поэтому 100 % соответствуют 0x80.
+    /// Скорость встроенного эффекта 0–100 %. При слишком большом значении контроллер MELK-OA21
+    /// останавливает часть эффектов, поэтому 100 % соответствуют наибольшей скорости, при которой идут все.
     /// </summary>
     public static byte[] EffectSpeedCommand(int speed)
     {
