@@ -34,6 +34,11 @@ public sealed class SettingsViewModel : ObservableObject
     public GlassViewModel Glass { get; }
 
     /// <summary>
+    /// Скрытый раздел с подробным журналом устройств.
+    /// </summary>
+    public DeviceLogViewModel Log { get; } = new();
+
+    /// <summary>
     /// Системное стекло есть в этой версии Windows.
     /// </summary>
     public bool IsAcrylicSupported => WindowBackdrop.IsSupported;
