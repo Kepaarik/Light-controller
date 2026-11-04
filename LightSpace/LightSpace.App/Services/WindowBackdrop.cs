@@ -13,6 +13,7 @@ public static class WindowBackdrop
 {
     private const int DwmUseImmersiveDarkMode = 20;
     private const int DwmBorderColor = 34;
+    private const int DwmCaptionColor = 35;
     private const int DwmSystemBackdropType = 38;
 
     // DWMWA_COLOR_NONE: рамка окна не рисуется вовсе
@@ -61,6 +62,9 @@ public static class WindowBackdrop
 
         // У активного окна Windows 11 рисует рамку цветом акцента — сверху она видна полоской над стеклом
         DwmSetWindowAttribute(handle, DwmBorderColor, ref borderColor, sizeof(int));
+
+        // При включённом «Цвет акцента в заголовках» Windows заливает им весь заголовок активного окна поверх стекла
+        DwmSetWindowAttribute(handle, DwmCaptionColor, ref borderColor, sizeof(int));
     }
 
     [DllImport("dwmapi.dll")]
