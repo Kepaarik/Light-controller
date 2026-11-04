@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using LightSpace.Core;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
@@ -18,6 +19,9 @@ public sealed class BleDiscoverer : IDeviceDiscoverer
     {
         var candidates = await ScanAdvertisementsAsync(timeout, ct);
         var devices = new List<LedDevice>();
+
+        DeviceLog.Write($"BLE поиск: подходящих устройств в эфире {candidates.Count}"
+            + string.Concat(candidates.Select(c => $"; {c.Key:X12} «{c.Value}»")));
 
         // Подключаемся по очереди: стек Bluetooth в Windows плохо переносит параллельные подключения
         foreach (var (address, advertisedName) in candidates)
@@ -82,14 +86,21 @@ public sealed class BleDiscoverer : IDeviceDiscoverer
         {
             device = await BluetoothLEDevice.FromBluetoothAddressAsync(address);
             if (device == null)
+            {
+                DeviceLog.Write($"BLE {address:X12} «{advertisedName}»: не удалось открыть устройство");
                 return null;
+            }
 
             var services = await device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
             if (services.Status != GattCommunicationStatus.Success)
             {
+                DeviceLog.Write($"BLE {address:X12} «{advertisedName}»: список сервисов не получен ({services.Status})");
                 device.Dispose();
                 return null;
             }
+
+            DeviceLog.Write($"BLE {address:X12} «{advertisedName}» (имя устройства «{device.Name}»): сервисы "
+                + string.Join(", ", services.Services.Select(s => s.Uuid)));
 
             foreach (var (variant, serviceUuid, characteristicUuid) in BleLedDevice.Variants)
             {
@@ -110,12 +121,14 @@ public sealed class BleDiscoverer : IDeviceDiscoverer
                 return new BleLedDevice(device, characteristic, variant, string.IsNullOrWhiteSpace(name) ? "BLE лента" : name);
             }
 
+            DeviceLog.Write($"BLE {address:X12} «{advertisedName}»: нет нужной характеристики — не лента");
             device.Dispose();
             return null;
         }
-        catch (Exception)
+        catch (Exception e)
         {
             // Посторонние BLE-устройства с похожими UUID могут не дать подключиться — это не ошибка поиска
+            DeviceLog.Write($"BLE {address:X12} «{advertisedName}»: подключиться не удалось: {e.GetType().Name}: {e.Message}");
             device?.Dispose();
             return null;
         }

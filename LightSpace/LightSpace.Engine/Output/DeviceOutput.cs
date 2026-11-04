@@ -146,6 +146,9 @@ public sealed class DeviceOutput : IDisposable
             if (start == _builtin)
                 return;
 
+            DeviceLog.Write($"«{_device.Name}»: запрошен встроенный эффект {start.EffectId}, скорость {start.Speed}, "
+                + $"яркость {start.Brightness}, цвет {start.Color?.ToHex() ?? "свой"}{(_isEnabled ? "" : " — подсветка выключена, не отправляется")}");
+
             // Неотправленный кадр затёр бы эффект
             _builtin = start;
             _pending = null;
@@ -167,6 +170,8 @@ public sealed class DeviceOutput : IDisposable
     {
         lock (_sync)
         {
+            DeviceLog.Write($"«{_device.Name}»: эффект сменился — сброс устройства");
+
             // Неотправленный кадр и запуск относятся к прежнему эффекту; встроенный эффект после сброса запустится заново
             _pending = null;
             _isPendingRepeat = false;
@@ -190,6 +195,8 @@ public sealed class DeviceOutput : IDisposable
         {
             if (_isEnabled == isEnabled)
                 return;
+
+            DeviceLog.Write($"«{_device.Name}»: подсветка {(isEnabled ? "включена" : "выключена")}");
 
             _isEnabled = isEnabled;
             _pendingPower = isEnabled;
@@ -311,7 +318,10 @@ public sealed class DeviceOutput : IDisposable
         {
             // Кадров, которые повторили бы попытку, у встроенного эффекта нет — запуск повторяется сам
             if (!await RunCommandAsync(() => StartBuiltinAsync(builtin, ct), isFrame: false, ct))
+            {
+                DeviceLog.Write($"«{_device.Name}»: запуск встроенного эффекта не дошёл, повтор через {BuiltinRetryDelay.TotalSeconds:0} с");
                 _ = RetryBuiltinAsync(builtin, ct);
+            }
 
             return true;
         }
@@ -394,7 +404,12 @@ public sealed class DeviceOutput : IDisposable
     private Task StartBuiltinAsync(BuiltinEffectStart start, CancellationToken ct)
     {
         if (_device is not IBuiltinEffectsDevice builtin)
+        {
+            DeviceLog.Write($"«{_device.Name}»: устройство не умеет встроенные эффекты — запуск пропущен");
             return Task.CompletedTask;
+        }
+
+        DeviceLog.Write($"«{_device.Name}»: отправка встроенного эффекта {start.EffectId}");
 
         // После эффекта клавиши сглаживаются заново, а не от кадра, который был до него
         _smoothed = null;
@@ -536,6 +551,8 @@ public sealed class DeviceOutput : IDisposable
         }
         catch (Exception e)
         {
+            DeviceLog.Write($"«{_device.Name}»: {(isFrame ? "кадр" : "команда")} не дошла: {e.GetType().Name}: {e.Message}");
+
             // Ошибка одной команды не останавливает вывод — следующий кадр попробует снова
             lock (_sync)
             {

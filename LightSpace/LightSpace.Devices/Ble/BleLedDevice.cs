@@ -39,6 +39,9 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
         _variant = variant;
         _model = variant == BleVariant.ElkBledom ? ElkModel.Find(name) : null;
         Name = name;
+
+        DeviceLog.Write($"BLE «{name}» {Address}: вариант {variant}, модель {_model?.Name ?? "не известна"}, "
+            + $"встроенных эффектов {BuiltinEffects.Count}, свойства характеристики {characteristic.CharacteristicProperties}");
     }
 
     public override string Id => $"ble:{_device.BluetoothAddress:X12}";
@@ -143,10 +146,19 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
         await _lock.WaitAsync(ct);
         try
         {
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
             var status = await _characteristic.WriteValueAsync(CryptographicBuffer.CreateFromByteArray(data), option).AsTask(ct);
+            var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(started);
+
+            DeviceLog.Write($"BLE «{Name}» → {DeviceLog.Hex(data)} ({option}): {status}, {elapsed.TotalMilliseconds:0} мс");
 
             if (status != GattCommunicationStatus.Success)
                 throw new IOException($"Ошибка записи по Bluetooth: {status}");
+        }
+        catch (Exception e) when (e is not IOException and not OperationCanceledException)
+        {
+            DeviceLog.Write($"BLE «{Name}» → {DeviceLog.Hex(data)}: исключение {e.GetType().Name}: {e.Message}");
+            throw;
         }
         finally
         {

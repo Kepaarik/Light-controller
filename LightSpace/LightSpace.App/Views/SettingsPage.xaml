@@ -10,7 +10,8 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Left">
-            <TextBlock Text="Настройки" Style="{StaticResource PageTitle}"/>
+            <!-- Семь щелчков по заголовку открывают скрытый раздел «Журнал устройств» -->
+            <TextBlock Text="Настройки" Style="{StaticResource PageTitle}" MouseLeftButtonUp="OnTitleClicked"/>
             <TextBlock Text="Внешний вид и поведение приложения" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
             <!-- Внешний вид -->
@@ -120,6 +121,33 @@
                                        Style="{StaticResource Hint}" Margin="0,2,0,0"/>
                         </StackPanel>
                     </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Скрытый раздел: подробный журнал устройств для разбора неполадок -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                    Visibility="{Binding Log.IsShown, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                <StackPanel>
+                    <TextBlock Text="Журнал устройств" Style="{StaticResource CardTitle}"/>
+                    <CheckBox IsChecked="{Binding Log.IsEnabled}">
+                        <StackPanel>
+                            <TextBlock Text="Записывать подробный журнал" Style="{StaticResource Body}"/>
+                            <TextBlock Text="Поиск, подключение и каждая команда, ушедшая на устройство. Включите, затем нажмите «Найти» на странице «Устройства» и повторите то, что не работает."
+                                       Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </CheckBox>
+
+                    <StackPanel Orientation="Horizontal" Margin="{StaticResource GapTop16}">
+                        <Button Content="Скопировать" controls:Appearance.Icon="&#xE8C8;" Command="{Binding Log.CopyCommand}"/>
+                        <Button Content="Открыть папку" controls:Appearance.Icon="&#xE838;" Command="{Binding Log.OpenFolderCommand}"
+                                Style="{StaticResource GhostButton}" Margin="8,0,0,0"/>
+                        <Button Content="Очистить" Command="{Binding Log.ClearCommand}" Style="{StaticResource DangerButton}" Margin="8,0,0,0"/>
+                    </StackPanel>
+
+                    <TextBox Text="{Binding Log.Text, Mode=OneWay}" IsReadOnly="True" TextWrapping="NoWrap"
+                             FontFamily="Consolas" Height="320" Margin="{StaticResource GapTop16}"
+                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" VerticalContentAlignment="Top"
+                             TextChanged="OnLogTextChanged"/>
                 </StackPanel>
             </Border>
         </StackPanel>
