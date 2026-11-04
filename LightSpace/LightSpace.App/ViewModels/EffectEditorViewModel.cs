@@ -16,6 +16,7 @@ public sealed partial class EffectEditorViewModel : ObservableObject
 
     private ContentConfig? _content;
     private EffectTileViewModel _selectedTile;
+    private bool _isPlaying = true;
 
     /// <summary>
     /// changed вызывается после каждой правки: выбора эффекта и изменения его настроек.
@@ -38,16 +39,43 @@ public sealed partial class EffectEditorViewModel : ObservableObject
     public IReadOnlyList<EffectTileViewModel> Tiles { get; }
 
     /// <summary>
-    /// Эффект, который играет в открытом содержимом.
+    /// Эффект из галереи сейчас играет — тогда его плитка выделена. Пока играет другое, например встроенный эффект
+    /// устройства, плитка не выделена, а выбор любой плитки включает эффект.
+    /// </summary>
+    public bool IsPlaying
+    {
+        get => _isPlaying;
+        set
+        {
+            if (SetProperty(ref _isPlaying, value))
+                OnPropertyChanged(nameof(SelectedTile));
+        }
+    }
+
+    /// <summary>
+    /// Эффект, который играет в открытом содержимом; null — играет не эффект из галереи.
     /// </summary>
     public EffectTileViewModel? SelectedTile
     {
-        get => _selectedTile;
+        get => _isPlaying ? _selectedTile : null;
         set
         {
             // Галерея сбрасывает выбор в null, когда пересобирает плитки, — играющий эффект от этого не меняется
-            if (value == null || _content == null || !SetProperty(ref _selectedTile, value))
+            if (value == null || _content == null)
                 return;
+
+            // Тот же эффект, пока играет другое, — включается снова
+            if (value == _selectedTile)
+            {
+                if (!_isPlaying)
+                    _changed();
+
+                OnPropertyChanged();
+                return;
+            }
+
+            _selectedTile = value;
+            OnPropertyChanged();
 
             _content.EffectId = value.Definition.Id;
             BuildParameters();

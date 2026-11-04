@@ -67,8 +67,16 @@
                         <TextBlock Text="{Binding PlayingText}" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
                     </DockPanel>
 
-                    <!-- Эффект: галерея, ниже настройки выбранного эффекта -->
+                    <!-- Эффект: сверху встроенные эффекты устройства, ниже галерея эффектов приложения; настройки — в панели справа -->
                     <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <StackPanel Visibility="{Binding BuiltinEditor.HasTiles, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                            <TextBlock Text="Встроенные эффекты устройства" Style="{StaticResource SectionLabel}"/>
+                            <ListBox Style="{StaticResource TileGallery}" ItemsSource="{Binding BuiltinEditor.Tiles}"
+                                     SelectedItem="{Binding BuiltinEditor.SelectedTile}"/>
+
+                            <TextBlock Text="Эффекты приложения" Style="{StaticResource SectionLabel}"/>
+                        </StackPanel>
+
                         <views:EffectEditor DataContext="{Binding Editor}" ShowsSettings="False"/>
                     </StackPanel>
 
@@ -122,8 +130,14 @@
                         <TextBlock Text="Настройки эффекта" Style="{StaticResource CardTitle}"/>
                     </DockPanel>
 
+                    <!-- Настройки того, что играет: встроенного эффекта устройства или эффекта приложения -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <views:EffectSettings DataContext="{Binding Editor}" Margin="22,0,22,22"/>
+                        <Grid Margin="22,0,22,22">
+                            <views:EffectSettings DataContext="{Binding Editor}"
+                                                  Visibility="{Binding DataContext.IsBuiltinPlaying, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+                            <views:BuiltinSettings DataContext="{Binding BuiltinEditor}"
+                                                   Visibility="{Binding DataContext.IsBuiltinPlaying, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                        </Grid>
                     </ScrollViewer>
                 </DockPanel>
             </Border>
