@@ -35,6 +35,12 @@ public abstract class LedDevice : IDisposable
     public virtual TimeSpan MinFrameInterval => TimeSpan.FromMilliseconds(50);
 
     /// <summary>
+    /// Устройство могли выключить с пульта или телефона, а цвета и эффекты его не включают — после подключения
+    /// ему первым делом отправляется включение.
+    /// </summary>
+    public virtual bool NeedsPowerOnAtStart => false;
+
+    /// <summary>
     /// Что устройство умеет: адресное ли оно, сколько у него светодиодов, как часто принимает кадры, есть ли раскладка клавиш.
     /// </summary>
     public DeviceCapabilities Capabilities => new(
