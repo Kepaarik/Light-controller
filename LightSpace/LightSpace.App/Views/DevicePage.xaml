@@ -94,6 +94,15 @@
                     <StackPanel Visibility="{Binding IsScreenContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                         <TextBlock Text="Лента повторяет цвета краёв монитора, за которым висит. Раскладку ленты по краям настройте на странице «Мониторы»."
                                    Style="{StaticResource Hint}" Margin="{StaticResource GapBottom16}"/>
+                        <TextBlock Text="Пресет" Style="{StaticResource Body}" Margin="{StaticResource GapBottom8}"/>
+                        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ScreenEditor.Presets}"
+                                 SelectedItem="{Binding ScreenEditor.SelectedPreset}" Margin="{StaticResource GapBottom16}">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                        </ListBox>
                         <controls:ValueSlider Label="Насыщенность" Unit="%" Minimum="0" Maximum="200" Step="5"
                                               Value="{Binding ScreenEditor.Saturation}" Margin="{StaticResource GapBottom16}"/>
                         <controls:ValueSlider Label="Яркость" Unit="%" Minimum="10" Maximum="200" Step="5"

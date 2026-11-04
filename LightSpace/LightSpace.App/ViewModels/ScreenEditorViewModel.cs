@@ -19,6 +19,14 @@ public sealed record MonitorOption(string Key, string Title)
 }
 
 /// <summary>
+/// Готовый набор цветов для «Экрана»: насыщенность, яркость и сглаживание, %.
+/// </summary>
+public sealed record ScreenPreset(string Title, int Saturation, int Brightness, int Smoothing)
+{
+    public override string ToString() => Title;
+}
+
+/// <summary>
 /// Редактор содержимого-экрана: монитор, насыщенность, яркость, сглаживание и живое превью картинки монитора
 /// тем же рендером, что и кадры устройств. Все правки сразу попадают в содержимое.
 /// </summary>
@@ -49,6 +57,48 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
         _changed = changed;
 
         RefreshMonitors();
+    }
+
+    /// <summary>
+    /// Готовые наборы цветов: выбор пресета выставляет все три ползунка, дальше их можно подправить.
+    /// </summary>
+    public IReadOnlyList<ScreenPreset> Presets { get; } = new ScreenPreset[]
+    {
+        new("Стандарт", ScreenConfig.DefaultSaturation, 100, 0),
+        new("Естественный", 100, 100, 20),
+        new("Кино", 120, 90, 50),
+        new("Игры", 150, 110, 0),
+        new("Яркий", 170, 140, 15),
+        new("Сочный", 200, 120, 10),
+        new("Приглушённый", 80, 60, 40),
+        new("Ночь", 110, 35, 60),
+        new("Плавный", 135, 100, 85),
+        new("Работа", 70, 50, 70)
+    };
+
+    /// <summary>
+    /// Пресет, совпадающий с текущими ползунками; null — ползунки настроены вручную.
+    /// </summary>
+    public ScreenPreset? SelectedPreset
+    {
+        get => _screen == null ? null : Presets.FirstOrDefault(p =>
+            p.Saturation == _screen.Saturation && p.Brightness == _screen.Brightness && p.Smoothing == _screen.Smoothing);
+        set
+        {
+            // Сегменты сбрасывают выбор в null, когда пересобираются
+            if (value == null || _screen == null)
+                return;
+
+            _screen.Saturation = value.Saturation;
+            _screen.Brightness = value.Brightness;
+            _screen.Smoothing = value.Smoothing;
+
+            OnPropertyChanged(nameof(Saturation));
+            OnPropertyChanged(nameof(Brightness));
+            OnPropertyChanged(nameof(Smoothing));
+            OnPropertyChanged();
+            _changed();
+        }
     }
 
     /// <summary>
@@ -133,6 +183,7 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(Brightness));
         OnPropertyChanged(nameof(Smoothing));
         OnPropertyChanged(nameof(KeepAspect));
+        OnPropertyChanged(nameof(SelectedPreset));
     }
 
     /// <summary>
@@ -195,6 +246,7 @@ public sealed partial class ScreenEditorViewModel : ObservableObject
 
         set(_screen, number);
         OnPropertyChanged(name);
+        OnPropertyChanged(nameof(SelectedPreset));
         _changed();
     }
 }

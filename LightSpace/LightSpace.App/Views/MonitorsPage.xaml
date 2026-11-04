@@ -10,7 +10,7 @@
 
     <!-- Подсветка мониторов, как в LedHub: у каждого монитора своя лента, ориентация и раскладка -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Left">
+        <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource WideContentMaxWidth}" HorizontalAlignment="Left">
             <TextBlock Text="Мониторы" Style="{StaticResource PageTitle}"/>
             <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}" TextWrapping="Wrap"
                        Text="Лента вокруг монитора, пока её группа играет «Экран», повторяет цвета именно этого монитора: обычная лента — средним цветом картинки, адресная — цветами краёв по раскладке. Лента без монитора берёт экран по своему месту на сцене."/>
@@ -27,6 +27,15 @@
                                 </StackPanel>
                                 <TextBlock Text="{Binding Details}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
+                                <!-- Лента и ориентация монитора рядом -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="24"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
                                 <!-- Лента для монитора -->
                                 <TextBlock Text="Лента" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
                                 <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Devices}" SelectedItem="{Binding Device}">
@@ -37,7 +46,9 @@
                                     </ListBox.ItemTemplate>
                                 </ListBox>
                                 <TextBlock Text="{Binding DeviceText}" Style="{StaticResource Hint}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
 
+                                <StackPanel Grid.Column="2">
                                 <!-- Ориентация монитора -->
                                 <TextBlock Text="Ориентация монитора" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
                                 <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Rotations}" SelectedItem="{Binding Rotation}">
@@ -49,11 +60,23 @@
                                 </ListBox>
                                 <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" TextWrapping="Wrap"
                                            Text="Меняйте, только если монитор физически повёрнут, а в параметрах экрана Windows поворот не выставлен."/>
+                                </StackPanel>
+                                </Grid>
 
                                 <!-- Расположение адресной ленты вокруг монитора -->
                                 <StackPanel Visibility="{Binding HasLayout, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}" Margin="0,20,0,0">
                                     <TextBlock Text="Расположение ленты" Style="{StaticResource CardTitle}"/>
                                     <TextBlock Text="{Binding LayoutSummary}" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}"/>
+
+                                    <!-- Слева схема и сторона просмотра, справа стороны, начало и сдвиг -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
 
                                     <Border Background="{DynamicResource InsetBrush}" CornerRadius="{StaticResource RadiusControl}" Height="230">
                                         <controls:ScreenLayoutPreview Layout="{Binding Layout}" LedCount="{Binding LedCount}"
@@ -68,8 +91,10 @@
                                                      Margin="{StaticResource GapRight4}"/>
                                         <RadioButton Style="{StaticResource SegmentRadio}" Content="Вид сзади" IsChecked="{Binding IsViewedFromBack}"/>
                                     </StackPanel>
+                                    </StackPanel>
 
-                                    <TextBlock Text="Стороны и число светодиодов (0 — автоматически)" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
+                                    <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Стороны и число светодиодов (0 — автоматически)" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
                                     <Grid HorizontalAlignment="Left">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -102,6 +127,11 @@
 
                                     <TextBlock Text="Начало и направление ленты" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
                                     <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding StartOptions}" SelectedItem="{Binding SelectedStart}">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Text="{Binding Title}"/>
@@ -113,6 +143,8 @@
 
                                     <controls:ValueSlider Label="Сдвиг начала" Unit="светодиодов" Minimum="0" Maximum="{Binding LedCount}" Step="1"
                                                           Value="{Binding Offset}" Margin="0,16,0,0"/>
+                                    </StackPanel>
+                                    </Grid>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
