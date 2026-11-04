@@ -104,6 +104,8 @@
     <sys:Double x:Key="SwatchSmallSize">16</sys:Double>
     <!-- Панель эффекта справа на сцене: три плитки галереи в ряд -->
     <GridLength x:Key="ScenePanelWidth">500</GridLength>
+    <!-- Выезжающая панель настроек эффекта справа на странице устройства -->
+    <sys:Double x:Key="EffectPanelWidth">340</sys:Double>
     <sys:Double x:Key="EmptyStateMaxWidth">360</sys:Double>
     <!-- Колонка списка слева от панели выбранного элемента -->
     <GridLength x:Key="ListPaneWidth">300</GridLength>
