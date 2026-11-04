@@ -6,7 +6,7 @@ using Forms = System.Windows.Forms;
 namespace LightSpace.App.Services;
 
 /// <summary>
-/// Значок Light Space в области уведомлений: двойной клик открывает окно, правый клик — своё меню.
+/// Значок Light Space в области уведомлений: левый клик открывает окно, правый клик — своё меню.
 /// </summary>
 public sealed class TrayIcon : IDisposable
 {
@@ -32,7 +32,6 @@ public sealed class TrayIcon : IDisposable
         };
 
         _icon.MouseUp += OnMouseUp;
-        _icon.MouseDoubleClick += OnMouseDoubleClick;
         _viewModel.Settings.PropertyChanged += OnSettingsChanged;
 
         UpdateText();
@@ -60,11 +59,7 @@ public sealed class TrayIcon : IDisposable
     {
         if (e.Button == Forms.MouseButtons.Right)
             ShowMenu();
-    }
-
-    private void OnMouseDoubleClick(object? sender, Forms.MouseEventArgs e)
-    {
-        if (e.Button == Forms.MouseButtons.Left)
+        else if (e.Button == Forms.MouseButtons.Left)
             _open();
     }
 

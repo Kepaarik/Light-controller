@@ -100,6 +100,8 @@
     <sys:Double x:Key="ScenarioPreviewHeight">96</sys:Double>
     <sys:Double x:Key="DialogMaxWidth">440</sys:Double>
     <sys:Double x:Key="ContentMaxWidth">880</sys:Double>
+    <!-- Страница с карточками в две колонки -->
+    <sys:Double x:Key="WideContentMaxWidth">1240</sys:Double>
     <sys:Double x:Key="ColorWheelSize">200</sys:Double>
     <sys:Double x:Key="SwatchSize">32</sys:Double>
     <!-- Образец цвета внутри кнопки выбора цвета -->
