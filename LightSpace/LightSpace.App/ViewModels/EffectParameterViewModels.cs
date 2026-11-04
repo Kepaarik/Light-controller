@@ -1,9 +1,30 @@
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using LightSpace.Core;
 using LightSpace.Core.Config;
 using LightSpace.Engine.Effects;
 
 namespace LightSpace.App.ViewModels;
+
+/// <summary>
+/// Готовый цвет для быстрого выбора.
+/// </summary>
+public sealed record ColorPreset(string Title, RgbColor Color)
+{
+    /// <summary>
+    /// Образец цвета для кнопки пресета.
+    /// </summary>
+    public Brush Swatch { get; } = CreateSwatch(Color);
+
+    private static Brush CreateSwatch(RgbColor color)
+    {
+        var brush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(color.R, color.G, color.B));
+
+        brush.Freeze();
+        return brush;
+    }
+}
 
 /// <summary>
 /// Одна настройка выбранного эффекта; правка сразу попадает в сохранённые настройки эффекта, движок получает их новым снимком.
@@ -112,10 +133,45 @@ public sealed class NumberParameterViewModel : EffectParameterViewModel
 /// </summary>
 public sealed class ColorParameterViewModel : EffectParameterViewModel
 {
-    public ColorParameterViewModel(EffectParameter parameter, EffectValuesConfig values, Action changed)
+    private static readonly IReadOnlyList<ColorPreset> AllPresets = new ColorPreset[]
+    {
+        new("Белый", new RgbColor(255, 255, 255)),
+        new("Тёплый белый", new RgbColor(255, 180, 100)),
+        new("Красный", new RgbColor(255, 0, 0)),
+        new("Оранжевый", new RgbColor(255, 90, 0)),
+        new("Жёлтый", new RgbColor(255, 200, 0)),
+        new("Лаймовый", new RgbColor(140, 255, 0)),
+        new("Зелёный", new RgbColor(0, 255, 0)),
+        new("Бирюзовый", new RgbColor(0, 255, 160)),
+        new("Голубой", new RgbColor(0, 200, 255)),
+        new("Синий", new RgbColor(0, 0, 255)),
+        new("Фиолетовый", new RgbColor(130, 0, 255)),
+        new("Пурпурный", new RgbColor(255, 0, 255)),
+        new("Розовый", new RgbColor(255, 40, 120))
+    };
+
+    /// <summary>
+    /// showsPresets — под выбором цвета показать готовые цвета, например у сплошного цвета.
+    /// </summary>
+    public ColorParameterViewModel(EffectParameter parameter, EffectValuesConfig values, Action changed, bool showsPresets = false)
         : base(parameter, values, changed)
     {
+        Presets = showsPresets ? AllPresets : Array.Empty<ColorPreset>();
+        ApplyPresetCommand = new RelayCommand<ColorPreset>(preset =>
+        {
+            if (preset != null)
+                Color = preset.Color;
+        });
     }
+
+    /// <summary>
+    /// Готовые цвета: щелчок сразу ставит цвет.
+    /// </summary>
+    public IReadOnlyList<ColorPreset> Presets { get; }
+
+    public bool HasPresets => Presets.Count > 0;
+
+    public IRelayCommand<ColorPreset> ApplyPresetCommand { get; }
 
     public RgbColor Color
     {
