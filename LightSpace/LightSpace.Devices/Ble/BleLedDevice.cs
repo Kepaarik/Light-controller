@@ -25,17 +25,22 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
         (BleVariant.Triones, BluetoothUuidHelper.FromShortId(0xFFD5), BluetoothUuidHelper.FromShortId(0xFFD9))
     };
 
-    private readonly BluetoothLEDevice _device;
-    private readonly GattCharacteristic _characteristic;
+    // После сна компьютера Windows закрывает соединение — тогда устройство и характеристика открываются заново
+    private BluetoothLEDevice _device;
+    private GattCharacteristic _characteristic;
     private readonly BleVariant _variant;
     private readonly ElkModel? _model;
     private readonly SemaphoreSlim _lock = new(1, 1);
+
+    // Адрес хранится отдельно: у закрытого Windows устройства его уже не прочитать
+    private readonly ulong _address;
     private int? _sentBrightness;
 
     public BleLedDevice(BluetoothLEDevice device, GattCharacteristic characteristic, BleVariant variant, string name)
     {
         _device = device;
         _characteristic = characteristic;
+        _address = device.BluetoothAddress;
         _variant = variant;
         _model = variant == BleVariant.ElkBledom ? ElkModel.Find(name) : null;
         Name = name;
@@ -44,7 +49,7 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
             + $"встроенных эффектов {BuiltinEffects.Count}, свойства характеристики {characteristic.CharacteristicProperties}");
     }
 
-    public override string Id => $"ble:{_device.BluetoothAddress:X12}";
+    public override string Id => $"ble:{_address:X12}";
 
     public override string Name { get; }
 
@@ -61,7 +66,7 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
     /// </summary>
     public override bool NeedsPowerOnAtStart => true;
 
-    public override string Address => string.Join(":", Enumerable.Range(0, 6).Reverse().Select(i => ((_device.BluetoothAddress >> (i * 8)) & 0xFF).ToString("X2")));
+    public override string Address => string.Join(":", Enumerable.Range(0, 6).Reverse().Select(i => ((_address >> (i * 8)) & 0xFF).ToString("X2")));
 
     public override Task SetPowerAsync(bool isOn, CancellationToken ct = default)
     {
@@ -142,17 +147,72 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
         _lock.Dispose();
     }
 
-    private async Task WriteAsync(byte[] data, CancellationToken ct)
-    {
-        var option = _characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.WriteWithoutResponse)
+    private GattWriteOption WriteOption =>
+        _characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.WriteWithoutResponse)
             ? GattWriteOption.WriteWithoutResponse
             : GattWriteOption.WriteWithResponse;
 
+    /// <summary>
+    /// Открывает устройство и его характеристику заново, вместо закрытых Windows.
+    /// </summary>
+    private async Task ReopenAsync(CancellationToken ct)
+    {
+        var (_, serviceUuid, characteristicUuid) = Variants.First(v => v.Variant == _variant);
+
+        var device = await BluetoothLEDevice.FromBluetoothAddressAsync(_address).AsTask(ct)
+            ?? throw new IOException("Bluetooth-устройство не открылось заново");
+
+        var services = await device.GetGattServicesForUuidAsync(serviceUuid, BluetoothCacheMode.Uncached).AsTask(ct);
+        var service = services.Status == GattCommunicationStatus.Success ? services.Services.FirstOrDefault() : null;
+
+        if (service == null)
+        {
+            device.Dispose();
+            throw new IOException($"Сервис ленты не найден после переподключения ({services.Status})");
+        }
+
+        var characteristics = await service.GetCharacteristicsForUuidAsync(characteristicUuid, BluetoothCacheMode.Uncached).AsTask(ct);
+        var characteristic = characteristics.Status == GattCommunicationStatus.Success ? characteristics.Characteristics.FirstOrDefault() : null;
+
+        if (characteristic == null)
+        {
+            service.Dispose();
+            device.Dispose();
+            throw new IOException($"Характеристика ленты не найдена после переподключения ({characteristics.Status})");
+        }
+
+        _device = device;
+        _characteristic = characteristic;
+
+        DeviceLog.Write($"BLE «{Name}»: подключено заново");
+    }
+
+    private async Task WriteAsync(byte[] data, CancellationToken ct)
+    {
         await _lock.WaitAsync(ct);
         try
         {
+            GattCommunicationStatus status;
+            GattWriteOption option;
             var started = System.Diagnostics.Stopwatch.GetTimestamp();
-            var status = await _characteristic.WriteValueAsync(CryptographicBuffer.CreateFromByteArray(data), option).AsTask(ct);
+
+            try
+            {
+                option = WriteOption;
+                status = await _characteristic.WriteValueAsync(CryptographicBuffer.CreateFromByteArray(data), option).AsTask(ct);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Соединение закрыла Windows, например на время сна: открываем устройство заново и повторяем команду
+                DeviceLog.Write($"BLE «{Name}»: соединение закрыто, подключаемся заново");
+
+                await ReopenAsync(ct);
+
+                option = WriteOption;
+                started = System.Diagnostics.Stopwatch.GetTimestamp();
+                status = await _characteristic.WriteValueAsync(CryptographicBuffer.CreateFromByteArray(data), option).AsTask(ct);
+            }
+
             var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(started);
 
             DeviceLog.Write($"BLE «{Name}» → {DeviceLog.Hex(data)} ({option}): {status}, {elapsed.TotalMilliseconds:0} мс");
