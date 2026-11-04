@@ -69,6 +69,14 @@ public sealed class DeviceOutput : IDisposable
         _device = device;
         _isEnabled = isEnabled;
 
+        // Устройство могли выключить с пульта или телефона: включение уйдёт раньше первого кадра и эффекта
+        if (isEnabled && device.NeedsPowerOnAtStart)
+        {
+            _pendingPower = true;
+            Signal();
+            DeviceLog.Write($"«{device.Name}»: подключено — сначала отправляется включение");
+        }
+
         // Отправка идёт не в потоке окна и не в потоке кадров: медленное устройство не задерживает ни то, ни другое
         var ct = _cts.Token;
         _worker = Task.Run(() => RunAsync(ct));

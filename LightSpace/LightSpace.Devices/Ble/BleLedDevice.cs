@@ -56,6 +56,11 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
 
     public bool HasBuiltinColor => false;
 
+    /// <summary>
+    /// Выключенный контроллер ELK/Triones принимает цвета и эффекты, но не показывает их, пока его не включат.
+    /// </summary>
+    public override bool NeedsPowerOnAtStart => true;
+
     public override string Address => string.Join(":", Enumerable.Range(0, 6).Reverse().Select(i => ((_device.BluetoothAddress >> (i * 8)) & 0xFF).ToString("X2")));
 
     public override Task SetPowerAsync(bool isOn, CancellationToken ct = default)
