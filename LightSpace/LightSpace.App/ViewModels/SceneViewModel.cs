@@ -119,9 +119,15 @@ public sealed partial class SceneViewModel : ObservableObject
     /// Типы содержимого для сегментов. У отдельного устройства «Встроенного» нет: его эффекты — плитки во вкладке «Эффект».
     /// </summary>
     public IReadOnlyList<ContentKindOption> ContentKinds =>
-        _selectedGroup is { IsDeviceLighting: true }
-            ? ContentKindOption.All.Where(k => k != ContentKindOption.Builtin).ToList()
-            : ContentKindOption.All;
+        ContentKindOption.All
+            .Where(k => k != ContentKindOption.Builtin || _selectedGroup is not { IsDeviceLighting: true })
+            .Where(k => k != ContentKindOption.Screen || HasMonitor)
+            .ToList();
+
+    /// <summary>
+    /// Выбранная лента висит за монитором: ей доступен «Экран» — цвета краёв этого монитора.
+    /// </summary>
+    public bool HasMonitor => IsStripSelected && SelectedMonitor?.MonitorKey != null;
 
     /// <summary>
     /// Тип содержимого, который сейчас играет у выбранного.
@@ -332,6 +338,20 @@ public sealed partial class SceneViewModel : ObservableObject
             }
 
             OnPropertyChanged();
+            OnPropertyChanged(nameof(HasMonitor));
+
+            // Без монитора «Экрана» нет: лента, которая его играла, переходит на обычный эффект
+            if (!HasMonitor && _viewedKind == ContentKindOption.Screen)
+                _viewedKind = null;
+
+            OnPropertyChanged(nameof(ContentKinds));
+            OnPropertyChanged(nameof(SelectedContentKind));
+
+            if (!HasMonitor && PlayingContentKind == ContentKindOption.Screen)
+                Play(ContentKindOption.Effect);
+            else
+                OnContentKindChanged();
+
             _contentChanged();
         }
     }
@@ -895,6 +915,7 @@ public sealed partial class SceneViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedContentKind));
         OnPropertyChanged(nameof(IsStripSelected));
         OnPropertyChanged(nameof(SelectedMonitor));
+        OnPropertyChanged(nameof(HasMonitor));
 
         // Рамку на карте рисуют только группы; превью плиток рисуются с настройками эффектов выбранного
         if (group != null)

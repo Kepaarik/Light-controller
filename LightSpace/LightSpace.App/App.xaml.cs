@@ -3,6 +3,7 @@ using System.Windows;
 using LightSpace.App.Services;
 using LightSpace.App.ViewModels;
 using LightSpace.Core.Config;
+using Microsoft.Win32;
 
 namespace LightSpace.App;
 
@@ -11,6 +12,9 @@ namespace LightSpace.App;
 /// </summary>
 public partial class App : Application
 {
+    // Сколько ждать перед сном, чтобы устройства успели получить команду выключения
+    private static readonly TimeSpan SleepDelay = TimeSpan.FromSeconds(1);
+
     private AppConfig _config = new();
     private MainViewModel? _viewModel;
     private MainWindow? _window;
@@ -40,6 +44,8 @@ public partial class App : Application
 
         _tray = new TrayIcon(_viewModel, ShowWindow, ExitApplication);
 
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
+
         // Устройства ищем сразу при запуске: найденные сразу показывают текущий эффект, даже если окно не открывали
         _viewModel.Devices.FindCommand.Execute(null);
 
@@ -50,9 +56,28 @@ public partial class App : Application
 
     private void OnExit(object sender, ExitEventArgs e)
     {
+        // Событие статическое: без отписки оно держало бы приложение в памяти
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _tray?.Dispose();
         _viewModel?.Shutdown();
         _viewModel?.Settings.SaveNow();
+    }
+
+    /// <summary>
+    /// Перед сном гасит свет на всех устройствах, после пробуждения возвращает его.
+    /// </summary>
+    private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode is not (PowerModes.Suspend or PowerModes.Resume))
+            return;
+
+        var isAsleep = e.Mode == PowerModes.Suspend;
+
+        Dispatcher.Invoke(() => _viewModel?.SetAsleep(isAsleep));
+
+        // Windows не усыпляет компьютер, пока обработчик не вернулся, — даём выводам отправить команду выключения
+        if (isAsleep)
+            Thread.Sleep(SleepDelay);
     }
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)

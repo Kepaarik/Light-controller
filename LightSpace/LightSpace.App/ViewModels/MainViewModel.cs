@@ -24,6 +24,9 @@ public sealed partial class MainViewModel : ObservableObject
     // Окно открыто и не свёрнуто
     private bool _isWindowShown;
 
+    // Компьютер спит: свет погашен, но общий выключатель подсветки в настройках не тронут
+    private bool _isAsleep;
+
     [ObservableProperty]
     private AppPage _selectedPage = AppPage.Devices;
 
@@ -42,11 +45,14 @@ public sealed partial class MainViewModel : ObservableObject
         // Страницы «Сцена» пока нет: у каждого устройства своё содержимое, оно выбирается на странице устройства
         config.Mode = SceneMode.Devices;
 
-        // Сцену, экран и игру пока не выбрать — устройство, которое их играло, переходит на обычный эффект,
-        // и экран не снимается впустую
+        // Сцену и игру пока не выбрать, а экран — только у ленты за монитором: устройство, которое их играло,
+        // переходит на обычный эффект, и экран не снимается впустую
         foreach (var lighting in config.DeviceLighting)
         {
-            if (lighting.DefaultContent.Kind is ContentKind.Scene or ContentKind.Screen or ContentKind.Game)
+            var isOnMonitor = config.Monitors.Any(m => m.DeviceId != null && lighting.DeviceIds.Contains(m.DeviceId));
+
+            if (lighting.DefaultContent.Kind is ContentKind.Scene or ContentKind.Game
+                || lighting.DefaultContent.Kind == ContentKind.Screen && !isOnMonitor)
                 lighting.DefaultContent.Kind = ContentKind.Effect;
         }
 
@@ -117,6 +123,26 @@ public sealed partial class MainViewModel : ObservableObject
         _isWindowShown = isShown;
         UpdateLive();
     }
+
+    /// <summary>
+    /// Компьютер уходит в сон или просыпается: на время сна свет на всех устройствах гаснет,
+    /// после пробуждения возвращается, если подсветка включена в настройках.
+    /// </summary>
+    public void SetAsleep(bool isAsleep)
+    {
+        if (_isAsleep == isAsleep)
+            return;
+
+        _isAsleep = isAsleep;
+
+        _deviceManager.SetLightingEnabled(IsLightOn);
+        UpdateFrames();
+    }
+
+    /// <summary>
+    /// Свет должен гореть: подсветка включена и компьютер не спит.
+    /// </summary>
+    private bool IsLightOn => Settings.LightingEnabled && !_isAsleep;
 
     /// <summary>
     /// Останавливает поток кадров, вывод на устройства и закрывает соединения с ними.
@@ -203,7 +229,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         // Подсветку выключают из меню трея или из настроек — выводы устройств гасят свет и перестают отправлять кадры
         if (e.PropertyName == nameof(SettingsViewModel.LightingEnabled))
-            _deviceManager.SetLightingEnabled(Settings.LightingEnabled);
+            _deviceManager.SetLightingEnabled(IsLightOn);
 
         // Выключенная подсветка — тоже часть снимка для потока кадров
         if (e.PropertyName == nameof(SettingsViewModel.LightingEnabled))
@@ -268,7 +294,9 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     private void UpdateFrames()
     {
-        _frameLoop.Update(FrameSnapshot.Build(_config, _deviceManager.Devices));
+        var snapshot = FrameSnapshot.Build(_config, _deviceManager.Devices);
+
+        _frameLoop.Update(snapshot with { IsLightingEnabled = IsLightOn });
     }
 
     partial void OnSelectedPageChanged(AppPage value)

@@ -33,9 +33,8 @@
                     <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
                                           Value="{Binding SelectedGroup.Brightness}"/>
 
-                    <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора.
-                         «Экрана» пока нет — без него выбор монитора ничего не меняет, поэтому скрыт -->
-                    <StackPanel Visibility="Collapsed">
+                    <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора -->
+                    <StackPanel Visibility="{Binding IsStripSelected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                         <TextBlock Text="Монитор" Style="{StaticResource SectionLabel}"/>
                         <ListBox Style="{StaticResource Segments}" HorizontalAlignment="Left"
                                  ItemsSource="{Binding MonitorOptions}" SelectedItem="{Binding SelectedMonitor}"/>
@@ -89,6 +88,20 @@
                     <!-- Музыка: живое превью, источник звука, режим, цвета и отклик -->
                     <StackPanel Visibility="{Binding IsMusicContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                         <views:MusicEditor DataContext="{Binding MusicEditor}"/>
+                    </StackPanel>
+
+                    <!-- Экран: лента повторяет цвета краёв своего монитора; монитор выбирается выше -->
+                    <StackPanel Visibility="{Binding IsScreenContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <TextBlock Text="Лента повторяет цвета краёв монитора, за которым висит. Раскладку ленты по краям настройте на странице «Мониторы»."
+                                   Style="{StaticResource Hint}" Margin="{StaticResource GapBottom16}"/>
+                        <controls:ValueSlider Label="Насыщенность" Unit="%" Minimum="0" Maximum="200" Step="5"
+                                              Value="{Binding ScreenEditor.Saturation}" Margin="{StaticResource GapBottom16}"/>
+                        <controls:ValueSlider Label="Яркость" Unit="%" Minimum="10" Maximum="200" Step="5"
+                                              Value="{Binding ScreenEditor.Brightness}" Margin="{StaticResource GapBottom16}"/>
+                        <controls:ValueSlider Label="Сглаживание" Unit="%" Minimum="0" Maximum="95" Step="5"
+                                              Value="{Binding ScreenEditor.Smoothing}"/>
+                        <TextBlock Text="Сильное сглаживание делает смену цветов плавнее, но свет отстаёт от картинки."
+                                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                     </StackPanel>
 
                     <!-- Встроенный эффект: подсказка вместо превью, эффект устройства, скорость и цвет -->
