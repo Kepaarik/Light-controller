@@ -105,6 +105,8 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
             OnPropertyChanged(nameof(HasVariants));
             OnPropertyChanged(nameof(VariantCount));
             OnPropertyChanged(nameof(Variant));
+            OnPropertyChanged(nameof(Presets));
+            OnPropertyChanged(nameof(SelectedPreset));
             _changed();
         }
     }
@@ -145,6 +147,24 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
             var index = Math.Clamp((int)Math.Round(value) - 1, 0, group.Variants.Count - 1);
 
             SelectedEffect = group.Variants[index];
+        }
+    }
+
+    /// <summary>
+    /// Пресеты выбранного эффекта — его варианты по номерам с 1; пусто, если вариантов нет.
+    /// </summary>
+    public IReadOnlyList<int> Presets => HasVariants ? Enumerable.Range(1, VariantCount).ToList() : Array.Empty<int>();
+
+    /// <summary>
+    /// Выбранный пресет — номер варианта с 1; null сегменты присылают при пересборке.
+    /// </summary>
+    public int? SelectedPreset
+    {
+        get => HasVariants ? (int)Variant : null;
+        set
+        {
+            if (value is { } number)
+                Variant = number;
         }
     }
 
