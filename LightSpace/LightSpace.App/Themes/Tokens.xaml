@@ -12,7 +12,9 @@
     <CornerRadius x:Key="RadiusCard">18</CornerRadius>
     <CornerRadius x:Key="RadiusOverlay">18</CornerRadius>
     <CornerRadius x:Key="RadiusPill">999</CornerRadius>
-    <CornerRadius x:Key="RadiusTopLeftCard">12,0,0,0</CornerRadius>
+    <!-- Слой содержимого окна: отдельная карточка на стекле, со всех сторон отступает от краёв окна -->
+    <CornerRadius x:Key="RadiusLayer">12</CornerRadius>
+    <Thickness x:Key="LayerMargin">0,0,10,10</Thickness>
 
     <!-- Отступы по сетке 4/8 px -->
     <Thickness x:Key="SpaceNone">0</Thickness>
@@ -138,7 +140,6 @@
     <Thickness x:Key="StrokeThin">1</Thickness>
     <Thickness x:Key="StrokeThick">2</Thickness>
     <Thickness x:Key="StrokeBottom">0,0,0,1</Thickness>
-    <Thickness x:Key="StrokeTopLeft">1,1,0,0</Thickness>
     <sys:Double x:Key="StrokeWidth">1</sys:Double>
     <sys:Double x:Key="StrokeWidthThick">2</sys:Double>
 

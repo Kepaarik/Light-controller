@@ -66,9 +66,11 @@
             </DockPanel>
         </Border>
 
-        <!-- Слой содержимого поверх стекла: страницы -->
-        <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource LayerBrush}" CornerRadius="{StaticResource RadiusTopLeftCard}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeTopLeft}">
+        <!-- Слой содержимого поверх стекла: страницы. Скруглённая карточка с отступом справа и снизу — полоса заголовка
+             с системными кнопками переходит в стеклянную рамку вокруг неё, а не обрывается прямой линией -->
+        <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource LayerBrush}" CornerRadius="{StaticResource RadiusLayer}"
+                Margin="{StaticResource LayerMargin}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeThin}">
             <Grid>
                 <views:DevicePage DataContext="{Binding Scene}"
                                   Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Device}"/>
