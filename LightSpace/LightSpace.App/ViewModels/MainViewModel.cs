@@ -58,7 +58,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         _deviceManager = new DeviceManager(config);
         _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices), _sources);
-        Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave);
+        Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave, OpenDevice);
         Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _sources, OnContentChanged);
         Monitors = new MonitorsViewModel(config, _deviceManager, OnContentChanged);
 
@@ -267,6 +267,16 @@ public sealed partial class MainViewModel : ObservableObject
         {
             SelectedPage = AppPage.Devices;
         }
+    }
+
+    /// <summary>
+    /// Открывает страницу устройства, как пункт устройства в левом меню.
+    /// </summary>
+    private void OpenDevice(string deviceId)
+    {
+        // Тот же Id подряд не вызвал бы смену выбора — сначала сбрасываем; null страницу не трогает
+        SelectedDeviceId = null;
+        SelectedDeviceId = deviceId;
     }
 
     partial void OnSelectedDeviceIdChanged(string? value)

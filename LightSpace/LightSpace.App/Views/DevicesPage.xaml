@@ -89,7 +89,7 @@
 
             <Grid Grid.Column="1" Margin="{StaticResource GapLeft24}">
                 <controls:EmptyState Icon="&#xE772;" Title="Выберите устройство"
-                                     Hint="Здесь появятся его возможности, цвет и диагностика связи."
+                                     Hint="Здесь появятся его состояние, возможности и диагностика связи."
                                      Visibility="{Binding HasSelection, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding SelectedItem}"
@@ -108,14 +108,21 @@
                                 </TextBlock>
                                 <TextBlock Text="{Binding StatusTitle}" Style="{StaticResource StatusLabel}" Margin="{StaticResource GapTop4}"/>
                                 <TextBlock Text="{Binding StatusText}" Style="{StaticResource Warning}" Margin="{StaticResource GapTop4}"/>
+                                <TextBlock Text="{Binding StatusAdvice}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                             </StackPanel>
                         </DockPanel>
 
-                        <!-- Цвет устройства задаёт эффект на вкладке «Сцена» -->
-                        <TextBlock Text="Цвет" Style="{StaticResource SectionLabel}"/>
+                        <!-- Что играет на устройстве, выбирается на его собственной странице -->
+                        <TextBlock Text="Подсветка" Style="{StaticResource SectionLabel}"/>
                         <Border Style="{StaticResource Card}">
-                            <TextBlock Style="{StaticResource Hint}"
-                                       Text="На всех устройствах играет эффект, выбранный на вкладке «Сцена»: там же его цвета, настройки и яркость. Сплошной цвет — первый эффект в галерее."/>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Настроить подсветку"
+                                        controls:Appearance.Icon="&#xE790;" VerticalAlignment="Center" CommandParameter="{Binding}"
+                                        Command="{Binding DataContext.OpenLightingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Margin="{StaticResource GapLeft12}"/>
+                                <TextBlock Style="{StaticResource Hint}" VerticalAlignment="Center"
+                                           Text="У каждого устройства свои эффект и яркость: эффекты приложения, встроенные эффекты контроллера, музыка, а у ленты за монитором — «Экран». Страница устройства открывается и из левого меню."/>
+                            </DockPanel>
                         </Border>
 
                         <!-- Сетевой ключ Tuya -->
@@ -151,6 +158,10 @@
                                 <DockPanel Style="{StaticResource FactRow}">
                                     <TextBlock Text="{Binding FrameRateText}" Style="{StaticResource FactValue}"/>
                                     <TextBlock Text="Частота кадров" Style="{StaticResource FactLabel}"/>
+                                </DockPanel>
+                                <DockPanel Style="{StaticResource FactRow}">
+                                    <TextBlock Text="{Binding BuiltinEffectsText}" Style="{StaticResource FactValue}"/>
+                                    <TextBlock Text="Встроенных эффектов контроллера" Style="{StaticResource FactLabel}"/>
                                 </DockPanel>
                             </StackPanel>
                         </Border>

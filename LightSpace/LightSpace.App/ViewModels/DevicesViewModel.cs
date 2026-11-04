@@ -21,13 +21,17 @@ public sealed partial class DevicesViewModel : ObservableObject
     private readonly Action _settingsChanged;
     private readonly DispatcherTimer _refreshTimer;
 
+    // Открывает страницу подсветки устройства по его Id
+    private readonly Action<string> _openLighting;
+
     private DeviceItemViewModel? _selectedItem;
 
     [ObservableProperty]
     private string _searchProblems = "";
 
-    public DevicesViewModel(DeviceManager manager, FrameLoop frameLoop, Action settingsChanged)
+    public DevicesViewModel(DeviceManager manager, FrameLoop frameLoop, Action settingsChanged, Action<string> openLighting)
     {
+        _openLighting = openLighting;
         _manager = manager;
         _frameLoop = frameLoop;
         _settingsChanged = settingsChanged;
@@ -92,6 +96,16 @@ public sealed partial class DevicesViewModel : ObservableObject
     /// <summary>
     /// Убирает устройство из списка вместе с его ключом.
     /// </summary>
+    /// <summary>
+    /// Открывает страницу устройства, где выбирается, что на нём играет.
+    /// </summary>
+    [RelayCommand]
+    private void OpenLighting(DeviceItemViewModel? item)
+    {
+        if (item != null)
+            _openLighting(item.Device.Id);
+    }
+
     [RelayCommand]
     private async Task ForgetAsync(DeviceItemViewModel? item)
     {

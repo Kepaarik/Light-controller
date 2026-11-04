@@ -14,7 +14,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     // Свойства, которые меняются сами по себе, без действий пользователя: связь, адрес, возможности, диагностика
     private static readonly string[] LiveProperties =
     {
-        nameof(Name), nameof(Protocol), nameof(Address), nameof(Status), nameof(StatusTitle), nameof(StatusText), nameof(IsConnected),
+        nameof(Name), nameof(Protocol), nameof(Address), nameof(Status), nameof(StatusTitle), nameof(StatusText), nameof(StatusAdvice), nameof(BuiltinEffectsText), nameof(IsConnected),
         nameof(KindText), nameof(LedCountText), nameof(FrameRateText), nameof(Keys), nameof(HasKeys),
         nameof(SentFramesText), nameof(DroppedFramesText), nameof(LastSendText), nameof(LastErrorText)
     };
@@ -73,6 +73,23 @@ public sealed partial class DeviceItemViewModel : ObservableObject
         { IsAddressable: true } => "Адресная лента, свой цвет каждого светодиода",
         _ => "Один цвет на всё устройство"
     };
+
+    /// <summary>
+    /// Что делать, если устройство не на связи; пусто, когда всё в порядке.
+    /// </summary>
+    public string StatusAdvice => Status switch
+    {
+        DeviceStatus.Failing => "Команды не доходят. Проверьте, что устройство включено и рядом с компьютером; Bluetooth-ленту не должен держать телефон. Приложение само повторяет попытки.",
+        DeviceStatus.Connected or DeviceStatus.NeedsSetup => "",
+        _ => "Устройство есть в настройках, но сейчас не найдено. Включите его и нажмите «Найти устройства»."
+    };
+
+    /// <summary>
+    /// Сколько встроенных эффектов умеет играть сам контроллер.
+    /// </summary>
+    public string BuiltinEffectsText => Device.Device is IBuiltinEffectsDevice { BuiltinEffects.Count: > 0 } builtin
+        ? $"{builtin.BuiltinEffects.Count}"
+        : "—";
 
     public string LedCountText => Device.Capabilities is { IsAddressable: true } capabilities ? capabilities.LedCount.ToString() : "—";
 
