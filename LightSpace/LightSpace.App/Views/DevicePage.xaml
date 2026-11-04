@@ -9,9 +9,16 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:SceneViewModel}">
 
-    <!-- Устройство, открытое в левом меню: яркость, монитор ленты и что на устройстве играет -->
+    <!-- Устройство, открытое в левом меню: яркость, монитор ленты и что на устройстве играет.
+         Справа выезжает панель с настройками выбранного эффекта -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Left">
+        <StackPanel Margin="{StaticResource PaddingPage}">
             <TextBlock Text="{Binding SelectedGroup.Title}" Style="{StaticResource PageTitle}"/>
             <TextBlock Text="{Binding SelectedGroup.Device.KindText}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
@@ -35,7 +42,13 @@
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
                     <!-- Что играет: тип содержимого, ниже его настройки. Новый эффект останавливает и стирает прежний -->
-                    <TextBlock Text="Эффект" Style="{StaticResource CardTitle}"/>
+                    <DockPanel>
+                        <!-- Открывает и прячет панель настроек эффекта справа -->
+                        <ToggleButton x:Name="SettingsToggle" DockPanel.Dock="Right" IsChecked="True" Content="Настройки"
+                                      controls:Appearance.Icon="&#xE713;" VerticalAlignment="Top"
+                                      Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                        <TextBlock Text="Эффект" Style="{StaticResource CardTitle}"/>
+                    </DockPanel>
                     <ListBox Style="{StaticResource Segments}" HorizontalAlignment="Left"
                              ItemsSource="{Binding ContentKinds}" SelectedItem="{Binding SelectedContentKind}"
                              Margin="{StaticResource GapBottom16}">
@@ -56,7 +69,7 @@
 
                     <!-- Эффект: галерея, ниже настройки выбранного эффекта -->
                     <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <views:EffectEditor DataContext="{Binding Editor}"/>
+                        <views:EffectEditor DataContext="{Binding Editor}" ShowsSettings="False"/>
                     </StackPanel>
 
                     <!-- Музыка: живое превью, источник звука, режим, цвета и отклик -->
@@ -72,4 +85,48 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+
+        <!-- Панель настроек эффекта: только у «Эффекта», выезжает справа -->
+        <Grid Grid.Column="1" Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <Border Width="{StaticResource EffectPanelWidth}" Margin="0,16,16,16" Padding="0"
+                    Visibility="{Binding IsChecked, ElementName=SettingsToggle, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                <Border.RenderTransform>
+                    <TranslateTransform/>
+                </Border.RenderTransform>
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource Card}">
+                        <Style.Triggers>
+                            <Trigger Property="IsVisible" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                                                             From="48" To="0" Duration="{StaticResource MotionNormal}"
+                                                             EasingFunction="{StaticResource EaseOut}"/>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1"
+                                                             Duration="{StaticResource MotionNormal}"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="{StaticResource PaddingCard}">
+                        <ToggleButton DockPanel.Dock="Right" IsChecked="{Binding IsChecked, ElementName=SettingsToggle}"
+                                      controls:Appearance.Icon="&#xE711;" ToolTip="Скрыть настройки" VerticalAlignment="Top"
+                                      Width="{StaticResource IconButtonSize}" Height="{StaticResource IconButtonSize}"
+                                      Padding="{StaticResource SpaceNone}" Background="Transparent" BorderBrush="Transparent"/>
+                        <TextBlock Text="Настройки эффекта" Style="{StaticResource CardTitle}"/>
+                    </DockPanel>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <views:EffectSettings DataContext="{Binding Editor}" Margin="22,0,22,22"/>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
 </UserControl>
