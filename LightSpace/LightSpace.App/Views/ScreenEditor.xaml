@@ -28,14 +28,6 @@
         </Border>
 
         <TextBlock Text="Цвета" Style="{StaticResource SectionLabel}"/>
-        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}"
-                 Margin="{StaticResource GapBottom16}">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel/>
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-        </ListBox>
         <controls:ValueSlider Label="Насыщенность" Unit="%" Minimum="0" Maximum="200" Step="5"
                               Value="{Binding Saturation}" Margin="{StaticResource GapBottom16}"/>
         <controls:ValueSlider Label="Яркость" Unit="%" Minimum="10" Maximum="200" Step="5"
