@@ -116,10 +116,10 @@ public sealed partial class SceneViewModel : ObservableObject
     public BuiltinEditorViewModel BuiltinEditor { get; }
 
     /// <summary>
-    /// Типы содержимого для сегментов. У отдельного устройства без встроенных эффектов «Встроенный» не показывается.
+    /// Типы содержимого для сегментов. У отдельного устройства «Встроенного» нет: его эффекты — плитки во вкладке «Эффект».
     /// </summary>
     public IReadOnlyList<ContentKindOption> ContentKinds =>
-        _selectedGroup is { IsDeviceLighting: true } group && !HasBuiltinEffects(group.Device.Id)
+        _selectedGroup is { IsDeviceLighting: true }
             ? ContentKindOption.All.Where(k => k != ContentKindOption.Builtin).ToList()
             : ContentKindOption.All;
 
@@ -143,7 +143,7 @@ public sealed partial class SceneViewModel : ObservableObject
     /// </summary>
     public ContentKindOption? SelectedContentKind
     {
-        get => _selectedGroup == null ? null : _viewedKind ?? PlayingContentKind;
+        get => _selectedGroup == null ? null : _viewedKind ?? TabOf(PlayingContentKind);
         set
         {
             // Сегменты сбрасывают выбор в null, когда пересобираются
@@ -160,7 +160,18 @@ public sealed partial class SceneViewModel : ObservableObject
     /// <summary>
     /// Открытая вкладка — не та, что играет: видна кнопка «Включить».
     /// </summary>
-    public bool IsViewedKindIdle => SelectedContentKind != null && SelectedContentKind != PlayingContentKind;
+    public bool IsViewedKindIdle => SelectedContentKind != null && SelectedContentKind != TabOf(PlayingContentKind);
+
+    /// <summary>
+    /// Играет встроенный эффект устройства — в боковой панели его настройки, а не настройки эффекта из галереи.
+    /// </summary>
+    public bool IsBuiltinPlaying => PlayingContentKind == ContentKindOption.Builtin;
+
+    /// <summary>
+    /// Вкладка, в которой показан тип содержимого: у отдельного устройства встроенные эффекты — во вкладке «Эффект».
+    /// </summary>
+    private ContentKindOption? TabOf(ContentKindOption? kind) =>
+        kind == ContentKindOption.Builtin && _selectedGroup is { IsDeviceLighting: true } ? ContentKindOption.Effect : kind;
 
     /// <summary>
     /// Что сейчас играет, для подписи над вкладкой, которая не играет.
@@ -830,6 +841,11 @@ public sealed partial class SceneViewModel : ObservableObject
         OnPropertyChanged(nameof(PlayingContentKind));
         OnPropertyChanged(nameof(IsViewedKindIdle));
         OnPropertyChanged(nameof(PlayingText));
+        OnPropertyChanged(nameof(IsBuiltinPlaying));
+
+        // Выделена плитка только того, что играет
+        Editor.IsPlaying = PlayingContentKind == ContentKindOption.Effect;
+        BuiltinEditor.IsPlaying = IsBuiltinPlaying;
 
         if (!IsScreenContent)
             ScreenEditor.StopPreview();
@@ -896,14 +912,6 @@ public sealed partial class SceneViewModel : ObservableObject
         BuiltinEditor.Edit(content, group is { IsDeviceLighting: true } ? group.Device.Id : null);
 
         OnContentKindChanged();
-    }
-
-    /// <summary>
-    /// У подключённого устройства есть встроенные эффекты.
-    /// </summary>
-    private bool HasBuiltinEffects(string deviceId)
-    {
-        return _manager.Devices.FirstOrDefault(d => d.Id == deviceId)?.Device is IBuiltinEffectsDevice { BuiltinEffects.Count: > 0 };
     }
 
     /// <summary>

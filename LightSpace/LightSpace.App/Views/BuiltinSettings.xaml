@@ -1,0 +1,38 @@
+<UserControl x:Class="LightSpace.App.Views.BuiltinSettings"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:BuiltinEditorViewModel}">
+
+    <!-- Настройки встроенного эффекта открытого устройства в боковой панели: вариант, скорость и цвет -->
+    <StackPanel>
+        <TextBlock Text="{Binding SelectedTile.Title}" Style="{StaticResource SectionLabel}"/>
+
+        <!-- Эффект играет само устройство, поэтому живого превью нет -->
+        <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapBottom16}"
+                   Text="Встроенный эффект играет сам контроллер устройства — посмотрите на само устройство."/>
+
+        <controls:ValueSlider Label="Вариант" Minimum="1" Maximum="{Binding Device.VariantCount}" Step="1"
+                              Value="{Binding Device.Variant}" Margin="{StaticResource GapBottom16}"
+                              Visibility="{Binding Device.HasVariants, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+
+        <controls:ValueSlider Label="Скорость эффекта" Unit="%" Minimum="0" Maximum="100" Step="5"
+                              Value="{Binding Speed}"/>
+
+        <!-- Цвет — только у устройств, которые умеют играть эффект одним цветом -->
+        <StackPanel Visibility="{Binding IsColorShown, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <TextBlock Text="Цвета" Style="{StaticResource SectionLabel}"/>
+            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ColorOptions}" SelectedItem="{Binding SelectedColors}"
+                     HorizontalAlignment="Left"/>
+            <DockPanel Margin="{StaticResource GapTop8}"
+                       Visibility="{Binding UseColor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}"/>
+                <TextBlock Text="Цвет" Style="{StaticResource Body}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

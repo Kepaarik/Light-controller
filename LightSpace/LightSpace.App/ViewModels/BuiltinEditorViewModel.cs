@@ -171,6 +171,8 @@ public sealed class BuiltinEditorViewModel : ObservableObject
 
     private BuiltinConfig? _builtin;
     private IReadOnlyList<BuiltinDeviceViewModel> _devices = Array.Empty<BuiltinDeviceViewModel>();
+    private IReadOnlyList<BuiltinTileViewModel> _tiles = Array.Empty<BuiltinTileViewModel>();
+    private bool _isPlaying;
 
     // Открытое устройство: редактор показывает только его; null — все устройства со встроенными эффектами
     private string? _deviceId;
@@ -204,6 +206,62 @@ public sealed class BuiltinEditorViewModel : ObservableObject
     }
 
     public bool HasDevices => _devices.Count > 0;
+
+    /// <summary>
+    /// Плитки встроенных эффектов открытого устройства для галереи; варианты одного эффекта — одна плитка.
+    /// Пусто, если открыто не одно устройство.
+    /// </summary>
+    public IReadOnlyList<BuiltinTileViewModel> Tiles
+    {
+        get => _tiles;
+        private set
+        {
+            if (SetProperty(ref _tiles, value))
+                OnPropertyChanged(nameof(HasTiles));
+        }
+    }
+
+    public bool HasTiles => _tiles.Count > 0;
+
+    /// <summary>
+    /// Открытое устройство, которому выбирают эффект плитками; null — открыто не одно устройство.
+    /// </summary>
+    public BuiltinDeviceViewModel? Device => IsOneDevice && _devices.Count == 1 ? _devices[0] : null;
+
+    /// <summary>
+    /// Встроенный эффект сейчас играет — тогда в галерее выделена его плитка.
+    /// </summary>
+    public bool IsPlaying
+    {
+        get => _isPlaying;
+        set
+        {
+            if (SetProperty(ref _isPlaying, value))
+                OnPropertyChanged(nameof(SelectedTile));
+        }
+    }
+
+    /// <summary>
+    /// Плитка эффекта, который играет устройство; null — встроенный эффект не играет. Выбор плитки включает её эффект,
+    /// даже если это тот же эффект, что был выбран раньше.
+    /// </summary>
+    public BuiltinTileViewModel? SelectedTile
+    {
+        get => _isPlaying && Device?.SelectedGroup is { } group ? _tiles.FirstOrDefault(t => t.Group == group) : null;
+        set
+        {
+            // Галерея сбрасывает выбор в null, когда пересобирает плитки
+            if (value == null || Device is not { } device)
+                return;
+
+            if (device.SelectedGroup == value.Group)
+                _changed();
+            else
+                device.SelectedGroup = value.Group;
+
+            OnPropertyChanged();
+        }
+    }
 
     /// <summary>
     /// Редактор открыт для одного устройства: его название и подсказки про другие устройства не нужны.
@@ -283,6 +341,7 @@ public sealed class BuiltinEditorViewModel : ObservableObject
         if (_builtin == null)
         {
             Devices = Array.Empty<BuiltinDeviceViewModel>();
+            RefreshTiles();
             return;
         }
 
@@ -292,6 +351,21 @@ public sealed class BuiltinEditorViewModel : ObservableObject
             .Where(d => d.Device is IBuiltinEffectsDevice { BuiltinEffects.Count: > 0 } && (_deviceId == null || d.Id == _deviceId))
             .Select(d => new BuiltinDeviceViewModel(builtin, d, (IBuiltinEffectsDevice)d.Device!, _changed))
             .ToList();
+
+        RefreshTiles();
+    }
+
+    /// <summary>
+    /// Собирает плитки эффектов открытого устройства.
+    /// </summary>
+    private void RefreshTiles()
+    {
+        Tiles = Device is { } device
+            ? device.EffectGroups.Select(g => new BuiltinTileViewModel(g)).ToList()
+            : Array.Empty<BuiltinTileViewModel>();
+
+        OnPropertyChanged(nameof(Device));
+        OnPropertyChanged(nameof(SelectedTile));
     }
 
     private void SetNumber(double value, Func<BuiltinConfig, int> get, Action<BuiltinConfig, int> set, [CallerMemberName] string? name = null)
