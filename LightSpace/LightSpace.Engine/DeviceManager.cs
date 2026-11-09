@@ -1,3 +1,4 @@
+using LightSpace.Core;
 using LightSpace.Core.Config;
 using LightSpace.Devices;
 using LightSpace.Devices.Tuya;
@@ -10,6 +11,11 @@ namespace LightSpace.Engine;
 /// </summary>
 public sealed class DeviceManager : IDisposable
 {
+    /// <summary>
+    /// Сколько команды подряд могут не доходить, прежде чем соединение с устройством считается потерянным.
+    /// </summary>
+    public static readonly TimeSpan LostAfter = TimeSpan.FromSeconds(30);
+
     private readonly AppConfig _config;
     private readonly DeviceDiscovery _discovery = new();
     private readonly List<ManagedDevice> _devices;
@@ -61,6 +67,67 @@ public sealed class DeviceManager : IDisposable
                 Attach(device);
 
             return result.Errors;
+        }
+        finally
+        {
+            IsSearching = false;
+            DevicesChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Есть известные устройства, которые сейчас не подключены.
+    /// </summary>
+    public bool HasMissingDevices => _devices.Any(d => d.Output == null);
+
+    /// <summary>
+    /// Переподключает пропавшие устройства, не трогая работающие: устройство, до которого команды не доходят дольше
+    /// <see cref="LostAfter"/>, отключается, затем поиск подключает известные устройства, которых нет на связи.
+    /// Новые устройства при этом не добавляются — это делает обычный поиск. Возвращает, сколько устройств подключилось.
+    /// </summary>
+    public async Task<int> ReconnectAsync(CancellationToken ct = default)
+    {
+        if (IsSearching)
+            return 0;
+
+        var now = DateTime.Now;
+
+        foreach (var device in _devices.Where(d => d.Output?.Diagnostics.FailingSince is { } since && now - since > LostAfter))
+        {
+            DeviceLog.Write($"«{device.Name}»: команды не доходят дольше {LostAfter.TotalSeconds:0} с — соединение закрывается для переподключения");
+            device.Disconnect();
+        }
+
+        if (!HasMissingDevices)
+            return 0;
+
+        IsSearching = true;
+        DevicesChanged?.Invoke(this, EventArgs.Empty);
+
+        var connected = 0;
+
+        try
+        {
+            var result = await _discovery.DiscoverAllAsync(ct);
+
+            foreach (var device in result.Devices)
+            {
+                var managed = _devices.FirstOrDefault(d => d.Id == device.Id);
+
+                // Работающее устройство второе соединение не получает, незнакомое ждёт обычного поиска
+                if (managed == null || managed.Output != null)
+                {
+                    device.Dispose();
+                    continue;
+                }
+
+                Attach(device);
+                connected++;
+
+                DeviceLog.Write($"«{managed.Name}»: подключено заново");
+            }
+
+            return connected;
         }
         finally
         {

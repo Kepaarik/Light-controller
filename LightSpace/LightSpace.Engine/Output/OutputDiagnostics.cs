@@ -10,6 +10,7 @@ namespace LightSpace.Engine.Output;
 /// <param name="LastError">Текст последней ошибки связи; null — ошибок не было.</param>
 /// <param name="LastErrorAt">Когда случилась последняя ошибка.</param>
 /// <param name="IsFailing">Последняя команда не дошла до устройства.</param>
+/// <param name="FailingSince">С какого момента команды подряд не доходят; null — последняя дошла.</param>
 public sealed record OutputDiagnostics(
     long SentFrames,
     long DroppedFrames,
@@ -17,4 +18,5 @@ public sealed record OutputDiagnostics(
     DateTime? LastSentAt,
     string? LastError,
     DateTime? LastErrorAt,
-    bool IsFailing);
+    bool IsFailing,
+    DateTime? FailingSince);

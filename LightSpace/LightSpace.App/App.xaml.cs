@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using LightSpace.App.Services;
 using LightSpace.App.ViewModels;
@@ -30,6 +31,15 @@ public partial class App : Application
     {
         // Журнал — первым: предупреждения при загрузке настроек и поиске устройств тоже попадут в файл
         FileLog.Start();
+
+        // Необработанные ошибки попадают в журнал: приложение живёт в трее, и без журнала их не увидеть
+        DispatcherUnhandledException += (_, args) => LogCrash("в потоке окна", args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => LogCrash("в фоновом потоке", args.ExceptionObject);
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            LogCrash("в фоновой задаче", args.Exception);
+            args.SetObserved();
+        };
 
         _config = ConfigStore.Load();
 
@@ -63,6 +73,11 @@ public partial class App : Application
         _viewModel?.Settings.SaveNow();
     }
 
+    private static void LogCrash(string where, object error)
+    {
+        Trace.WriteLine($"Light Space: необработанная ошибка {where}: {error}");
+    }
+
     /// <summary>
     /// Перед сном гасит свет на всех устройствах, после пробуждения возвращает его.
     /// </summary>
@@ -73,7 +88,14 @@ public partial class App : Application
 
         var isAsleep = e.Mode == PowerModes.Suspend;
 
-        Dispatcher.Invoke(() => _viewModel?.SetAsleep(isAsleep));
+        Dispatcher.Invoke(() =>
+        {
+            _viewModel?.SetAsleep(isAsleep);
+
+            // После сна Bluetooth и сеть часто отпускают устройства — пропавшие ищем сразу, а не через несколько минут
+            if (!isAsleep)
+                _viewModel?.Devices.ReconnectSoon();
+        });
 
         // Windows не усыпляет компьютер, пока обработчик не вернулся, — даём выводам отправить команду выключения
         if (isAsleep)

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -16,10 +17,24 @@ public sealed partial class DevicesViewModel : ObservableObject
     // Как часто обновляются состояние связи и диагностика устройств
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(500);
 
+    // Паузы между попытками переподключить пропавшие устройства: чем дольше их нет, тем реже поиск
+    private static readonly TimeSpan[] ReconnectDelays =
+    {
+        TimeSpan.FromSeconds(15),
+        TimeSpan.FromSeconds(30),
+        TimeSpan.FromMinutes(1),
+        TimeSpan.FromMinutes(2),
+        TimeSpan.FromMinutes(5)
+    };
+
     private readonly DeviceManager _manager;
     private readonly FrameLoop _frameLoop;
     private readonly Action _settingsChanged;
     private readonly DispatcherTimer _refreshTimer;
+    private readonly DispatcherTimer _reconnectTimer;
+
+    // Сколько попыток переподключения подряд не вернули все устройства
+    private int _reconnectAttempt;
 
     // Открывает страницу подсветки устройства по его Id
     private readonly Action<string> _openLighting;
@@ -42,6 +57,26 @@ public sealed partial class DevicesViewModel : ObservableObject
         _refreshTimer = new DispatcherTimer { Interval = RefreshInterval };
         _refreshTimer.Tick += (_, _) => RefreshItems();
         _refreshTimer.Start();
+
+        _reconnectTimer = new DispatcherTimer { Interval = ReconnectDelays[0] };
+        _reconnectTimer.Tick += async (_, _) => await ReconnectAsync();
+        _reconnectTimer.Start();
+    }
+
+    /// <summary>
+    /// Сколько известных устройств сейчас не на связи: не найдены или команды до них не доходят.
+    /// </summary>
+    public int ProblemCount => Items.Count(i => i.Device.Status is DeviceStatus.NotFound or DeviceStatus.Failing);
+
+    /// <summary>
+    /// Пробует переподключить пропавшие устройства сразу, не дожидаясь очередной попытки, — например, после сна компьютера.
+    /// </summary>
+    public void ReconnectSoon()
+    {
+        _reconnectAttempt = 0;
+        _reconnectTimer.Stop();
+        _reconnectTimer.Interval = ReconnectDelays[0];
+        _reconnectTimer.Start();
     }
 
     public ObservableCollection<DeviceItemViewModel> Items { get; } = new();
@@ -155,5 +190,28 @@ public sealed partial class DevicesViewModel : ObservableObject
             item.Refresh();
 
         OnPropertyChanged(nameof(FrameTimeText));
+        OnPropertyChanged(nameof(ProblemCount));
+    }
+
+    /// <summary>
+    /// Очередная попытка переподключения; пока не все устройства на связи, следующая — через паузу подлиннее.
+    /// </summary>
+    private async Task ReconnectAsync()
+    {
+        _reconnectTimer.Stop();
+
+        try
+        {
+            if (await _manager.ReconnectAsync() > 0)
+                _settingsChanged();
+        }
+        catch (Exception e)
+        {
+            Trace.WriteLine($"Light Space: переподключение устройств не удалось: {e}");
+        }
+
+        _reconnectAttempt = _manager.HasMissingDevices ? Math.Min(_reconnectAttempt + 1, ReconnectDelays.Length - 1) : 0;
+        _reconnectTimer.Interval = ReconnectDelays[_reconnectAttempt];
+        _reconnectTimer.Start();
     }
 }

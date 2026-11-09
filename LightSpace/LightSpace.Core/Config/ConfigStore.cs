@@ -48,20 +48,30 @@ public static class ConfigStore
 
         try
         {
-            if (JsonNode.Parse(File.ReadAllText(FilePath)) is not JsonObject root)
-                return new AppConfig();
-
-            Migrate(root);
-
-            var config = root.Deserialize<AppConfig>(Options) ?? new AppConfig();
-            config.Normalize();
-
-            return config;
+            return Parse(File.ReadAllText(FilePath));
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException or IOException)
         {
             return new AppConfig();
         }
+    }
+
+    /// <summary>
+    /// Читает настройки из текста файла любой версии и приводит их к текущей.
+    /// </summary>
+    /// <exception cref="JsonException">Текст — не JSON или не настройки.</exception>
+    /// <exception cref="InvalidOperationException">Значение в файле не того типа.</exception>
+    public static AppConfig Parse(string json)
+    {
+        if (JsonNode.Parse(json) is not JsonObject root)
+            return new AppConfig();
+
+        Migrate(root);
+
+        var config = root.Deserialize<AppConfig>(Options) ?? new AppConfig();
+        config.Normalize();
+
+        return config;
     }
 
     public static void Save(AppConfig config)

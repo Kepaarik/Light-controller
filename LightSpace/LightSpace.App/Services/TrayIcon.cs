@@ -33,6 +33,7 @@ public sealed class TrayIcon : IDisposable
 
         _icon.MouseUp += OnMouseUp;
         _viewModel.Settings.PropertyChanged += OnSettingsChanged;
+        _viewModel.Devices.PropertyChanged += OnDevicesChanged;
 
         UpdateText();
     }
@@ -40,6 +41,7 @@ public sealed class TrayIcon : IDisposable
     public void Dispose()
     {
         _viewModel.Settings.PropertyChanged -= OnSettingsChanged;
+        _viewModel.Devices.PropertyChanged -= OnDevicesChanged;
         _menu?.Close();
 
         _icon.Visible = false;
@@ -69,12 +71,25 @@ public sealed class TrayIcon : IDisposable
             UpdateText();
     }
 
+    private void OnDevicesChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DevicesViewModel.ProblemCount))
+            UpdateText();
+    }
+
     /// <summary>
-    /// Подсказка значка: название и выключена ли подсветка.
+    /// Подсказка значка: название, выключена ли подсветка и сколько устройств не на связи.
     /// </summary>
     private void UpdateText()
     {
-        _icon.Text = _viewModel.Settings.LightingEnabled ? "Light Space" : "Light Space — подсветка выключена";
+        var text = _viewModel.Settings.LightingEnabled ? "Light Space" : "Light Space — подсветка выключена";
+
+        if (_viewModel.Devices.ProblemCount is var problems and > 0)
+            text += $"\nНет связи с устройствами: {problems}";
+
+        // Счётчик пересчитывается дважды в секунду — значок обновляется, только когда текст правда изменился
+        if (_icon.Text != text)
+            _icon.Text = text;
     }
 
     private void ShowMenu()

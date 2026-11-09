@@ -3,4 +3,5 @@
   <Project Path="LightSpace.Devices/LightSpace.Devices.csproj" />
   <Project Path="LightSpace.Engine/LightSpace.Engine.csproj" />
   <Project Path="LightSpace.App/LightSpace.App.csproj" />
+  <Project Path="LightSpace.Tests/LightSpace.Tests.csproj" />
 </Solution>

@@ -19,8 +19,8 @@ public sealed class DeviceOutput : IDisposable
     // Сколько остановка ждёт, пока уйдёт последняя команда
     private static readonly TimeSpan StopTimeout = TimeSpan.FromMilliseconds(500);
 
-    // Через сколько повторяется запуск встроенного эффекта, который не дошёл до устройства
-    private static readonly TimeSpan BuiltinRetryDelay = TimeSpan.FromSeconds(5);
+    // Через сколько повторяются запуск встроенного эффекта и включение или выключение, которые не дошли до устройства
+    private static readonly TimeSpan CommandRetryDelay = TimeSpan.FromSeconds(5);
 
     // Как часто повторяется кадр, который не меняется: устройство, потерявшее его, всё равно его получит
     private static readonly TimeSpan SameFrameResendInterval = TimeSpan.FromSeconds(2);
@@ -49,6 +49,7 @@ public sealed class DeviceOutput : IDisposable
     private string? _lastError;
     private DateTime? _lastErrorAt;
     private bool _isFailing;
+    private DateTime? _failingSince;
 
     // Встроенный эффект, который сейчас играет устройство, и его ещё не отправленный запуск; null — устройство показывает кадры
     private BuiltinEffectStart? _builtin;
@@ -101,7 +102,7 @@ public sealed class DeviceOutput : IDisposable
         get
         {
             lock (_sync)
-                return new OutputDiagnostics(_sentFrames, _droppedFrames, _lastSendDuration, _lastSentAt, _lastError, _lastErrorAt, _isFailing);
+                return new OutputDiagnostics(_sentFrames, _droppedFrames, _lastSendDuration, _lastSentAt, _lastError, _lastErrorAt, _isFailing, _failingSince);
         }
     }
 
@@ -297,7 +298,13 @@ public sealed class DeviceOutput : IDisposable
 
         if (power is { } isOn)
         {
-            await RunCommandAsync(() => _device.SetPowerAsync(isOn, ct), isFrame: false, ct);
+            // Без включения лента не покажет ни кадров, ни эффекта — не дошедшая команда повторяется сама
+            if (!await RunCommandAsync(() => _device.SetPowerAsync(isOn, ct), isFrame: false, ct))
+            {
+                DeviceLog.Write($"«{_device.Name}»: {(isOn ? "включение" : "выключение")} не дошло, повтор через {CommandRetryDelay.TotalSeconds:0} с");
+                _ = RetryPowerAsync(isOn, ct);
+            }
+
             return true;
         }
 
@@ -315,7 +322,7 @@ public sealed class DeviceOutput : IDisposable
             // Кадров, которые повторили бы попытку, у встроенного эффекта нет — запуск повторяется сам
             if (!await RunCommandAsync(() => StartBuiltinAsync(builtin, ct), isFrame: false, ct))
             {
-                DeviceLog.Write($"«{_device.Name}»: запуск встроенного эффекта не дошёл, повтор через {BuiltinRetryDelay.TotalSeconds:0} с");
+                DeviceLog.Write($"«{_device.Name}»: запуск встроенного эффекта не дошёл, повтор через {CommandRetryDelay.TotalSeconds:0} с");
                 _ = RetryBuiltinAsync(builtin, ct);
             }
 
@@ -420,7 +427,7 @@ public sealed class DeviceOutput : IDisposable
     {
         try
         {
-            await Task.Delay(BuiltinRetryDelay, ct);
+            await Task.Delay(CommandRetryDelay, ct);
         }
         catch (OperationCanceledException)
         {
@@ -434,6 +441,44 @@ public sealed class DeviceOutput : IDisposable
                 return;
 
             _pendingBuiltin = start;
+            Signal();
+        }
+    }
+
+    /// <summary>
+    /// Через несколько секунд снова кладёт в ящик включение или выключение, если подсветка всё ещё должна быть такой.
+    /// </summary>
+    private async Task RetryPowerAsync(bool isOn, CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(CommandRetryDelay, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        lock (_sync)
+        {
+            // За это время подсветку могли переключить — тогда в ящике уже своя команда
+            if (ct.IsCancellationRequested || _isEnabled != isOn || _pendingPower != null)
+                return;
+
+            _pendingPower = isOn;
+
+            // После включения лента должна снова показать то, что играет: кадр или встроенный эффект
+            if (isOn)
+            {
+                _pendingBuiltin = _builtin;
+
+                if (_builtin == null && _pending == null && _latest != null)
+                {
+                    _pending = _latest;
+                    _isPendingRepeat = true;
+                }
+            }
+
             Signal();
         }
     }
@@ -537,6 +582,7 @@ public sealed class DeviceOutput : IDisposable
                 _lastSendDuration = duration;
                 _lastSentAt = DateTime.Now;
                 _isFailing = false;
+                _failingSince = null;
             }
 
             return true;
@@ -555,6 +601,7 @@ public sealed class DeviceOutput : IDisposable
                 _lastError = e.Message;
                 _lastErrorAt = DateTime.Now;
                 _isFailing = true;
+                _failingSince ??= _lastErrorAt;
             }
 
             return false;
