@@ -19,6 +19,11 @@ public sealed class DeviceConfig
     public string? CustomName { get; set; }
 
     /// <summary>
+    /// Значок устройства в левом меню, выбранный пользователем (символ Segoe Fluent Icons). null — значок по типу устройства.
+    /// </summary>
+    public string? Icon { get; set; }
+
+    /// <summary>
     /// Способ подключения и тип контроллера, например «BLE · ELK-BLEDOM».
     /// </summary>
     public string Protocol { get; set; } = "";

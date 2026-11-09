@@ -59,6 +59,9 @@ public sealed partial class SceneViewModel : ObservableObject
     [ObservableProperty]
     private bool _isEditingLayout;
 
+    // Превью редакторов видно: открыта страница устройства или сцены и окно не скрыто
+    private bool _isPreviewShown;
+
     /// <summary>
     /// contentChanged вызывается после каждого изменения: режима сцены, состава групп, названия, цвета, яркости,
     /// содержимого и его настроек. sources — откуда превью экрана, музыки и игры берут картинку, звук и события игр.
@@ -576,10 +579,25 @@ public sealed partial class SceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Включает живые цвета и превью, пока сцену видно, и выключает, когда окно скрыто или открыта другая вкладка.
+    /// Включает живые цвета устройств, пока окно видно (они нужны и значкам в левом меню), и превью редакторов,
+    /// пока открыта страница устройства или сцены; выключает, когда окно скрыто или открыта другая вкладка.
     /// </summary>
-    public void SetLive(bool isLive)
+    public void SetLive(bool isLive, bool isPageShown)
     {
+        var isPreviewShown = isLive && isPageShown;
+
+        if (isPreviewShown != _isPreviewShown)
+        {
+            _isPreviewShown = isPreviewShown;
+
+            // Пока превью не видно, монитор и звук для него не снимаются
+            if (!isPreviewShown)
+                StopPreviews();
+            // Пока сцену не видели, устройства могли переставить
+            else
+                SceneEditor.RefreshDevices();
+        }
+
         if (isLive == _liveTimer.IsEnabled)
             return;
 
@@ -589,20 +607,19 @@ public sealed partial class SceneViewModel : ObservableObject
         {
             _liveTimer.Stop();
             _clock.Stop();
-
-            // Пока превью не видно, монитор и звук для него не снимаются
-            ScreenEditor.StopPreview();
-            MusicEditor.StopPreview();
-            GameEditor.StopPreview();
             return;
         }
-
-        // Пока сцену не видели, устройства могли переставить
-        SceneEditor.RefreshDevices();
 
         _clock.Restart();
         _lastTick = TimeSpan.Zero;
         _liveTimer.Start();
+    }
+
+    private void StopPreviews()
+    {
+        ScreenEditor.StopPreview();
+        MusicEditor.StopPreview();
+        GameEditor.StopPreview();
     }
 
     /// <summary>
@@ -1088,6 +1105,27 @@ public sealed partial class SceneViewModel : ObservableObject
         var seconds = (now - _lastTick).TotalSeconds;
         _lastTick = now;
 
+        // Превью редакторов считаются, только пока их видно
+        if (_isPreviewShown)
+            AdvancePreview(seconds);
+
+        var live = _loop.LiveColors;
+
+        foreach (var device in Devices)
+        {
+            var colors = live is { IsLightingEnabled: true } && live.Devices.TryGetValue(device.Id, out var found) ? found : null;
+
+            device.Show(colors?.Colors, colors?.Brightness ?? 100);
+            device.IsBuiltinPlaying = colors?.IsBuiltin == true;
+            device.RefreshStatus();
+        }
+    }
+
+    /// <summary>
+    /// Следующий кадр превью в редакторе того, что выбрано.
+    /// </summary>
+    private void AdvancePreview(double seconds)
+    {
         // У сцены свой холст и своя галерея — эффекта выбранного слоя
         if (IsSceneContent)
             SceneEditor.Advance(seconds);
@@ -1099,15 +1137,5 @@ public sealed partial class SceneViewModel : ObservableObject
             GameEditor.Advance(seconds);
         else if (IsEffectContent)
             Editor.Advance(seconds);
-
-        var live = _loop.LiveColors;
-
-        foreach (var device in Devices)
-        {
-            var colors = live is { IsLightingEnabled: true } && live.Devices.TryGetValue(device.Id, out var found) ? found : null;
-
-            device.Show(colors?.Colors, colors?.Brightness ?? 100);
-            device.IsBuiltinPlaying = colors?.IsBuiltin == true;
-        }
     }
 }

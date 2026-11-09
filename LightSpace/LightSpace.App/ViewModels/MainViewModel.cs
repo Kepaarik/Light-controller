@@ -144,7 +144,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Settings.PropertyChanged -= OnSettingsChanged;
         _deviceManager.DevicesChanged -= OnDevicesChanged;
-        Scene.SetLive(false);
+        Scene.SetLive(false, false);
 
         // Сначала поток кадров: иначе он клал бы кадры в уже закрытые выводы устройств
         _frameLoop.Dispose();
@@ -301,7 +301,7 @@ public sealed partial class MainViewModel : ObservableObject
         DeviceNav.Clear();
 
         foreach (var device in Scene.Devices)
-            DeviceNav.Add(new DeviceNavOption(device.Id, device.Name, device.IsKeyboard ? "" : ""));
+            DeviceNav.Add(new DeviceNavOption(device));
 
         if (SelectedPage != AppPage.Device || opened == null)
             return;
@@ -316,6 +316,56 @@ public sealed partial class MainViewModel : ObservableObject
         {
             SelectedPage = AppPage.Devices;
         }
+    }
+
+    /// <summary>
+    /// Даёт устройству своё название; пустое или такое же, как у драйвера, возвращает название от драйвера.
+    /// </summary>
+    public void RenameDevice(string deviceId, string name)
+    {
+        var device = _deviceManager.Devices.FirstOrDefault(d => d.Id == deviceId);
+
+        if (device == null)
+            return;
+
+        var customName = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+
+        if (customName == (device.Device?.Name ?? device.Settings.Name))
+            customName = null;
+
+        if (customName == device.Settings.CustomName)
+            return;
+
+        device.Settings.CustomName = customName;
+        OnDeviceLookChanged(deviceId);
+    }
+
+    /// <summary>
+    /// Меняет значок устройства в левом меню.
+    /// </summary>
+    public void SetDeviceIcon(string deviceId, string icon)
+    {
+        var device = _deviceManager.Devices.FirstOrDefault(d => d.Id == deviceId);
+
+        if (device == null || device.Settings.Icon == icon)
+            return;
+
+        device.Settings.Icon = icon;
+        OnDeviceLookChanged(deviceId);
+    }
+
+    /// <summary>
+    /// Название или значок устройства сменились: меню и открытая страница показывают новые, настройки сохраняются.
+    /// </summary>
+    private void OnDeviceLookChanged(string deviceId)
+    {
+        Scene.Reload();
+
+        if (SelectedPage == AppPage.Device && _openedDeviceId == deviceId)
+            Scene.OpenDevice(deviceId);
+
+        RefreshDeviceNav();
+        Settings.ScheduleSave();
     }
 
     /// <summary>
@@ -375,10 +425,10 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Живая сцена работает, только пока окно видно и открыта вкладка «Сцена».
+    /// Живые цвета устройств идут, пока окно видно; превью редакторов — пока открыта страница устройства или сцены.
     /// </summary>
     private void UpdateLive()
     {
-        Scene.SetLive(_isWindowShown && SelectedPage is AppPage.Scene or AppPage.Device);
+        Scene.SetLive(_isWindowShown, SelectedPage is AppPage.Scene or AppPage.Device);
     }
 }

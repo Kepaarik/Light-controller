@@ -21,7 +21,11 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     private static readonly DevicePlacement Unplaced = new();
 
     private readonly ColorBitmap _bitmap;
+    private readonly ManagedDevice _device;
     private readonly DeviceConfig _settings;
+
+    // Состояние связи, которое сейчас показано: меняется само, без пересборки устройств
+    private DeviceStatus _status;
 
     [ObservableProperty]
     private IReadOnlyList<RgbColor>? _keyColors;
@@ -45,7 +49,9 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
         IsConnected = device.Device != null;
         Keys = capabilities?.Keys ?? Array.Empty<KeyboardKey>();
         Geometry = device.Geometry;
+        _device = device;
         _settings = device.Settings;
+        _status = device.Status;
 
         KindText = capabilities switch
         {
@@ -73,6 +79,24 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     /// Что это за устройство, или что оно не подключено.
     /// </summary>
     public string KindText { get; }
+
+    /// <summary>
+    /// Значок устройства в левом меню: выбранный пользователем или по типу устройства.
+    /// </summary>
+    public string Icon => _settings.Icon ?? (IsKeyboard ? DeviceIcons.Keyboard : DeviceIcons.Strip);
+
+    /// <summary>
+    /// Состояние связи с устройством.
+    /// </summary>
+    public DeviceStatus Status => _status;
+
+    public string StatusTitle => _status switch
+    {
+        DeviceStatus.Connected => "Подключено",
+        DeviceStatus.NeedsSetup => "Нужна настройка",
+        DeviceStatus.Failing => "Нет связи",
+        _ => "Не найдено"
+    };
 
     public IReadOnlyList<KeyboardKey> Keys { get; }
 
@@ -191,9 +215,39 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
         if (IsKeyboard)
         {
             KeyColors = colors?.Select(c => c.Scale(brightness)).ToArray();
+
+            // Полоса клавиатуры — одна точка: средний цвет клавиш, например для значка в меню
+            _bitmap.Write(colors is { Count: > 0 } ? new[] { Average(colors) } : Array.Empty<RgbColor>(), brightness);
             return;
         }
 
         _bitmap.Write(colors ?? Array.Empty<RgbColor>(), brightness);
+    }
+
+    /// <summary>
+    /// Показывает новое состояние связи, если оно сменилось.
+    /// </summary>
+    public void RefreshStatus()
+    {
+        if (_device.Status == _status)
+            return;
+
+        _status = _device.Status;
+        OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(StatusTitle));
+    }
+
+    private static RgbColor Average(IReadOnlyList<RgbColor> colors)
+    {
+        int r = 0, g = 0, b = 0;
+
+        foreach (var color in colors)
+        {
+            r += color.R;
+            g += color.G;
+            b += color.B;
+        }
+
+        return new RgbColor((byte)(r / colors.Count), (byte)(g / colors.Count), (byte)(b / colors.Count));
     }
 }

@@ -56,6 +56,43 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,8">
                     <ListBox x:Name="DeviceNavList" Style="{StaticResource NavList}"
                              ItemsSource="{Binding DeviceNav}" SelectedValuePath="Id" SelectedValue="{Binding SelectedDeviceId}">
+                        <!-- Значок устройства с точкой его живого цвета; при проблеме со связью точка — цвета состояния,
+                             у ненайденного устройства значок и название приглушены -->
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:DeviceNavOption">
+                                <StackPanel Orientation="Horizontal">
+                                    <Grid Width="20" VerticalAlignment="Center">
+                                        <TextBlock x:Name="Glyph" Text="{Binding Icon}" Style="{StaticResource Icon}"/>
+                                        <Ellipse x:Name="Dot" Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                 Margin="0,0,-3,-3" Fill="{Binding Device.Preview}"
+                                                 Stroke="{DynamicResource BorderBrush}" StrokeThickness="{StaticResource StrokeWidth}"/>
+                                    </Grid>
+                                    <TextBlock x:Name="Label" Text="{Binding Title}" Margin="14,0,0,0" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="150"/>
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Device.IsBuiltinPlaying}" Value="True">
+                                        <Setter TargetName="Dot" Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Device.Status}" Value="NeedsSetup">
+                                        <Setter TargetName="Dot" Property="Visibility" Value="Visible"/>
+                                        <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource WarningBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Device.Status}" Value="Failing">
+                                        <Setter TargetName="Dot" Property="Visibility" Value="Visible"/>
+                                        <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource DangerBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Device.IsConnected}" Value="False">
+                                        <Setter TargetName="Dot" Property="Visibility" Value="Collapsed"/>
+                                        <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                        <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                                        <Setter TargetName="Label" Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel/>

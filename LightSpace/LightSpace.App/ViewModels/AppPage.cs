@@ -25,9 +25,15 @@ public sealed record PageOption(AppPage Page, string Title, string Icon)
 }
 
 /// <summary>
-/// Найденное устройство в левом меню окна: открывает выбор его эффекта.
+/// Найденное устройство в левом меню окна: открывает выбор его эффекта. Рядом со значком — живой цвет устройства.
 /// </summary>
-public sealed record DeviceNavOption(string Id, string Title, string Icon)
+public sealed record DeviceNavOption(SceneDeviceViewModel Device)
 {
+    public string Id => Device.Id;
+
+    public string Title => Device.Name;
+
+    public string Icon => Device.Icon;
+
     public override string ToString() => Title;
 }

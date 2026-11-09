@@ -19,28 +19,148 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="{StaticResource PaddingPage}">
-            <TextBlock Text="{Binding SelectedGroup.Title}" Style="{StaticResource PageTitle}"/>
-            <TextBlock Text="{Binding SelectedGroup.Device.KindText}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+            <!-- Шапка: значок из меню (щелчок — выбрать другой), название с переименованием, тип и состояние связи -->
+            <DockPanel>
+                <Grid DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,2,16,0">
+                    <ToggleButton x:Name="IconOpener" Width="48" Height="48" Padding="{StaticResource SpaceNone}"
+                                  ToolTip="Значок в левом меню"
+                                  IsHitTestVisible="{Binding IsOpen, ElementName=IconFlyout, Converter={x:Static controls:InverseBooleanConverter.Instance}}">
+                        <TextBlock Text="{Binding SelectedGroup.Device.Icon}" Style="{StaticResource Icon}" FontSize="22"/>
+                    </ToggleButton>
+
+                    <Popup x:Name="IconFlyout" PlacementTarget="{Binding ElementName=IconOpener}" Placement="Bottom" StaysOpen="False"
+                           HorizontalOffset="{StaticResource FlyoutOffsetX}" VerticalOffset="{StaticResource FlyoutOffsetY}"
+                           AllowsTransparency="True" PopupAnimation="Fade"
+                           IsOpen="{Binding IsChecked, ElementName=IconOpener, Mode=TwoWay}">
+                        <Border Style="{StaticResource FlyoutCard}" Width="240">
+                            <StackPanel Margin="{StaticResource Space8}">
+                                <TextBlock Text="Значок в меню" Style="{StaticResource Caption}" Margin="{StaticResource GapBottom8}"/>
+                                <ListBox x:Name="IconList" ItemsSource="{x:Static vm:DeviceIcons.All}"
+                                         SelectedItem="{Binding SelectedGroup.Device.Icon, Mode=OneWay}"
+                                         SelectionChanged="OnIconSelected" FocusVisualStyle="{x:Null}">
+                                    <ListBox.Template>
+                                        <ControlTemplate TargetType="ListBox">
+                                            <ItemsPresenter/>
+                                        </ControlTemplate>
+                                    </ListBox.Template>
+                                    <ListBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ListBox.ItemsPanel>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" Style="{StaticResource Icon}" HorizontalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ListBoxItem">
+                                                        <Border x:Name="Root" Width="40" Height="40" Margin="{StaticResource GapTile}"
+                                                                CornerRadius="{StaticResource RadiusInner}" Background="Transparent"
+                                                                BorderBrush="Transparent" BorderThickness="{StaticResource StrokeThick}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlBrush}"/>
+                                                            </Trigger>
+                                                            <Trigger Property="IsSelected" Value="True">
+                                                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+                                                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AccentGradientBrush}"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </Grid>
+
+                <!-- Яркость устройства — в шапке, под рукой; у неподключённого её нет -->
+                <controls:ValueSlider DockPanel.Dock="Right" Width="240" VerticalAlignment="Center" Margin="{StaticResource GapLeft24}"
+                                      Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                      Value="{Binding SelectedGroup.Brightness}"
+                                      Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Grid>
+                            <TextBlock x:Name="TitleText" Text="{Binding SelectedGroup.Title}" Style="{StaticResource PageTitle}"
+                                       Margin="{StaticResource SpaceNone}"/>
+                            <!-- Поле названия: Enter или уход фокуса сохраняет, Esc — отменяет; пустое возвращает название устройства -->
+                            <TextBox x:Name="NameBox" FontSize="{StaticResource FontSizeTitle}" MinWidth="280" HorizontalAlignment="Left"
+                                     VerticalContentAlignment="Center" Visibility="Collapsed"
+                                     KeyDown="OnNameKeyDown" LostKeyboardFocus="OnNameLostFocus"/>
+                        </Grid>
+                        <Button x:Name="RenameButton" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE70F;"
+                                ToolTip="Переименовать" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}" Click="OnRenameClicked"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}">
+                        <Run Text="{Binding SelectedGroup.Device.KindText, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding SelectedGroup.Device.StatusTitle, Mode=OneWay}">
+                            <Run.Style>
+                                <Style TargetType="Run">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedGroup.Device.Status}" Value="Connected">
+                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedGroup.Device.Status}" Value="NeedsSetup">
+                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SelectedGroup.Device.Status}" Value="Failing">
+                                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Run.Style>
+                        </Run>
+                    </TextBlock>
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Живые цвета, которые сейчас уходят на устройство; у встроенного эффекта их не знает и само приложение -->
+            <Border Height="10" CornerRadius="5" Margin="{StaticResource GapTop16}" Background="{Binding SelectedGroup.Device.Preview}"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeThin}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedGroup.Device.IsConnected}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding SelectedGroup.Device.IsBuiltinPlaying}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
 
             <!-- Неподключённому устройству настраивать нечего: команды до него не дойдут -->
-            <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop16}"
-                       Text="Устройство не подключено. Включите его и нажмите «Найти» на странице «Устройства» — настройки появятся здесь."
-                       Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+            <controls:EmptyState Icon="&#xE772;" Title="Устройство не подключено" Margin="0,64,0,0"
+                                 Hint="Включите его и запустите поиск — настройки появятся здесь."
+                                 ActionText="Найти устройства" ActionIcon="&#xE721;"
+                                 Command="{Binding DataContext.FindDevicesCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                 Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
 
             <StackPanel Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+                    Visibility="{Binding IsStripSelected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                 <StackPanel>
-                    <controls:ValueSlider Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                          Value="{Binding SelectedGroup.Brightness}"/>
-
-                    <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора -->
-                    <StackPanel Visibility="{Binding IsStripSelected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <TextBlock Text="Монитор" Style="{StaticResource SectionLabel}"/>
-                        <ListBox Style="{StaticResource Segments}" HorizontalAlignment="Left"
-                                 ItemsSource="{Binding MonitorOptions}" SelectedItem="{Binding SelectedMonitor}"/>
-                        <TextBlock Text="Лента за монитором в эффекте «Экран» повторяет цвета его краёв. Раскладку ленты по краям настройте на странице «Мониторы»."
-                                   Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
-                    </StackPanel>
+                    <TextBlock Text="Монитор" Style="{StaticResource CardTitle}"/>
+                    <ListBox Style="{StaticResource Segments}" HorizontalAlignment="Left"
+                             ItemsSource="{Binding MonitorOptions}" SelectedItem="{Binding SelectedMonitor}"/>
+                    <TextBlock Text="Лента за монитором в эффекте «Экран» повторяет цвета его краёв. Раскладку ленты по краям настройте на странице «Мониторы»."
+                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                 </StackPanel>
             </Border>
 
@@ -65,12 +185,16 @@
                     </ListBox>
 
                     <!-- Вкладку только открыли: играет прежнее, пока здесь не выберут эффект или не нажмут «Включить» -->
-                    <DockPanel Margin="{StaticResource GapBottom16}"
-                               Visibility="{Binding IsViewedKindIdle, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <Button DockPanel.Dock="Right" Content="Включить" Style="{StaticResource AccentButton}"
-                                Command="{Binding PlayViewedKindCommand}"/>
-                        <TextBlock Text="{Binding PlayingText}" Style="{StaticResource Hint}" VerticalAlignment="Center"/>
-                    </DockPanel>
+                    <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="{StaticResource RadiusControl}"
+                            Padding="14,10,10,10" Margin="{StaticResource GapBottom16}"
+                            Visibility="{Binding IsViewedKindIdle, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Включить" Style="{StaticResource AccentButton}"
+                                    controls:Appearance.Icon="&#xE768;" Command="{Binding PlayViewedKindCommand}"/>
+                            <TextBlock DockPanel.Dock="Left" Text="&#xE946;" Style="{StaticResource Icon}" Margin="{StaticResource GapRight12}"/>
+                            <TextBlock Text="{Binding PlayingText}" Style="{StaticResource Body}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        </DockPanel>
+                    </Border>
 
                     <!-- Эффект: сверху встроенные эффекты устройства, ниже галерея эффектов приложения; настройки — в панели справа -->
                     <StackPanel Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
