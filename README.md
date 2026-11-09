@@ -52,7 +52,7 @@ dotnet publish LightSpace.App -c Release -r win-x64 --self-contained false -p:Pu
 dotnet publish LightSpace.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o publish/full
 ```
 
-Файлы `.pdb` рядом нужны только для отладки.
+Отладочная информация в Release встроена в exe (`DebugType=embedded` в `Directory.Build.props`): отдельных `.pdb` рядом нет, а в журнале ошибок есть номера строк.
 
 ## Релиз
 
