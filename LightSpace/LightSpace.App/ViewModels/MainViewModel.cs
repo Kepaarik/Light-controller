@@ -44,16 +44,10 @@ public sealed partial class MainViewModel : ObservableObject
         // Страницы «Сцена» пока нет: у каждого устройства своё содержимое, оно выбирается на странице устройства
         config.Mode = SceneMode.Devices;
 
-        // Сцену и игру пока не выбрать, а экран — только у ленты за монитором: устройство, которое их играло,
-        // переходит на обычный эффект, и экран не снимается впустую
-        foreach (var lighting in config.DeviceLighting)
-        {
-            var isOnMonitor = config.Monitors.Any(m => m.DeviceId != null && lighting.DeviceIds.Contains(m.DeviceId));
+        DropUnavailableContent();
 
-            if (lighting.DefaultContent.Kind is ContentKind.Scene or ContentKind.Game
-                || lighting.DefaultContent.Kind == ContentKind.Screen && !isOnMonitor)
-                lighting.DefaultContent.Kind = ContentKind.Effect;
-        }
+        foreach (var profile in config.Profiles)
+            Profiles.Add(new ProfileOption(profile));
 
         _deviceManager = new DeviceManager(config);
         _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices), _sources);
@@ -165,6 +159,99 @@ public sealed partial class MainViewModel : ObservableObject
     private void ToggleLighting()
     {
         Settings.LightingEnabled = !Settings.LightingEnabled;
+    }
+
+    /// <summary>
+    /// Сохранённые профили подсветки.
+    /// </summary>
+    public ObservableCollection<ProfileOption> Profiles { get; } = new();
+
+    public bool HasProfiles => Profiles.Count > 0;
+
+    /// <summary>
+    /// Общая яркость всей подсветки, 0–100 %.
+    /// </summary>
+    public double MasterBrightness
+    {
+        get => _config.MasterBrightness;
+        set
+        {
+            var brightness = (int)Math.Round(Math.Clamp(value, 0, 100));
+
+            if (brightness == _config.MasterBrightness)
+                return;
+
+            _config.MasterBrightness = brightness;
+            OnPropertyChanged();
+            OnContentChanged();
+        }
+    }
+
+    /// <summary>
+    /// Сохраняет то, что сейчас играет на устройствах, профилем с этим названием.
+    /// </summary>
+    public void SaveProfile(string name)
+    {
+        var title = string.IsNullOrWhiteSpace(name) ? $"Профиль {Profiles.Count + 1}" : name.Trim();
+
+        Profiles.Add(new ProfileOption(_config.SaveProfile(title)));
+        OnPropertyChanged(nameof(HasProfiles));
+        Settings.ScheduleSave();
+    }
+
+    /// <summary>
+    /// Возвращает устройствам яркость и содержимое из профиля.
+    /// </summary>
+    [RelayCommand]
+    private void ApplyProfile(ProfileOption? profile)
+    {
+        if (profile == null)
+            return;
+
+        _config.ApplyProfile(profile.Settings);
+        DropUnavailableContent();
+
+        // Открытая страница устройства показывает уже новое содержимое
+        Scene.Reload();
+
+        if (SelectedPage == AppPage.Device && _openedDeviceId != null)
+            Scene.OpenDevice(_openedDeviceId);
+
+        OnContentChanged();
+    }
+
+    [RelayCommand]
+    private async Task DeleteProfileAsync(ProfileOption? profile)
+    {
+        if (profile == null)
+            return;
+
+        var confirmed = await Dialogs.ConfirmAsync($"Удалить профиль «{profile.Name}»?",
+            "Подсветка, которая играет сейчас, не изменится.", "Удалить", isDanger: true);
+
+        if (!confirmed)
+            return;
+
+        _config.Profiles.Remove(profile.Settings);
+        Profiles.Remove(profile);
+        OnPropertyChanged(nameof(HasProfiles));
+        Settings.ScheduleSave();
+    }
+
+    /// <summary>
+    /// Сцену и игру пока не выбрать, а экран — только у ленты за монитором: устройство, которое их играет,
+    /// переходит на обычный эффект, и экран не снимается впустую.
+    /// </summary>
+    private void DropUnavailableContent()
+    {
+        foreach (var lighting in _config.DeviceLighting)
+        {
+            var isOnMonitor = _config.Monitors.Any(m => m.DeviceId != null && lighting.DeviceIds.Contains(m.DeviceId));
+
+            if (lighting.DefaultContent.Kind is ContentKind.Scene or ContentKind.Game
+                || lighting.DefaultContent.Kind == ContentKind.Screen && !isOnMonitor)
+                lighting.DefaultContent.Kind = ContentKind.Effect;
+        }
     }
 
     /// <summary>

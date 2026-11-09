@@ -5,7 +5,7 @@ using LightSpace.App.ViewModels;
 namespace LightSpace.App;
 
 /// <summary>
-/// Меню значка в трее: включить или выключить подсветку, открыть окно, выйти.
+/// Меню значка в трее: включить или выключить подсветку, общая яркость, профили, открыть окно, выйти.
 /// Закрывается, как только теряет фокус.
 /// </summary>
 public partial class TrayMenuWindow : Window
@@ -58,6 +58,12 @@ public partial class TrayMenuWindow : Window
     private void OnToggleLighting(object sender, RoutedEventArgs e)
     {
         _viewModel.ToggleLightingCommand.Execute(null);
+        CloseOnce();
+    }
+
+    private void OnApplyProfile(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ApplyProfileCommand.Execute(((FrameworkElement)sender).DataContext as ProfileOption);
         CloseOnce();
     }
 

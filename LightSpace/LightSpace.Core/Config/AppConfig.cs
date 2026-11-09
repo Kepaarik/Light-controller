@@ -72,6 +72,50 @@ public sealed class AppConfig
     public List<MonitorConfig> Monitors { get; set; } = new();
 
     /// <summary>
+    /// Общая яркость всей подсветки, 0–100 %: умножается на яркость каждого устройства.
+    /// </summary>
+    public int MasterBrightness { get; set; } = 100;
+
+    /// <summary>
+    /// Сохранённые профили подсветки в порядке их создания.
+    /// </summary>
+    public List<ProfileConfig> Profiles { get; set; } = new();
+
+    /// <summary>
+    /// Сохраняет то, что сейчас играет на устройствах, новым профилем.
+    /// </summary>
+    public ProfileConfig SaveProfile(string name)
+    {
+        var profile = new ProfileConfig
+        {
+            Id = GroupConfig.NewId(),
+            Name = name,
+            DeviceLighting = DeviceLighting.Select(l => GroupConfig.Solo(l.DeviceIds[0], l.DefaultContent.Clone(), l.Brightness)).ToList()
+        };
+
+        Profiles.Add(profile);
+
+        return profile;
+    }
+
+    /// <summary>
+    /// Возвращает устройствам яркость и содержимое из профиля. Устройства, которых в профиле нет, играют своё;
+    /// забытые с тех пор устройства пропускаются.
+    /// </summary>
+    public void ApplyProfile(ProfileConfig profile)
+    {
+        var devices = Devices.Select(d => d.Id).ToHashSet();
+
+        foreach (var saved in profile.DeviceLighting.Where(l => devices.Contains(l.DeviceIds[0])))
+        {
+            var lighting = EnsureDeviceLighting(saved.DeviceIds[0]);
+
+            lighting.Brightness = saved.Brightness;
+            lighting.DefaultContent = saved.DefaultContent.Clone();
+        }
+    }
+
+    /// <summary>
     /// Приводит значения к допустимым: файл могли поправить руками.
     /// </summary>
     public void Normalize()
@@ -98,6 +142,13 @@ public sealed class AppConfig
         NormalizeGroups();
         NormalizeDeviceLighting();
         NormalizeMonitors();
+
+        MasterBrightness = Math.Clamp(MasterBrightness, 0, 100);
+
+        Profiles = (Profiles ?? new List<ProfileConfig>()).Where(p => p != null).ToList();
+
+        foreach (var profile in Profiles)
+            profile.Normalize();
     }
 
     /// <summary>

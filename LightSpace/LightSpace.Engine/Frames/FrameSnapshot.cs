@@ -138,7 +138,10 @@ public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGr
                 ? ready.Values.ToList()
                 : group.DeviceIds.Where(ready.ContainsKey).Select(id => ready[id]).ToList();
 
-            groups.Add(new FrameGroup(group.Id, FrameContent.From(group.DefaultContent), group.Brightness, targets));
+            // Общая яркость приглушает все устройства разом, не трогая их собственную яркость
+            var brightness = (int)Math.Round(group.Brightness * config.MasterBrightness / 100.0);
+
+            groups.Add(new FrameGroup(group.Id, FrameContent.From(group.DefaultContent), brightness, targets));
         }
 
         return new FrameSnapshot(config.LightingEnabled, groups);

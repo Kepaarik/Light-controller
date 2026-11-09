@@ -102,6 +102,47 @@
                                        Style="{StaticResource Hint}" Margin="0,2,0,0"/>
                         </StackPanel>
                     </CheckBox>
+
+                    <controls:ValueSlider Label="Общая яркость" Unit="%" Minimum="0" Maximum="100" Step="1" Margin="0,14,0,0"
+                                          Value="{Binding DataContext.MasterBrightness, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                    <TextBlock Text="Приглушает все устройства разом, их собственная яркость не меняется"
+                               Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Профили: сохранённые наборы «устройство → эффект и яркость» -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Профили" Style="{StaticResource CardTitle}"/>
+                    <TextBlock Text="Профиль запоминает, что играет на каждом устройстве и с какой яркостью. Применить его можно здесь или из меню значка в трее."
+                               Style="{StaticResource Hint}"/>
+
+                    <ItemsControl ItemsSource="{Binding DataContext.Profiles, RelativeSource={RelativeSource AncestorType=Window}}"
+                                  Margin="{StaticResource GapTop16}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,0,0,8">
+                                    <Button DockPanel.Dock="Right" Content="Удалить" Style="{StaticResource GhostButton}" Margin="8,0,0,0"
+                                            Command="{Binding DataContext.DeleteProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"/>
+                                    <Button DockPanel.Dock="Right" Content="Применить"
+                                            Command="{Binding DataContext.ApplyProfileCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource Body}"/>
+                                        <TextBlock Text="{Binding DevicesText}" Style="{StaticResource Hint}"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <DockPanel Margin="0,8,0,0">
+                        <Button DockPanel.Dock="Right" Content="Сохранить текущее" controls:Appearance.Icon="&#xE74E;"
+                                Margin="8,0,0,0" Click="OnSaveProfile"/>
+                        <TextBox x:Name="ProfileName" VerticalContentAlignment="Center" KeyDown="OnProfileNameKeyDown"
+                                 ToolTip="Название нового профиля"/>
+                    </DockPanel>
                 </StackPanel>
             </Border>
 

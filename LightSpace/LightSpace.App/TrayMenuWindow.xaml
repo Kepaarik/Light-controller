@@ -32,6 +32,18 @@
                     </Style>
                 </Button.Style>
             </Button>
+            <controls:ValueSlider Label="Общая яркость" Unit="%" Minimum="0" Maximum="100" Step="1" Margin="12,8,12,8"
+                                  Value="{Binding MasterBrightness}"/>
+            <Border Style="{StaticResource Divider}"
+                    Visibility="{Binding HasProfiles, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+            <ItemsControl ItemsSource="{Binding Profiles}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource MenuButton}" Content="{Binding Name}" controls:Appearance.Icon="&#xE790;"
+                                Click="OnApplyProfile"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
             <Border Style="{StaticResource Divider}"/>
             <Button Style="{StaticResource MenuButton}" Content="Открыть Light Space" controls:Appearance.Icon="&#xE8A7;" Click="OnOpen"/>
             <Button Style="{StaticResource MenuButton}" Content="Выход" controls:Appearance.Icon="&#xE711;" Click="OnExit"/>
