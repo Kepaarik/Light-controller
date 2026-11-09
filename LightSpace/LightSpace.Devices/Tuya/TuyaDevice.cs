@@ -11,10 +11,15 @@ namespace LightSpace.Devices.Tuya;
 public sealed class TuyaDevice : LedDevice
 {
     private const int ControlPort = 6668;
-    private const string SupportedVersion = "3.3";
+    private const string LegacyVersion = "3.3";
+
+    private static readonly string[] SupportedVersions = { LegacyVersion, "3.4", "3.5" };
 
     private readonly IPAddress _ip;
-    private readonly TcpConnection _connection;
+
+    // 3.3 шлёт команды по простому соединению, 3.4 и 3.5 — по сессии со своим ключом
+    private readonly TcpConnection? _connection;
+    private readonly TuyaSession? _session;
     private uint _sequence;
 
     public TuyaDevice(string deviceId, IPAddress ip, string version)
@@ -22,7 +27,13 @@ public sealed class TuyaDevice : LedDevice
         DeviceId = deviceId;
         Version = version;
         _ip = ip;
-        _connection = new TcpConnection(new IPEndPoint(ip, ControlPort));
+
+        var endPoint = new IPEndPoint(ip, ControlPort);
+
+        if (version == LegacyVersion)
+            _connection = new TcpConnection(endPoint);
+        else if (SupportedVersions.Contains(version))
+            _session = new TuyaSession(endPoint, version);
     }
 
     public string DeviceId { get; }
@@ -50,7 +61,7 @@ public sealed class TuyaDevice : LedDevice
     {
         get
         {
-            if (Version != SupportedVersion)
+            if (!SupportedVersions.Contains(Version))
                 return $"Протокол Tuya {Version} пока не поддерживается";
 
             if (LocalKey is not { Length: 16 })
@@ -84,7 +95,8 @@ public sealed class TuyaDevice : LedDevice
 
     public override void Dispose()
     {
-        _connection.Dispose();
+        _connection?.Dispose();
+        _session?.Dispose();
     }
 
     private string FormatColour(RgbColor color, int brightness)
@@ -107,6 +119,22 @@ public sealed class TuyaDevice : LedDevice
         if (!IsReady)
             throw new InvalidOperationException(StatusText);
 
+        var key = Encoding.ASCII.GetBytes(LocalKey!);
+
+        if (_session != null)
+        {
+            // В 3.4 и 3.5 точки данных лежат внутри data, а протокол команды — 5
+            var data = JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                protocol = 5,
+                t = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                data = new { dps }
+            });
+
+            await _session.SendDpsAsync(key, data, ct);
+            return;
+        }
+
         var json = JsonSerializer.SerializeToUtf8Bytes(new
         {
             devId = DeviceId,
@@ -115,16 +143,16 @@ public sealed class TuyaDevice : LedDevice
             dps
         });
 
-        var encrypted = TuyaProtocol.Encrypt(Encoding.ASCII.GetBytes(LocalKey!), json);
+        var encrypted = TuyaProtocol.Encrypt(key, json);
 
         // В 3.3 зашифрованной команде предшествует заголовок: версия и 12 нулевых байт
-        var payload = Encoding.ASCII.GetBytes(SupportedVersion)
+        var payload = Encoding.ASCII.GetBytes(LegacyVersion)
             .Concat(new byte[12])
             .Concat(encrypted)
             .ToArray();
 
         var frame = TuyaProtocol.BuildFrame(Interlocked.Increment(ref _sequence), TuyaProtocol.CommandControl, payload);
 
-        await _connection.SendAsync(frame, ct);
+        await _connection!.SendAsync(frame, ct);
     }
 }

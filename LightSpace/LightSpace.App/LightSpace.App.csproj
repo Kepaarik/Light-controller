@@ -11,6 +11,9 @@
     <RootNamespace>LightSpace.App</RootNamespace>
     <AssemblyName>LightSpace</AssemblyName>
     <ApplicationIcon>Assets\LightSpace.ico</ApplicationIcon>
+    <!-- Версия приложения: её показывают «Настройки», с ней сравнивается последний релиз на GitHub.
+         Сборка релиза из тега задаёт её сама: -p:Version=1.2.3 -->
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <!-- Глобальные using WinForms конфликтуют с WPF (Application, Button, Color...) — типы WinForms берём только явно -->

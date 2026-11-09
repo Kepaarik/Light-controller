@@ -1,0 +1,53 @@
+# Релиз по тегу vX.Y.Z: тесты, две сборки exe и страница релиза с ними
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: LightSpace
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version from tag
+        shell: pwsh
+        run: echo "VERSION=$('${{ github.ref_name }}'.TrimStart('v'))" >> $env:GITHUB_ENV
+
+      - name: Test
+        run: dotnet test -c Release
+
+      # Маленький exe: нужен установленный .NET 10 Desktop Runtime
+      - name: Publish (needs .NET)
+        run: dotnet publish LightSpace.App -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:Version=${{ env.VERSION }} -o out/small
+
+      # Самодостаточный exe: .NET внутри, сжат
+      - name: Publish (self-contained)
+        run: dotnet publish LightSpace.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:Version=${{ env.VERSION }} -o out/full
+
+      - name: Rename
+        shell: pwsh
+        run: |
+          Move-Item out/small/LightSpace.exe "out/LightSpace-${env:VERSION}.exe"
+          Move-Item out/full/LightSpace.exe "out/LightSpace-${env:VERSION}-standalone.exe"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            LightSpace/out/LightSpace-${{ env.VERSION }}.exe
+            LightSpace/out/LightSpace-${{ env.VERSION }}-standalone.exe
+          body: |
+            - `LightSpace-${{ env.VERSION }}.exe` — маленький, нужен [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
+            - `LightSpace-${{ env.VERSION }}-standalone.exe` — всё внутри, ничего ставить не нужно.

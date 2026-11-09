@@ -59,6 +59,9 @@ public partial class App : Application
         // Устройства ищем сразу при запуске: найденные сразу показывают текущий эффект, даже если окно не открывали
         _viewModel.Devices.FindCommand.Execute(null);
 
+        // Новая версия на GitHub — проверка в фоне, без сети просто ничего не покажет
+        _ = _viewModel.Settings.CheckForUpdatesAsync();
+
         // При автозапуске окно не показываем: приложение сразу уходит в трей
         if (!e.Args.Contains(StartupRegistration.TrayArgument))
             ShowWindow();

@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using LightSpace.App.Services;
 using LightSpace.Core.Config;
 
@@ -8,7 +10,7 @@ namespace LightSpace.App.ViewModels;
 /// <summary>
 /// Страница «Настройки»: каждое изменение сразу попадает в конфиг и сохраняется в файл.
 /// </summary>
-public sealed class SettingsViewModel : ObservableObject
+public sealed partial class SettingsViewModel : ObservableObject
 {
     // Ползунок меняет значение на каждом шаге — пишем файл, только когда его отпустили
     private static readonly TimeSpan SaveDelay = TimeSpan.FromMilliseconds(500);
@@ -64,6 +66,42 @@ public sealed class SettingsViewModel : ObservableObject
             if (Update(_config.StartWithWindows, value, (c, v) => c.StartWithWindows = v))
                 StartupRegistration.Apply(value);
         }
+    }
+
+    /// <summary>
+    /// Версия этой сборки для карточки «О приложении».
+    /// </summary>
+    public string VersionText => $"Версия {UpdateCheck.Current}";
+
+    /// <summary>
+    /// Найденный новый релиз; null — обновлений нет или их ещё не проверяли.
+    /// </summary>
+    public AvailableUpdate? FoundUpdate { get; private set; }
+
+    public bool HasUpdate => FoundUpdate != null;
+
+    public string UpdateText => FoundUpdate is { } update ? $"Доступна версия {update.Version}" : "";
+
+    /// <summary>
+    /// Проверяет, не вышла ли новая версия; ошибки сети молча пропускаются.
+    /// </summary>
+    public async Task CheckForUpdatesAsync()
+    {
+        FoundUpdate = await UpdateCheck.FindAsync();
+
+        OnPropertyChanged(nameof(FoundUpdate));
+        OnPropertyChanged(nameof(HasUpdate));
+        OnPropertyChanged(nameof(UpdateText));
+    }
+
+    /// <summary>
+    /// Открывает в браузере страницу найденного релиза.
+    /// </summary>
+    [RelayCommand]
+    private void OpenUpdate()
+    {
+        if (FoundUpdate != null)
+            Process.Start(new ProcessStartInfo(FoundUpdate.PageUrl) { UseShellExecute = true });
     }
 
     /// <summary>

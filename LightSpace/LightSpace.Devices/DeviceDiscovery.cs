@@ -1,10 +1,12 @@
 using LightSpace.Devices.Ble;
 using LightSpace.Devices.Govee;
 using LightSpace.Devices.MagicHome;
+using LightSpace.Devices.OpenRgb;
 using LightSpace.Devices.Robobloq;
 using LightSpace.Devices.RoyalKludge;
 using LightSpace.Devices.Serial;
 using LightSpace.Devices.Tuya;
+using LightSpace.Devices.Wled;
 
 namespace LightSpace.Devices;
 
@@ -29,7 +31,9 @@ public sealed class DeviceDiscovery
         new TuyaDiscoverer(),
         new SerialDiscoverer(),
         new RobobloqDiscoverer(),
-        new RkKeyboardDiscoverer()
+        new RkKeyboardDiscoverer(),
+        new WledDiscoverer(),
+        new OpenRgbDiscoverer()
     };
 
     public async Task<DiscoveryResult> DiscoverAllAsync(CancellationToken ct)

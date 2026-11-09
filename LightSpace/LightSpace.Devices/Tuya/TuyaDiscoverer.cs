@@ -11,7 +11,8 @@ namespace LightSpace.Devices.Tuya;
 /// </summary>
 public sealed class TuyaDiscoverer : IDeviceDiscoverer
 {
-    private static readonly int[] BroadcastPorts = { 6666, 6667 };
+    // 6666 и 6667 — анонсы 3.1–3.4, 7000 — анонсы 3.5 в своих кадрах
+    private static readonly int[] BroadcastPorts = { 6666, 6667, 7000 };
 
     public string Protocol => "Tuya";
 
@@ -47,17 +48,37 @@ public sealed class TuyaDiscoverer : IDeviceDiscoverer
 
     private static TuyaDevice? TryParse(byte[] packet)
     {
-        if (packet.Length <= 28 ||BinaryPrimitives.ReadUInt32BigEndian(packet) != TuyaProtocol.Prefix)
+        if (packet.Length <= 28)
             return null;
-
-        // После 16 байт заголовка и 4 байт кода возврата идут данные, в конце — CRC и суффикс
-        var data = packet.AsSpan(20, packet.Length - 28);
 
         try
         {
-            var json = data[0] == (byte)'{'
-                ? Encoding.UTF8.GetString(data)
-                : Encoding.UTF8.GetString(TuyaProtocol.Decrypt(TuyaProtocol.BroadcastKey, data));
+            string json;
+
+            if (BinaryPrimitives.ReadUInt32BigEndian(packet) == TuyaProtocol.Prefix35)
+            {
+                // Анонс 3.5 зашифрован AES-GCM тем же общим ключом; перед JSON может стоять код возврата
+                var (_, payload) = TuyaProtocol.ParseFrame35(packet, TuyaProtocol.BroadcastKey);
+                var start = Array.IndexOf(payload, (byte)'{');
+
+                if (start < 0)
+                    return null;
+
+                json = Encoding.UTF8.GetString(payload, start, payload.Length - start);
+            }
+            else if (BinaryPrimitives.ReadUInt32BigEndian(packet) == TuyaProtocol.Prefix)
+            {
+                // После 16 байт заголовка и 4 байт кода возврата идут данные, в конце — CRC и суффикс
+                var data = packet.AsSpan(20, packet.Length - 28);
+
+                json = data[0] == (byte)'{'
+                    ? Encoding.UTF8.GetString(data)
+                    : Encoding.UTF8.GetString(TuyaProtocol.Decrypt(TuyaProtocol.BroadcastKey, data));
+            }
+            else
+            {
+                return null;
+            }
 
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
@@ -68,7 +89,7 @@ public sealed class TuyaDiscoverer : IDeviceDiscoverer
 
             return new TuyaDevice(deviceId, ip, version);
         }
-        catch (Exception e) when (e is CryptographicException or JsonException or KeyNotFoundException or InvalidOperationException or FormatException or ArgumentNullException)
+        catch (Exception e) when (e is CryptographicException or InvalidDataException or JsonException or KeyNotFoundException or InvalidOperationException or FormatException or ArgumentNullException)
         {
             return null;
         }
