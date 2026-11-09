@@ -8,7 +8,7 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:MonitorsViewModel}">
 
-    <!-- Подсветка мониторов, как в LedHub: у каждого монитора своя лента, ориентация и раскладка -->
+    <!-- Подсветка мониторов: у каждого монитора своя лента, ориентация и раскладка -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource WideContentMaxWidth}" HorizontalAlignment="Left">
             <TextBlock Text="Мониторы" Style="{StaticResource PageTitle}"/>

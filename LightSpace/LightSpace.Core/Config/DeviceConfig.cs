@@ -14,7 +14,7 @@ public sealed class DeviceConfig
     public string Name { get; set; } = "";
 
     /// <summary>
-    /// Имя, которое дал устройству пользователь (например, в LedHub); оно важнее имени от драйвера. null — своего имени нет.
+    /// Имя, которое дал устройству пользователь; оно важнее имени от драйвера. null — своего имени нет.
     /// </summary>
     public string? CustomName { get; set; }
 

@@ -119,21 +119,6 @@
                                Style="{StaticResource Hint}" Margin="0,14,0,0"/>
                 </StackPanel>
             </Border>
-
-            <!-- Перенос настроек -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
-                <StackPanel>
-                    <TextBlock Text="Перенос настроек" Style="{StaticResource CardTitle}"/>
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Импортировать" VerticalAlignment="Center" Command="{Binding ImportCommand}"/>
-                        <StackPanel VerticalAlignment="Center" Margin="{StaticResource GapRight12}">
-                            <TextBlock Text="Импортировать из LedHub" Style="{StaticResource Body}"/>
-                            <TextBlock Text="Устройства, группы, расстановка, настройки эффектов и режимы Dota 2 и CS2 добавятся к текущим настройкам; файл LedHub не меняется"
-                                       Style="{StaticResource Hint}" Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </DockPanel>
-                </StackPanel>
-            </Border>
             </StackPanel>
             </Grid>
 

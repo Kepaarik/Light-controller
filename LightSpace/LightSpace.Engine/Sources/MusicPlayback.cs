@@ -30,7 +30,7 @@ public sealed record MusicSettings(AudioInput Input, MusicMode Mode, MusicColors
 /// </summary>
 public sealed class MusicPlayback
 {
-    // Сглаживание задано на 1/20 секунды: так же, как в старом LedHub при 20 кадрах в секунду
+    // Сглаживание задано на 1/20 секунды
     private const double SmoothingRate = 20;
 
     // Насколько тон перескакивает на каждом ударе и как медленно плывёт между ударами

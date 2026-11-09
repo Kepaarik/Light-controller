@@ -96,18 +96,6 @@ public sealed class DeviceOutput : IDisposable
         }
     }
 
-    /// <summary>
-    /// Последний присланный кадр; null — кадров ещё не было.
-    /// </summary>
-    public OutputFrame? LatestFrame
-    {
-        get
-        {
-            lock (_sync)
-                return _latest;
-        }
-    }
-
     public OutputDiagnostics Diagnostics
     {
         get

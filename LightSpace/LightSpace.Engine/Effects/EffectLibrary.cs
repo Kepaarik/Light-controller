@@ -435,13 +435,6 @@ public static class EffectLibrary
         return id != null ? Find(id) ?? Solid : Solid;
     }
 
-    public static string CategoryTitle(EffectCategory category) => category switch
-    {
-        EffectCategory.Colors => "Цвета",
-        EffectCategory.Motion => "Движение",
-        _ => "Природа"
-    };
-
     private static EffectParameter Speed(double value = 1) =>
         EffectParameter.Number("speed", "Скорость", 0.1, 4, value, "{0:0.0}×");
 

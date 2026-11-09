@@ -3,12 +3,12 @@ using System.IO.Ports;
 namespace LightSpace.Devices.Serial;
 
 /// <summary>
-/// Опрашивает все COM-порты командой PING и ждёт ответа "LEDHUB &lt;имя&gt;" от прошивки.
+/// Опрашивает все COM-порты командой PING и ждёт ответа "LIGHTSPACE &lt;имя&gt;" от прошивки.
 /// </summary>
 public sealed class SerialDiscoverer : IDeviceDiscoverer
 {
     private const int BaudRate = 115200;
-    private const string HandshakePrefix = "LEDHUB ";
+    private const string HandshakePrefix = "LIGHTSPACE ";
     private const string LedCountPrefix = "LEDS ";
     private const int PingAttempts = 3;
 

@@ -938,7 +938,7 @@ public sealed partial class SceneViewModel : ObservableObject
     /// <summary>
     /// Название новой группы: «Группа N» с первым свободным номером.
     /// </summary>
-    public string NextGroupName()
+    private string NextGroupName()
     {
         var names = _config.Groups.Select(g => g.Name).ToHashSet();
         var number = 1;
@@ -952,7 +952,7 @@ public sealed partial class SceneViewModel : ObservableObject
     /// <summary>
     /// Цвет обводки новой группы: первый из палитры, которого ещё нет у других групп; если заняты все — по кругу.
     /// </summary>
-    public string NextGroupColor()
+    private string NextGroupColor()
     {
         var palette = (Application.Current.TryFindResource("GroupPalette") as Color[] ?? Array.Empty<Color>())
             .Select(c => new RgbColor(c.R, c.G, c.B).ToHex())

@@ -5,7 +5,7 @@ using LightSpace.Core;
 namespace LightSpace.Devices.Serial;
 
 /// <summary>
-/// Лента на Arduino с прошивкой LedHub, подключённая по USB.
+/// Лента на Arduino с прошивкой Light Space, подключённая по USB.
 /// </summary>
 public sealed class SerialLedDevice : LedDevice, IAddressableLedDevice
 {

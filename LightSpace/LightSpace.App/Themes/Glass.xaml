@@ -1,4 +1,4 @@
-<!-- Палитра «жидкого стекла» из LedHub: полупрозрачные слои поверх системного стекла окна (Acrylic или Mica).
+<!-- Палитра «жидкого стекла»: полупрозрачные слои поверх системного стекла окна (Acrylic или Mica).
      Тонировку окна, карточки, блик по краю и слой содержимого перекрашивает GlassTheme по настройкам стекла,
      поэтому они берутся только через DynamicResource -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -21,7 +21,6 @@
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#A397FF"/>
     <SolidColorBrush x:Key="AccentSoftBrush" Color="#4D8B7CFF"/>
     <SolidColorBrush x:Key="SuccessBrush" Color="#5FD99A"/>
-    <SolidColorBrush x:Key="InfoBrush" Color="#6BB8FF"/>
     <SolidColorBrush x:Key="WarningBrush" Color="#F5B95F"/>
     <SolidColorBrush x:Key="DangerBrush" Color="#FF6B7A"/>
     <!-- Затемнение окна под модальной карточкой -->

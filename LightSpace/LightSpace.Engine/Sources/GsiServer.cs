@@ -14,7 +14,7 @@ namespace LightSpace.Engine.Sources;
 public sealed class GsiServer : IDisposable
 {
     /// <summary>
-    /// Порт на локальном адресе; не совпадает с портом старого LedHub, чтобы оба могли работать одновременно.
+    /// Порт на локальном адресе.
     /// </summary>
     public const int Port = 4791;
 

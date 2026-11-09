@@ -6,7 +6,6 @@ using LightSpace.App.Services;
 using LightSpace.Core.Config;
 using LightSpace.Engine;
 using LightSpace.Engine.Frames;
-using LightSpace.Engine.Import;
 using LightSpace.Engine.Sources;
 
 namespace LightSpace.App.ViewModels;
@@ -40,7 +39,7 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(AppConfig config)
     {
         _config = config;
-        Settings = new SettingsViewModel(config, ImportFromLedHubAsync);
+        Settings = new SettingsViewModel(config);
 
         // Страницы «Сцена» пока нет: у каждого устройства своё содержимое, оно выбирается на странице устройства
         config.Mode = SceneMode.Devices;
@@ -186,43 +185,6 @@ public sealed partial class MainViewModel : ObservableObject
         SelectedPage = AppPage.Devices;
 
         await Devices.FindCommand.ExecuteAsync(null);
-    }
-
-    /// <summary>
-    /// «Импортировать из LedHub» в настройках: после подтверждения переносит настройки старого приложения, сразу
-    /// сохраняет их и показывает, что перенесено и что пропущено.
-    /// </summary>
-    private async Task ImportFromLedHubAsync()
-    {
-        if (!LedHubImport.IsAvailable)
-        {
-            await Dialogs.ShowAsync("Настройки LedHub не найдены", $"Файла {LedHubImport.FilePath} нет.");
-            return;
-        }
-
-        // Свою расстановку от расставленной автоматически Light Space не отличает, поэтому заменить её можно только явно
-        var (confirmed, replacesPlacements) = await Dialogs.ConfirmWithOptionAsync("Импортировать настройки LedHub?",
-            "Устройства, группы, расстановка и настройки эффектов добавятся к текущим. То, что уже настроено в Light Space, не изменится. " +
-            "Расстановка из LedHub переносится, только пока устройства на сцене не расставлены, — или если включить замену ниже.",
-            "Заменить расстановку устройств на сцене", "Импортировать");
-
-        if (!confirmed)
-            return;
-
-        var result = LedHubImport.Run(_config, Scene.NextGroupName, Scene.NextGroupColor, replacesPlacements);
-
-        _deviceManager.SyncWithSettings();
-        Settings.SaveNow();
-
-        var lines = new List<string>();
-
-        if (result.Imported.Count > 0)
-            lines.Add("Перенесено:\n" + string.Join("\n", result.Imported.Select(l => "• " + l)));
-
-        if (result.Skipped.Count > 0)
-            lines.Add("Пропущено:\n" + string.Join("\n", result.Skipped.Select(l => "• " + l)));
-
-        await Dialogs.ShowAsync("Импорт из LedHub", lines.Count > 0 ? string.Join("\n\n", lines) : "В настройках LedHub нечего переносить.");
     }
 
     private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)

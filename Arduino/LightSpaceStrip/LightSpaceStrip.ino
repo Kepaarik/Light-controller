@@ -1,8 +1,8 @@
-// Прошивка адресной ленты (WS2812B и т.п.) для управления из LedHub по USB.
+// Прошивка адресной ленты (WS2812B и т.п.) для управления из Light Space по USB.
 // Требуется библиотека FastLED (Arduino IDE → Library Manager → FastLED).
 //
 // Протокол (строки, завершённые '\n', 115200 бод):
-//   PING        -> ответ "LEDHUB <имя>", по нему LedHub находит плату
+//   PING        -> ответ "LIGHTSPACE <имя>", по нему Light Space находит плату
 //   ON / OFF    -> включить / выключить ленту
 //   C r g b     -> установить цвет (0–255 на канал)
 //   COUNT       -> ответ "LEDS <число светодиодов>"
@@ -10,7 +10,7 @@
 
 #include <FastLED.h>
 
-// Имя должно быть уникальным для каждой платы: по нему LedHub запоминает ленту в группах
+// Имя должно быть уникальным для каждой платы: по нему Light Space запоминает ленту
 #define DEVICE_NAME "Arduino Strip 1"
 
 #define DATA_PIN    6
@@ -67,7 +67,7 @@ void render() {
 
 void handleCommand(const String& cmd) {
   if (cmd == "PING") {
-    Serial.print("LEDHUB ");
+    Serial.print("LIGHTSPACE ");
     Serial.println(DEVICE_NAME);
   } else if (cmd == "COUNT") {
     Serial.print("LEDS ");

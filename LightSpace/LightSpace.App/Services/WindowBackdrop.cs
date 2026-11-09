@@ -6,7 +6,7 @@ using System.Windows.Media;
 namespace LightSpace.App.Services;
 
 /// <summary>
-/// Системное стекло Windows 11 под всем окном, как в LedHub: прозрачное (Acrylic) или матовое (Mica).
+/// Системное стекло Windows 11 под всем окном: прозрачное (Acrylic) или матовое (Mica).
 /// В Windows без системного стекла окно просто заливается тёмным цветом.
 /// </summary>
 public static class WindowBackdrop

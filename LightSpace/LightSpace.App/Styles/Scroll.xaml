@@ -1,4 +1,4 @@
-<!-- Полоса прокрутки, как в LedHub: тонкая, без стрелок и фона, скруглённый ползунок в цветах темы -->
+<!-- Полоса прокрутки: тонкая, без стрелок и фона, скруглённый ползунок в цветах темы -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 

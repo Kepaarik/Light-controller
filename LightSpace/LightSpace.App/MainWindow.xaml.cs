@@ -6,7 +6,7 @@ using LightSpace.App.ViewModels;
 namespace LightSpace.App;
 
 /// <summary>
-/// Главное окно приложения, как в LedHub: системное стекло под всем окном, меню разделов слева и страницы справа.
+/// Главное окно приложения: системное стекло под всем окном, меню разделов слева и страницы справа.
 /// </summary>
 public partial class MainWindow : Window
 {

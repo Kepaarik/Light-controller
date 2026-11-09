@@ -28,7 +28,7 @@ public sealed record ScreenSettings(string MonitorKey, double Saturation, double
 /// </summary>
 public sealed class ScreenPlayback
 {
-    // Сглаживание задано на 1/20 секунды: так же, как в старом LedHub при 20 кадрах в секунду
+    // Сглаживание задано на 1/20 секунды
     private const double SmoothingRate = 20;
 
     private readonly Dictionary<string, (double R, double G, double B)[]> _states = new();

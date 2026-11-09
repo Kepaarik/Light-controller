@@ -1,4 +1,4 @@
-<!-- Текстовые стили и поверхности, как в LedHub: заголовки, подписи, значки, стеклянные панели, разделы, разделители -->
+<!-- Текстовые стили и поверхности: заголовки, подписи, значки, стеклянные панели, разделы, разделители -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 

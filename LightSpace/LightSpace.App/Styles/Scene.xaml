@@ -1,4 +1,4 @@
-<!-- Сцена в стиле LedHub: карточка устройства, рамка группы, живое превью,
+<!-- Сцена: рамка группы, живое превью,
      перетаскиваемая строка, рамка выделения мышью, холст и слои -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,24 +8,6 @@
         <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
         <ResourceDictionary Source="/LightSpace;component/Styles/Text.xaml"/>
     </ResourceDictionary.MergedDictionaries>
-
-    <!-- Карточка устройства на сцене: стеклянная панель, под курсором светлее, выбранная (Appearance.IsSelected)
-         обведена акцентом. Обводка всегда толстая, чтобы выбор не сдвигал содержимое -->
-    <Style x:Key="DeviceCard" TargetType="Border" BasedOn="{StaticResource Card}">
-        <Setter Property="BorderThickness" Value="{StaticResource StrokeThick}"/>
-        <Setter Property="CornerRadius" Value="14"/>
-        <Setter Property="Padding" Value="16"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-            </Trigger>
-            <Trigger Property="controls:Appearance.IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource SelectedBrush}"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-            </Trigger>
-        </Style.Triggers>
-    </Style>
 
     <!-- Рамка группы на сцене: обводка цветом группы (BorderBrush), внутри заголовок и карточки устройств группы.
          Выбранная группа (Appearance.IsSelected) подсвечена мягким акцентом -->
@@ -44,11 +26,6 @@
                 <Setter Property="Background" Value="{DynamicResource SelectedBrush}"/>
             </Trigger>
         </Style.Triggers>
-    </Style>
-
-    <!-- Заголовок рамки группы: название слева -->
-    <Style x:Key="GroupFrameHeader" TargetType="DockPanel">
-        <Setter Property="Margin" Value="{StaticResource GroupHeaderMargin}"/>
     </Style>
 
     <!-- Строка списка, которую можно перетащить на другое место (DragReorder): например, слой в редакторе сцены.
@@ -101,7 +78,7 @@
         <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
 
-    <!-- Подложка карты сцены — холст, на котором стоят устройства, как в LedHub: тёмная вставка в стекле.
+    <!-- Подложка карты сцены — холст, на котором стоят устройства: тёмная вставка в стекле.
          Ставится на карту SceneMap отдельным элементом на место SceneMap.WholeScene; в редакторе слоёв её фон
          заменяет кадр всей сцены -->
     <Style x:Key="SceneSurface" TargetType="Border">
