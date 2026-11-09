@@ -35,6 +35,15 @@ dotnet run --project LightSpace.App
 
 Нужны Windows 10 (2004+) или 11 и .NET 10 SDK.
 
+## Сборка готового приложения
+
+```
+cd LightSpace
+dotnet publish LightSpace.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+```
+
+Результат — один файл `LightSpace/publish/LightSpace.exe` (~190 МБ, .NET внутри), запускается на любом Windows 10 (2004+) / 11 x64 без установленного .NET. Файлы `.pdb` рядом нужны только для отладки.
+
 ## Особенности по типам лент
 
 - **Bluetooth**: лента не должна быть подключена к телефону — пока к ней подключено приложение, она не видна при поиске.
