@@ -90,12 +90,26 @@ public sealed class AppConfig
         {
             Id = GroupConfig.NewId(),
             Name = name,
-            DeviceLighting = DeviceLighting.Select(l => GroupConfig.Solo(l.DeviceIds[0], l.DefaultContent.Clone(), l.Brightness)).ToList()
+            DeviceLighting = CurrentLighting()
         };
 
         Profiles.Add(profile);
 
         return profile;
+    }
+
+    /// <summary>
+    /// Записывает в профиль то, что сейчас играет на устройствах, вместо сохранённого раньше.
+    /// </summary>
+    public void UpdateProfile(ProfileConfig profile)
+    {
+        profile.DeviceLighting = CurrentLighting();
+    }
+
+    // Копия яркости и содержимого каждого устройства: правки профиля не меняют то, что играет
+    private List<GroupConfig> CurrentLighting()
+    {
+        return DeviceLighting.Select(l => GroupConfig.Solo(l.DeviceIds[0], l.DefaultContent.Clone(), l.Brightness)).ToList();
     }
 
     /// <summary>

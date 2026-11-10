@@ -8,6 +8,12 @@ public enum AppPage
     Scene,
     Devices,
     Monitors,
+
+    /// <summary>
+    /// Сохранённые профили подсветки и что каждый включает на устройствах.
+    /// </summary>
+    Profiles,
+
     Settings,
 
     /// <summary>

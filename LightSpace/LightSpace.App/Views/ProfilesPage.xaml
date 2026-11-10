@@ -1,0 +1,131 @@
+<UserControl x:Class="LightSpace.App.Views.ProfilesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:MainViewModel}">
+
+    <Grid Margin="{StaticResource PaddingPage}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок и новый профиль из того, что играет сейчас -->
+        <DockPanel>
+            <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" VerticalAlignment="Top"
+                    Content="Сохранить текущую подсветку" controls:Appearance.Icon="&#xE74E;" Command="{Binding NewProfileCommand}"/>
+            <StackPanel>
+                <TextBlock Text="Профили" Style="{StaticResource PageTitle}" Margin="{StaticResource SpaceNone}"/>
+                <TextBlock Text="Профиль запоминает, что играет на каждом устройстве и с какой яркостью. Применить его можно здесь или из меню значка в трее; устройства, которых в профиле нет, продолжают играть своё."
+                           Style="{StaticResource Hint}" Margin="0,4,0,16" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Left"/>
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Профилей нет: подсказка и сохранение -->
+        <controls:EmptyState Grid.Row="1" Icon="&#xE728;" Title="Профилей пока нет"
+                             Hint="Настройте эффекты и яркость на страницах устройств и сохраните их профилем — потом всё вернётся одним щелчком."
+                             ActionText="Сохранить текущую подсветку" ActionIcon="&#xE74E;" Command="{Binding NewProfileCommand}"
+                             Visibility="{Binding HasProfiles, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+        <!-- Список профилей слева, выбранный профиль справа -->
+        <Grid Grid.Row="1" Visibility="{Binding HasProfiles, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="{StaticResource ListPaneWidth}"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:ProfileOption">
+                        <DockPanel>
+                            <!-- Профиль, который сейчас играет -->
+                            <TextBlock DockPanel.Dock="Right" Text="&#xE73E;" Style="{StaticResource Icon}" Foreground="{DynamicResource SuccessBrush}"
+                                       ToolTip="Сейчас играет этот профиль"
+                                       Visibility="{Binding IsActive, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding DevicesText}" Style="{StaticResource Caption}"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Grid Grid.Column="1" Margin="{StaticResource GapLeft24}">
+                <controls:EmptyState Icon="&#xE728;" Title="Выберите профиль"
+                                     Hint="Здесь будет видно, что он включает на каждом устройстве."
+                                     Visibility="{Binding HasSelectedProfile, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding HasSelectedProfile, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                    <StackPanel MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Stretch"
+                                DataContext="{Binding SelectedProfile}" d:DataContext="{d:DesignInstance vm:ProfileOption}">
+                        <!-- Название и действия с профилем -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="Название" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                                <TextBox Text="{Binding Name}" KeyDown="OnNameKeyDown"/>
+
+                                <WrapPanel Margin="{StaticResource GapTop16}">
+                                    <Button Style="{StaticResource AccentButton}" Content="Применить" controls:Appearance.Icon="&#xE768;"
+                                            Margin="0,0,8,8" CommandParameter="{Binding}"
+                                            Command="{Binding DataContext.ApplyProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                    <Button Content="Записать текущую подсветку" controls:Appearance.Icon="&#xE72C;"
+                                            Margin="0,0,8,8" CommandParameter="{Binding}"
+                                            Command="{Binding DataContext.UpdateProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                    <Button Style="{StaticResource DangerButton}" Content="Удалить" controls:Appearance.Icon="&#xE74D;"
+                                            Margin="0,0,8,8" CommandParameter="{Binding}"
+                                            Command="{Binding DataContext.DeleteProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                </WrapPanel>
+
+                                <TextBlock Text="Сейчас играет этот профиль." Style="{StaticResource Hint}" Foreground="{DynamicResource SuccessBrush}"
+                                           Visibility="{Binding IsActive, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Что профиль включает на каждом устройстве -->
+                        <TextBlock Text="Устройства" Style="{StaticResource SectionLabel}"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <ItemsControl ItemsSource="{Binding Devices}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:ProfileDeviceViewModel">
+                                            <DockPanel Margin="{StaticResource GapBottom16}">
+                                                <TextBlock x:Name="Glyph" DockPanel.Dock="Left" Text="{Binding Icon}" Style="{StaticResource Icon}"
+                                                           FontSize="20" Width="28" Margin="{StaticResource GapRight12}"/>
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE711;"
+                                                        ToolTip="Убрать из профиля" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}"
+                                                        Command="{Binding RemoveCommand}"/>
+                                                <controls:ValueSlider DockPanel.Dock="Right" Width="200" VerticalAlignment="Center"
+                                                                      Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                                                      Value="{Binding Brightness}" Margin="{StaticResource GapLeft24}"/>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock x:Name="DeviceName" Text="{Binding Name}" Style="{StaticResource BodyStrong}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding ContentText}" Style="{StaticResource Hint}" TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsKnown}" Value="False">
+                                                    <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                                    <Setter TargetName="DeviceName" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Чтобы поменять эффект в профиле, включите нужный на странице устройства и нажмите «Записать текущую подсветку»."/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

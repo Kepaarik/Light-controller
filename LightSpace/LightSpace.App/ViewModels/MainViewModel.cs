@@ -46,13 +46,15 @@ public sealed partial class MainViewModel : ObservableObject
 
         DropUnavailableContent();
 
-        foreach (var profile in config.Profiles)
-            Profiles.Add(new ProfileOption(profile));
-
         _deviceManager = new DeviceManager(config);
+
+        // Профиль показывает устройства по их названиям, поэтому читается после списка устройств
+        foreach (var profile in config.Profiles)
+            Profiles.Add(NewProfileOption(profile));
+
         _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices), _sources);
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave, OpenDevice);
-        Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _sources, OnContentChanged);
+        Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _sources, OnLightingEdited);
         Monitors = new MonitorsViewModel(config, _deviceManager, OnContentChanged);
 
         Settings.PropertyChanged += OnSettingsChanged;
@@ -72,7 +74,8 @@ public sealed partial class MainViewModel : ObservableObject
     public IReadOnlyList<PageOption> Pages { get; } = new PageOption[]
     {
         new(AppPage.Devices, "Устройства", ""),
-        new(AppPage.Monitors, "Мониторы", "")
+        new(AppPage.Monitors, "Мониторы", ""),
+        new(AppPage.Profiles, "Профили", "")
     };
 
     /// <summary>
@@ -188,14 +191,52 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Сохраняет то, что сейчас играет на устройствах, профилем с этим названием.
+    /// Профиль, открытый в разделе «Профили».
     /// </summary>
-    public void SaveProfile(string name)
-    {
-        var title = string.IsNullOrWhiteSpace(name) ? $"Профиль {Profiles.Count + 1}" : name.Trim();
+    [ObservableProperty]
+    private ProfileOption? _selectedProfile;
 
-        Profiles.Add(new ProfileOption(_config.SaveProfile(title)));
+    public bool HasSelectedProfile => SelectedProfile != null;
+
+    partial void OnSelectedProfileChanged(ProfileOption? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedProfile));
+    }
+
+    /// <summary>
+    /// Сохраняет то, что сейчас играет на устройствах, новым профилем и открывает его.
+    /// </summary>
+    [RelayCommand]
+    private void NewProfile()
+    {
+        var profile = NewProfileOption(_config.SaveProfile($"Профиль {Profiles.Count + 1}"));
+
+        Profiles.Add(profile);
         OnPropertyChanged(nameof(HasProfiles));
+        SetActiveProfile(profile);
+        SelectedProfile = profile;
+        Settings.ScheduleSave();
+    }
+
+    /// <summary>
+    /// Записывает в профиль то, что сейчас играет на устройствах, вместо сохранённого раньше.
+    /// </summary>
+    [RelayCommand]
+    private async Task UpdateProfileAsync(ProfileOption? profile)
+    {
+        if (profile == null)
+            return;
+
+        var confirmed = await Dialogs.ConfirmAsync($"Перезаписать профиль «{profile.Name}»?",
+            "В профиль попадёт то, что сейчас играет на каждом устройстве, и его яркость. Сохранённое раньше пропадёт.",
+            "Перезаписать");
+
+        if (!confirmed)
+            return;
+
+        _config.UpdateProfile(profile.Settings);
+        profile.Reload();
+        SetActiveProfile(profile);
         Settings.ScheduleSave();
     }
 
@@ -218,6 +259,39 @@ public sealed partial class MainViewModel : ObservableObject
             Scene.OpenDevice(_openedDeviceId);
 
         OnContentChanged();
+        SetActiveProfile(profile);
+    }
+
+    /// <summary>
+    /// Отмечает профиль, который сейчас играет; null — играет то, что выбрали вручную.
+    /// </summary>
+    private void SetActiveProfile(ProfileOption? active)
+    {
+        foreach (var profile in Profiles)
+            profile.IsActive = profile == active;
+    }
+
+    private ProfileOption NewProfileOption(ProfileConfig profile)
+    {
+        return new ProfileOption(profile, id => _deviceManager.Devices.FirstOrDefault(d => d.Id == id), OnProfileEdited);
+    }
+
+    /// <summary>
+    /// Профиль поправили в разделе «Профили»: то, что играет, он больше не повторяет, пока его не применят снова.
+    /// </summary>
+    private void OnProfileEdited()
+    {
+        SetActiveProfile(null);
+        Settings.ScheduleSave();
+    }
+
+    /// <summary>
+    /// Эффект или яркость устройства поменяли вручную: играет уже не профиль.
+    /// </summary>
+    private void OnLightingEdited()
+    {
+        SetActiveProfile(null);
+        OnContentChanged();
     }
 
     [RelayCommand]
@@ -234,6 +308,10 @@ public sealed partial class MainViewModel : ObservableObject
 
         _config.Profiles.Remove(profile.Settings);
         Profiles.Remove(profile);
+
+        if (SelectedProfile == profile)
+            SelectedProfile = Profiles.FirstOrDefault();
+
         OnPropertyChanged(nameof(HasProfiles));
         Settings.ScheduleSave();
     }

@@ -38,9 +38,20 @@
                     Visibility="{Binding HasProfiles, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
             <ItemsControl ItemsSource="{Binding Profiles}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Button Style="{StaticResource MenuButton}" Content="{Binding Name}" controls:Appearance.Icon="&#xE790;"
-                                Click="OnApplyProfile"/>
+                    <!-- Профиль, который сейчас играет, отмечен галочкой; подсказка — что он включает на каждом устройстве -->
+                    <DataTemplate DataType="vm:ProfileOption">
+                        <Button Content="{Binding Name}" ToolTip="{Binding SummaryText}" Click="OnApplyProfile">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource MenuButton}">
+                                    <Setter Property="controls:Appearance.Icon" Value="&#xE790;"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                            <Setter Property="controls:Appearance.Icon" Value="&#xE73E;"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
