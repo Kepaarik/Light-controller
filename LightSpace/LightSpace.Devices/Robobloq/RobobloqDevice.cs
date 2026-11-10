@@ -113,6 +113,10 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         // Лента не выключается полностью: останавливаем её эффекты и гасим все светодиоды
         await SendAsync(new[] { CommandTurnOff }, ct);
         await SendColorAsync(new RgbColor(0, 0, 0), ct);
+
+        // Некоторые ленты (прошивка 1.7.3) выполняют команду, только когда приходит следующая, а после выключения
+        // следующей нет — повтор чёрного цвета проталкивает предыдущий; ленте, которая уже погасла, он ничего не меняет
+        await SendColorAsync(new RgbColor(0, 0, 0), ct);
     }
 
     public override async Task SetColorAsync(RgbColor color, int brightness, CancellationToken ct = default)
