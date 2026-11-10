@@ -326,6 +326,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         {
             var expectedIndex = _packetIndex;
 
+            // Ответы, которые пришли, но не на этот запрос: чужие пакеты или ответы на старые команды
+            var foreign = 0;
+
             try
             {
                 _stream.Write(BuildReport(new[] { CommandReadDeviceInfo }));
@@ -338,25 +341,42 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
                     // buffer[0] — идентификатор отчёта, дальше ответ в том же формате, что и команда
                     if (read < 25 || buffer[1] != 0x52 || buffer[2] != 0x42 || buffer[4] != expectedIndex)
+                    {
+                        foreign++;
+                        DeviceLog.Write($"Robobloq {_devicePath}: попытка {attempt + 1}, ответ не на запрос параметров "
+                            + $"(ждали пакет {expectedIndex}, прочитано {read} байт): {DeviceLog.Hex(buffer[..read])}");
                         continue;
+                    }
 
                     _screenSize = buffer[9];
                     _ledCount = buffer[12];
                     _serial = Convert.ToHexString(buffer, 13, 8).ToLowerInvariant();
                     _firmware = $"{buffer[22]}.{buffer[23]}.{buffer[24]}";
 
+                    DeviceLog.Write($"Robobloq {_devicePath}: параметры прочитаны с попытки {attempt + 1} — светодиодов {_ledCount}, "
+                        + $"экран {_screenSize}\", серийный номер {_serial}, прошивка {_firmware}"
+                        + (_ledCount == 0 ? " — лента сообщила 0 светодиодов, управлять нечем" : ""));
+
                     return true;
                 }
+
+                DeviceLog.Write($"Robobloq {_devicePath}: попытка {attempt + 1}, ответа на запрос параметров нет за "
+                    + $"{ReplyTimeout.TotalSeconds:0} с (чужих ответов: {foreign})");
             }
             catch (TimeoutException)
             {
                 // Лента иногда не отвечает с первого раза — повторяем запрос
+                DeviceLog.Write($"Robobloq {_devicePath}: попытка {attempt + 1}, лента не ответила за {ReplyTimeout.TotalSeconds:0} с "
+                    + $"(чужих ответов: {foreign})");
             }
-            catch (IOException)
+            catch (IOException e)
             {
+                DeviceLog.Write($"Robobloq {_devicePath}: попытка {attempt + 1}, ошибка ввода-вывода — {e.Message}");
                 return false;
             }
         }
+
+        DeviceLog.Write($"Robobloq {_devicePath}: параметры не прочитаны за {ReplyAttempts} попытки");
 
         return false;
     }
