@@ -76,6 +76,11 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     public bool IsConnected { get; }
 
     /// <summary>
+    /// Подсветка устройства включена; выключенное не светится, и живых цветов у него нет.
+    /// </summary>
+    public bool IsOn => _settings.IsOn;
+
+    /// <summary>
     /// Что это за устройство, или что оно не подключено.
     /// </summary>
     public string KindText { get; }

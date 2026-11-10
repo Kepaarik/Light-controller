@@ -103,6 +103,9 @@
                     <!-- Значок с точкой состояния связи (подсказка — словами), название и способ подключения -->
                     <DataTemplate DataType="vm:DeviceItemViewModel">
                         <DockPanel ToolTip="{Binding StatusTitle}">
+                            <!-- Выключатель устройства прямо в строке списка -->
+                            <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}"
+                                      IsChecked="{Binding IsOn}" ToolTip="Подсветка устройства"/>
                             <Grid DockPanel.Dock="Left" Width="20" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}"/>
                                 <Ellipse Style="{StaticResource StatusDot}"/>

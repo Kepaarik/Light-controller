@@ -150,7 +150,10 @@ public sealed class XamlTests
                 Assert.Contains(DeviceIcons.Strip, texts);
 
                 // Точка состояния у каждого устройства; состояние словами — только в подсказке
-                Assert.Equal(2, UiThread.Descendants<System.Windows.Shapes.Ellipse>(list).Count());
+                // У выключателя в строке своя круглая ручка — считаются только точки состояния
+                var statusDot = page.FindResource("StatusDot");
+
+                Assert.Equal(2, UiThread.Descendants<System.Windows.Shapes.Ellipse>(list).Count(e => e.Style == statusDot));
                 Assert.DoesNotContain("Не найдено", texts);
             }
             finally

@@ -24,6 +24,11 @@ public sealed class DeviceConfig
     public string? Icon { get; set; }
 
     /// <summary>
+    /// Подсветка устройства включена. Выключенное устройство не светится, остальные играют как играли.
+    /// </summary>
+    public bool IsOn { get; set; } = true;
+
+    /// <summary>
     /// Способ подключения и тип контроллера, например «BLE · ELK-BLEDOM».
     /// </summary>
     public string Protocol { get; set; } = "";

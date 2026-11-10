@@ -433,6 +433,21 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Выключает подсветку одного устройства или включает её обратно. Профиль это не меняет: что играет, остаётся прежним.
+    /// </summary>
+    public void SetDeviceOn(string deviceId, bool isOn)
+    {
+        var device = _deviceManager.Devices.FirstOrDefault(d => d.Id == deviceId);
+
+        if (device == null || device.Settings.IsOn == isOn)
+            return;
+
+        // Меню, список устройств и открытая страница обновятся по смене состояния устройств
+        _deviceManager.SetDeviceOn(device, isOn);
+        Settings.ScheduleSave();
+    }
+
+    /// <summary>
     /// Название или значок устройства сменились: меню и открытая страница показывают новые, настройки сохраняются.
     /// </summary>
     private void OnDeviceLookChanged(string deviceId)

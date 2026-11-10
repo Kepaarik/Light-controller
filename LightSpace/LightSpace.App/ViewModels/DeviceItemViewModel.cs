@@ -14,7 +14,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     // Свойства, которые меняются сами по себе, без действий пользователя: связь, адрес, возможности, диагностика
     private static readonly string[] LiveProperties =
     {
-        nameof(Name), nameof(Icon), nameof(Protocol), nameof(Address), nameof(Status), nameof(StatusTitle), nameof(StatusText), nameof(StatusAdvice), nameof(BuiltinEffectsText), nameof(IsConnected),
+        nameof(Name), nameof(Icon), nameof(IsOn), nameof(Protocol), nameof(Address), nameof(Status), nameof(StatusTitle), nameof(StatusText), nameof(StatusAdvice), nameof(BuiltinEffectsText), nameof(IsConnected),
         nameof(KindText), nameof(LedCountText), nameof(FrameRateText), nameof(Keys), nameof(HasKeys),
         nameof(SentFramesText), nameof(DroppedFramesText), nameof(LastSendText), nameof(LastErrorText)
     };
@@ -46,6 +46,23 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     /// Значок устройства: выбранный пользователем или по типу устройства.
     /// </summary>
     public string Icon => Device.Settings.Icon ?? (Device.Capabilities?.IsKeyboard == true ? DeviceIcons.Keyboard : DeviceIcons.Strip);
+
+    /// <summary>
+    /// Подсветка устройства включена; выключенное не светится, остальные устройства играют как играли.
+    /// </summary>
+    public bool IsOn
+    {
+        get => Device.Settings.IsOn;
+        set
+        {
+            if (value == Device.Settings.IsOn)
+                return;
+
+            _manager.SetDeviceOn(Device, value);
+            _settingsChanged();
+            OnPropertyChanged();
+        }
+    }
 
     public string Protocol => Device.Protocol;
 

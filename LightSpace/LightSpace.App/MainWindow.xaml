@@ -107,6 +107,12 @@
                                         <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                                         <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                                     </DataTrigger>
+                                    <!-- Выключенное устройство приглушено, как ненайденное: оно не светится -->
+                                    <DataTrigger Binding="{Binding Device.IsOn}" Value="False">
+                                        <Setter TargetName="Dot" Property="Visibility" Value="Collapsed"/>
+                                        <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                        <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                    </DataTrigger>
                                     <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
                                         <Setter TargetName="Label" Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>

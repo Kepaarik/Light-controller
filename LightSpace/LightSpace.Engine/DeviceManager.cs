@@ -138,13 +138,28 @@ public sealed class DeviceManager : IDisposable
 
     /// <summary>
     /// Выключает подсветку всех устройств или включает её обратно с последними кадрами.
+    /// Выключенные по отдельности устройства остаются выключенными.
     /// </summary>
     public void SetLightingEnabled(bool isEnabled)
     {
         _isLightingEnabled = isEnabled;
 
         foreach (var device in _devices)
-            device.Output?.SetEnabled(isEnabled);
+            device.Output?.SetEnabled(isEnabled && device.Settings.IsOn);
+    }
+
+    /// <summary>
+    /// Выключает подсветку одного устройства или включает её обратно с последним кадром; остальные устройства играют как играли.
+    /// </summary>
+    public void SetDeviceOn(ManagedDevice device, bool isOn)
+    {
+        if (device.Settings.IsOn == isOn)
+            return;
+
+        device.Settings.IsOn = isOn;
+        device.Output?.SetEnabled(_isLightingEnabled && isOn);
+
+        DevicesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -209,7 +224,7 @@ public sealed class DeviceManager : IDisposable
             return;
         }
 
-        managed.Connect(device, _isLightingEnabled);
+        managed.Connect(device, _isLightingEnabled && managed.Settings.IsOn);
 
         // Кадры подключённое устройство получает от потока кадров, как только окно отдаст ему новый снимок
         ApplySettings(managed);

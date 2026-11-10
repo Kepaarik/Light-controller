@@ -30,6 +30,12 @@ public partial class DevicePage : UserControl
         Main?.SetDeviceIcon(device.Id, icon);
     }
 
+    private void OnPowerClicked(object sender, RoutedEventArgs e)
+    {
+        if (OpenedDevice is { } device)
+            Main?.SetDeviceOn(device.Id, PowerSwitch.IsChecked == true);
+    }
+
     private void OnRenameClicked(object sender, RoutedEventArgs e)
     {
         if (OpenedDevice is not { } device)
