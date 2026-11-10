@@ -316,6 +316,20 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     }
 
     /// <summary>
+    /// Параметры ленты из её ответа на запрос параметров (с байтом идентификатора отчёта в начале);
+    /// null — это ответ на другую команду или не ответ ленты. Номер пакета не важен: ответ мог прийти на прошлый запрос.
+    /// </summary>
+    public static RobobloqDeviceInfo? ParseDeviceInfo(IReadOnlyList<byte> report)
+    {
+        if (report.Count < 25 || report[1] != 0x52 || report[2] != 0x42 || report[5] != CommandReadDeviceInfo)
+            return null;
+
+        var serial = string.Concat(Enumerable.Range(13, 8).Select(i => report[i].ToString("x2")));
+
+        return new RobobloqDeviceInfo(report[9], report[12], serial, $"{report[22]}.{report[23]}.{report[24]}");
+    }
+
+    /// <summary>
     /// Запрашивает число светодиодов, размер экрана, серийный номер и версию прошивки.
     /// </summary>
     private bool TryReadDeviceInfo()
@@ -333,25 +347,29 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
             {
                 _stream.Write(BuildReport(new[] { CommandReadDeviceInfo }));
 
-                // Во входном буфере могут лежать ответы на старые команды — ищем ответ именно на наш пакет
+                // Во входном буфере могут лежать ответы на старые команды — ищем ответ именно на запрос параметров
                 var deadline = DateTime.UtcNow + ReplyTimeout;
                 while (DateTime.UtcNow < deadline)
                 {
                     var read = _stream.Read(buffer, 0, buffer.Length);
 
                     // buffer[0] — идентификатор отчёта, дальше ответ в том же формате, что и команда
-                    if (read < 25 || buffer[1] != 0x52 || buffer[2] != 0x42 || buffer[4] != expectedIndex)
+                    if (ParseDeviceInfo(buffer[..read]) is not { } info)
                     {
                         foreign++;
                         DeviceLog.Write($"Robobloq {_devicePath}: попытка {attempt + 1}, ответ не на запрос параметров "
-                            + $"(ждали пакет {expectedIndex}, прочитано {read} байт): {DeviceLog.Hex(buffer[..read])}");
+                            + $"(прочитано {read} байт): {DeviceLog.Hex(buffer[..read])}");
                         continue;
                     }
 
-                    _screenSize = buffer[9];
-                    _ledCount = buffer[12];
-                    _serial = Convert.ToHexString(buffer, 13, 8).ToLowerInvariant();
-                    _firmware = $"{buffer[22]}.{buffer[23]}.{buffer[24]}";
+                    _screenSize = info.ScreenSize;
+                    _ledCount = info.LedCount;
+                    _serial = info.Serial;
+                    _firmware = info.Firmware;
+
+                    // Некоторые ленты отвечают с опозданием на один запрос: ответ на прошлую попытку подходит так же
+                    if (buffer[4] != expectedIndex)
+                        DeviceLog.Write($"Robobloq {_devicePath}: ответ на параметры пришёл на прошлый запрос (пакет {buffer[4]}, ждали {expectedIndex})");
 
                     DeviceLog.Write($"Robobloq {_devicePath}: параметры прочитаны с попытки {attempt + 1} — светодиодов {_ledCount}, "
                         + $"экран {_screenSize}\", серийный номер {_serial}, прошивка {_firmware}"
