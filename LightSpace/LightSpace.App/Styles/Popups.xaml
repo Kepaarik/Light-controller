@@ -39,7 +39,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
                     <Border Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="{StaticResource StrokeThin}" CornerRadius="12"
+                            BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusFlyout}"
                             Padding="{StaticResource PaddingFlyout}" Margin="{StaticResource ShadowRoom}"
                             MinWidth="{StaticResource FlyoutMinWidth}" Effect="{DynamicResource ShadowFlyout}">
                         <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"/>
@@ -98,7 +98,7 @@
                                IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                                PopupAnimation="Fade">
                             <Border Background="{DynamicResource PopupBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                    BorderThickness="{StaticResource StrokeThin}" CornerRadius="12"
+                                    BorderThickness="{StaticResource StrokeThin}" CornerRadius="{StaticResource RadiusFlyout}"
                                     Padding="{StaticResource PaddingFlyout}" Margin="{StaticResource ShadowRoom}"
                                     MinWidth="{StaticResource FlyoutMinWidth}" Effect="{DynamicResource ShadowFlyout}"
                                     Grid.IsSharedSizeScope="True">

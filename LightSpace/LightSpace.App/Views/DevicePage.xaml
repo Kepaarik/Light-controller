@@ -21,7 +21,7 @@
         <StackPanel Margin="{StaticResource PaddingPage}">
             <!-- Шапка: значок из меню (щелчок — выбрать другой), название с переименованием, тип и состояние связи -->
             <DockPanel>
-                <Grid DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,2,16,0">
+                <Grid DockPanel.Dock="Left" VerticalAlignment="Top" Margin="{StaticResource HeaderIconMargin}">
                     <ToggleButton x:Name="IconOpener" Width="48" Height="48" Padding="{StaticResource SpaceNone}"
                                   ToolTip="Значок в левом меню"
                                   IsHitTestVisible="{Binding IsOpen, ElementName=IconFlyout, Converter={x:Static controls:InverseBooleanConverter.Instance}}">
@@ -145,7 +145,7 @@
             </Border>
 
             <!-- Неподключённому устройству настраивать нечего: команды до него не дойдут -->
-            <controls:EmptyState Icon="&#xE772;" Title="Устройство не подключено" Margin="0,64,0,0"
+            <controls:EmptyState Icon="&#xE772;" Title="Устройство не подключено" Margin="{StaticResource GapTop64}"
                                  Hint="Включите его и запустите поиск — настройки появятся здесь."
                                  ActionText="Найти устройства" ActionIcon="&#xE721;"
                                  Command="{Binding DataContext.FindDevicesCommand, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -153,7 +153,7 @@
 
             <StackPanel Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
             <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}"
                     Visibility="{Binding IsStripSelected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                 <StackPanel>
                     <TextBlock Text="Монитор" Style="{StaticResource CardTitle}"/>
@@ -164,7 +164,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
                 <StackPanel>
                     <!-- Что играет: тип содержимого, ниже его настройки. Новый эффект останавливает и стирает прежний -->
                     <DockPanel>
@@ -186,7 +186,7 @@
 
                     <!-- Вкладку только открыли: играет прежнее, пока здесь не выберут эффект или не нажмут «Включить» -->
                     <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="{StaticResource RadiusControl}"
-                            Padding="14,10,10,10" Margin="{StaticResource GapBottom16}"
+                            Padding="{StaticResource PaddingBanner}" Margin="{StaticResource GapBottom16}"
                             Visibility="{Binding IsViewedKindIdle, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Включить" Style="{StaticResource AccentButton}"
@@ -241,7 +241,7 @@
         <!-- Панель настроек эффекта: только у «Эффекта», выезжает справа -->
         <Grid Grid.Column="1" Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
         <Grid Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-            <Border Width="{StaticResource EffectPanelWidth}" Margin="0,16,16,16" Padding="0"
+            <Border Width="{StaticResource EffectPanelWidth}" Margin="{StaticResource EffectPanelMargin}" Padding="{StaticResource SpaceNone}"
                     Visibility="{Binding IsChecked, ElementName=SettingsToggle, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                 <Border.RenderTransform>
                     <TranslateTransform/>
@@ -254,10 +254,10 @@
                                     <BeginStoryboard>
                                         <Storyboard>
                                             <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
-                                                             From="48" To="0" Duration="{StaticResource MotionNormal}"
+                                                             From="48" To="0" Duration="{StaticResource MotionSlow}"
                                                              EasingFunction="{StaticResource EaseOut}"/>
                                             <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1"
-                                                             Duration="{StaticResource MotionNormal}"/>
+                                                             Duration="{StaticResource MotionSlow}"/>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -277,7 +277,8 @@
 
                     <!-- Настройки того, что играет: встроенного эффекта устройства или эффекта приложения -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <Grid Margin="22,0,22,22">
+                        <!-- Те же поля, что у карточки, кроме верхнего: сверху уже заголовок панели -->
+                        <Grid Margin="{StaticResource PaddingCardBody}">
                             <views:EffectSettings DataContext="{Binding Editor}"
                                                   Visibility="{Binding DataContext.IsBuiltinPlaying, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
                             <views:BuiltinSettings DataContext="{Binding BuiltinEditor}"

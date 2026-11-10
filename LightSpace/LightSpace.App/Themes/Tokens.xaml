@@ -4,16 +4,22 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
-    <!-- Радиусы скругления -->
+    <!-- Радиусы скругления: чем крупнее и «внешнее» поверхность, тем больше радиус —
+         слой окна и модальная карточка 16, карточки, плитки и всплывающие меню 12, элементы управления 10 -->
     <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
     <CornerRadius x:Key="RadiusControl">10</CornerRadius>
     <!-- Элемент внутри скруглённого контейнера с узким отступом, например вариант в сегментах или подсказка -->
     <CornerRadius x:Key="RadiusInner">8</CornerRadius>
-    <CornerRadius x:Key="RadiusCard">18</CornerRadius>
-    <CornerRadius x:Key="RadiusOverlay">18</CornerRadius>
+    <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+    <!-- Плитка галереи эффектов -->
+    <CornerRadius x:Key="RadiusTile">12</CornerRadius>
+    <!-- Всплывающая карточка: меню, выпадающие списки, меню трея -->
+    <CornerRadius x:Key="RadiusFlyout">12</CornerRadius>
+    <CornerRadius x:Key="RadiusOverlay">16</CornerRadius>
     <CornerRadius x:Key="RadiusPill">999</CornerRadius>
-    <!-- Слой содержимого окна: отдельная карточка на стекле, со всех сторон отступает от краёв окна -->
-    <CornerRadius x:Key="RadiusLayer">12</CornerRadius>
+    <!-- Слой содержимого окна: отдельная карточка на стекле, со всех сторон отступает от краёв окна;
+         он внешний для карточек страницы, поэтому скруглён сильнее их -->
+    <CornerRadius x:Key="RadiusLayer">16</CornerRadius>
     <Thickness x:Key="LayerMargin">0,0,10,10</Thickness>
 
     <!-- Отступы по сетке 4/8 px -->
@@ -28,18 +34,43 @@
     <Thickness x:Key="GapBottom4">0,0,0,4</Thickness>
     <Thickness x:Key="GapBottom8">0,0,0,8</Thickness>
     <Thickness x:Key="GapBottom16">0,0,0,16</Thickness>
+    <Thickness x:Key="GapBottom12">0,0,0,12</Thickness>
     <Thickness x:Key="GapLeft8">8,0,0,0</Thickness>
     <Thickness x:Key="GapLeft12">12,0,0,0</Thickness>
+    <Thickness x:Key="GapLeft16">16,0,0,0</Thickness>
     <Thickness x:Key="GapLeft24">24,0,0,0</Thickness>
     <Thickness x:Key="GapTop4">0,4,0,0</Thickness>
     <Thickness x:Key="GapTop8">0,8,0,0</Thickness>
+    <Thickness x:Key="GapTop12">0,12,0,0</Thickness>
     <Thickness x:Key="GapTop16">0,16,0,0</Thickness>
+    <Thickness x:Key="GapTop24">0,24,0,0</Thickness>
+    <!-- Отступ большого пустого состояния от того, что над ним -->
+    <Thickness x:Key="GapTop64">0,64,0,0</Thickness>
+    <Thickness x:Key="GapVertical4">0,4</Thickness>
+    <Thickness x:Key="GapVertical8">0,8</Thickness>
+    <Thickness x:Key="GapHorizontal12">12,0</Thickness>
+    <!-- Подпись над полем или переключателем: отступ от того, что выше, и небольшой — до самого поля -->
+    <Thickness x:Key="FieldLabelMargin">0,16,0,8</Thickness>
+    <!-- Пояснение сразу под подписью, к которой оно относится: на полшага сетки, чтобы пара читалась как одно целое -->
+    <Thickness x:Key="GapTextPair">0,2,0,0</Thickness>
+    <!-- Пояснение под заголовком страницы, когда за ним сразу идёт содержимое -->
+    <Thickness x:Key="PageSubtitleMargin">0,4,0,16</Thickness>
     <Thickness x:Key="GapTile">0,0,8,8</Thickness>
+    <!-- Промежуток между элементами в переносящемся ряду: чипы, кнопки -->
+    <Thickness x:Key="GapWrap">0,0,8,8</Thickness>
+    <!-- Подпись справа от значка: в левом меню, в списке устройств -->
+    <Thickness x:Key="IconLabelGap">12,0,0,0</Thickness>
+    <!-- Плашка с сообщением и кнопкой справа: слева место под текст, справа кнопка ближе к краю -->
+    <Thickness x:Key="PaddingBanner">16,8,8,8</Thickness>
+    <!-- Значок слева от ползунка: внизу, вровень с дорожкой под подписью -->
+    <Thickness x:Key="SliderIconMargin">0,0,12,4</Thickness>
     <Thickness x:Key="PaddingControl">14,9</Thickness>
     <Thickness x:Key="PaddingCompact">8,6</Thickness>
     <Thickness x:Key="PaddingChip">10,5</Thickness>
     <Thickness x:Key="PaddingField">10,8</Thickness>
     <Thickness x:Key="PaddingCard">22</Thickness>
+    <!-- Содержимое карточки под отдельным заголовком: поля карточки без верхнего -->
+    <Thickness x:Key="PaddingCardBody">22,0,22,22</Thickness>
     <Thickness x:Key="PaddingOverlay">22</Thickness>
     <Thickness x:Key="PaddingFlyout">4</Thickness>
     <Thickness x:Key="PaddingListItem">10,9</Thickness>
@@ -106,6 +137,9 @@
     <GridLength x:Key="ScenePanelWidth">500</GridLength>
     <!-- Выезжающая панель настроек эффекта справа на странице устройства -->
     <sys:Double x:Key="EffectPanelWidth">340</sys:Double>
+    <Thickness x:Key="EffectPanelMargin">0,16,16,16</Thickness>
+    <!-- Крупный значок слева от заголовка страницы: чуть ниже, вровень с буквами заголовка, и с промежутком до него -->
+    <Thickness x:Key="HeaderIconMargin">0,2,16,0</Thickness>
     <sys:Double x:Key="EmptyStateMaxWidth">360</sys:Double>
     <!-- Колонка списка слева от панели выбранного элемента -->
     <GridLength x:Key="ListPaneWidth">300</GridLength>
@@ -143,8 +177,11 @@
     <!-- Прозрачность выключенного элемента -->
     <sys:Double x:Key="OpacityDisabled">0.4</sys:Double>
 
-    <!-- Движение: длительности и кривые -->
+    <!-- Движение: длительности и кривые. Быстрое — отклик на курсор, обычное — появление и смена страниц,
+         медленное — выезжающие панели -->
+    <Duration x:Key="MotionFast">0:0:0.083</Duration>
     <Duration x:Key="MotionNormal">0:0:0.167</Duration>
+    <Duration x:Key="MotionSlow">0:0:0.250</Duration>
     <CubicEase x:Key="EaseOut" EasingMode="EaseOut"/>
     <CubicEase x:Key="EaseInOut" EasingMode="EaseInOut"/>
 

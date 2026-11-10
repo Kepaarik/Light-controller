@@ -14,7 +14,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     // Свойства, которые меняются сами по себе, без действий пользователя: связь, адрес, возможности, диагностика
     private static readonly string[] LiveProperties =
     {
-        nameof(Name), nameof(Protocol), nameof(Address), nameof(Status), nameof(StatusTitle), nameof(StatusText), nameof(StatusAdvice), nameof(BuiltinEffectsText), nameof(IsConnected),
+        nameof(Name), nameof(Icon), nameof(Protocol), nameof(Address), nameof(Status), nameof(StatusTitle), nameof(StatusText), nameof(StatusAdvice), nameof(BuiltinEffectsText), nameof(IsConnected),
         nameof(KindText), nameof(LedCountText), nameof(FrameRateText), nameof(Keys), nameof(HasKeys),
         nameof(SentFramesText), nameof(DroppedFramesText), nameof(LastSendText), nameof(LastErrorText)
     };
@@ -41,6 +41,11 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     public ManagedDevice Device { get; }
 
     public string Name => Device.Name;
+
+    /// <summary>
+    /// Значок устройства: выбранный пользователем или по типу устройства.
+    /// </summary>
+    public string Icon => Device.Settings.Icon ?? (Device.Capabilities?.IsKeyboard == true ? DeviceIcons.Keyboard : DeviceIcons.Strip);
 
     public string Protocol => Device.Protocol;
 

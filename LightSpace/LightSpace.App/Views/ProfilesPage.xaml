@@ -21,7 +21,7 @@
             <StackPanel>
                 <TextBlock Text="Профили" Style="{StaticResource PageTitle}" Margin="{StaticResource SpaceNone}"/>
                 <TextBlock Text="Профиль запоминает, что играет на каждом устройстве и с какой яркостью. Применить его можно здесь или из меню значка в трее; устройства, которых в профиле нет, продолжают играть своё."
-                           Style="{StaticResource Hint}" Margin="0,4,0,16" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Left"/>
+                           Style="{StaticResource Hint}" Margin="{StaticResource PageSubtitleMargin}" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Left"/>
             </StackPanel>
         </DockPanel>
 
@@ -72,13 +72,13 @@
 
                                 <WrapPanel Margin="{StaticResource GapTop16}">
                                     <Button Style="{StaticResource AccentButton}" Content="Применить" controls:Appearance.Icon="&#xE768;"
-                                            Margin="0,0,8,8" CommandParameter="{Binding}"
+                                            Margin="{StaticResource GapWrap}" CommandParameter="{Binding}"
                                             Command="{Binding DataContext.ApplyProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                     <Button Content="Записать текущую подсветку" controls:Appearance.Icon="&#xE72C;"
-                                            Margin="0,0,8,8" CommandParameter="{Binding}"
+                                            Margin="{StaticResource GapWrap}" CommandParameter="{Binding}"
                                             Command="{Binding DataContext.UpdateProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                     <Button Style="{StaticResource DangerButton}" Content="Удалить" controls:Appearance.Icon="&#xE74D;"
-                                            Margin="0,0,8,8" CommandParameter="{Binding}"
+                                            Margin="{StaticResource GapWrap}" CommandParameter="{Binding}"
                                             Command="{Binding DataContext.DeleteProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                 </WrapPanel>
 

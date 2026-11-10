@@ -18,12 +18,12 @@
             <ItemsControl ItemsSource="{Binding Items}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:MonitorItemViewModel}">
-                        <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                        <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE7F4;" Style="{StaticResource Icon}" Foreground="{DynamicResource AccentBrush}"
                                                Margin="{StaticResource GapRight8}" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}" Margin="0"/>
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource CardTitle}" Margin="{StaticResource SpaceNone}"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Details}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
@@ -37,7 +37,7 @@
 
                                 <StackPanel Grid.Column="0">
                                 <!-- Лента для монитора -->
-                                <TextBlock Text="Лента" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
+                                <TextBlock Text="Лента" Style="{StaticResource Hint}" Margin="{StaticResource FieldLabelMargin}"/>
                                 <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Devices}" SelectedItem="{Binding Device}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
@@ -45,12 +45,12 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                                <TextBlock Text="{Binding DeviceText}" Style="{StaticResource Hint}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding DeviceText}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}" TextWrapping="Wrap"/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2">
                                 <!-- Ориентация монитора -->
-                                <TextBlock Text="Ориентация монитора" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
+                                <TextBlock Text="Ориентация монитора" Style="{StaticResource Hint}" Margin="{StaticResource FieldLabelMargin}"/>
                                 <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Rotations}" SelectedItem="{Binding Rotation}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
@@ -58,13 +58,13 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                                <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}" TextWrapping="Wrap"
                                            Text="Меняйте, только если монитор физически повёрнут, а в параметрах экрана Windows поворот не выставлен."/>
                                 </StackPanel>
                                 </Grid>
 
                                 <!-- Расположение адресной ленты вокруг монитора -->
-                                <StackPanel Visibility="{Binding HasLayout, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}" Margin="0,20,0,0">
+                                <StackPanel Visibility="{Binding HasLayout, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}" Margin="{StaticResource GapTop24}">
                                     <TextBlock Text="Расположение ленты" Style="{StaticResource CardTitle}"/>
                                     <TextBlock Text="{Binding LayoutSummary}" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}"/>
 
@@ -82,10 +82,10 @@
                                         <controls:ScreenLayoutPreview Layout="{Binding Layout}" LedCount="{Binding LedCount}"
                                                                       Version="{Binding LayoutVersion}" Aspect="{Binding PhysicalAspect}"/>
                                     </Border>
-                                    <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}" TextWrapping="Wrap"
                                                Text="Цвет точек идёт радугой от начала ленты к концу, «1» — первый светодиод. Схема в пропорциях монитора."/>
 
-                                    <TextBlock Text="Откуда смотрим на раскладку" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
+                                    <TextBlock Text="Откуда смотрим на раскладку" Style="{StaticResource Hint}" Margin="{StaticResource FieldLabelMargin}"/>
                                     <StackPanel Orientation="Horizontal">
                                         <RadioButton Style="{StaticResource SegmentRadio}" Content="Вид спереди" IsChecked="{Binding IsViewedFromFront}"
                                                      Margin="{StaticResource GapRight4}"/>
@@ -94,7 +94,7 @@
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Стороны и число светодиодов (0 — автоматически)" Style="{StaticResource Hint}" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Стороны и число светодиодов (0 — автоматически)" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}"/>
                                     <Grid HorizontalAlignment="Left">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -109,23 +109,23 @@
                                         </Grid.RowDefinitions>
 
                                         <CheckBox IsChecked="{Binding UseLeft}" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="Слева" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="10,0"/>
-                                        <TextBox Grid.Column="2" Text="{Binding LeftCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,3"/>
+                                        <TextBlock Grid.Column="1" Text="Слева" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="{StaticResource GapHorizontal12}"/>
+                                        <TextBox Grid.Column="2" Text="{Binding LeftCount, UpdateSourceTrigger=PropertyChanged}" Margin="{StaticResource GapVertical4}"/>
 
                                         <CheckBox Grid.Row="1" IsChecked="{Binding UseTop}" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="Сверху" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="10,0"/>
-                                        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding TopCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,3"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="Сверху" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="{StaticResource GapHorizontal12}"/>
+                                        <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding TopCount, UpdateSourceTrigger=PropertyChanged}" Margin="{StaticResource GapVertical4}"/>
 
                                         <CheckBox Grid.Row="2" IsChecked="{Binding UseRight}" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="Справа" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="10,0"/>
-                                        <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding RightCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,3"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="Справа" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="{StaticResource GapHorizontal12}"/>
+                                        <TextBox Grid.Row="2" Grid.Column="2" Text="{Binding RightCount, UpdateSourceTrigger=PropertyChanged}" Margin="{StaticResource GapVertical4}"/>
 
                                         <CheckBox Grid.Row="3" IsChecked="{Binding UseBottom}" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="Снизу" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="10,0"/>
-                                        <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding BottomCount, UpdateSourceTrigger=PropertyChanged}" Margin="0,3"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="Снизу" Style="{StaticResource Body}" VerticalAlignment="Center" Margin="{StaticResource GapHorizontal12}"/>
+                                        <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding BottomCount, UpdateSourceTrigger=PropertyChanged}" Margin="{StaticResource GapVertical4}"/>
                                     </Grid>
 
-                                    <TextBlock Text="Начало и направление ленты" Style="{StaticResource Hint}" Margin="0,16,0,6"/>
+                                    <TextBlock Text="Начало и направление ленты" Style="{StaticResource Hint}" Margin="{StaticResource FieldLabelMargin}"/>
                                     <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding StartOptions}" SelectedItem="{Binding SelectedStart}">
                                         <ListBox.ItemsPanel>
                                             <ItemsPanelTemplate>
@@ -138,11 +138,11 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
-                                    <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}" TextWrapping="Wrap"
                                                Text="Угол, где у ленты первый светодиод, и куда она идёт от него — если смотреть с выбранной стороны."/>
 
                                     <controls:ValueSlider Label="Сдвиг начала" Unit="светодиодов" Minimum="0" Maximum="{Binding LedCount}" Step="1"
-                                                          Value="{Binding Offset}" Margin="0,16,0,0"/>
+                                                          Value="{Binding Offset}" Margin="{StaticResource GapTop16}"/>
                                     </StackPanel>
                                     </Grid>
                                 </StackPanel>

@@ -14,15 +14,27 @@
             <TextBlock Text="Настройки" Style="{StaticResource PageTitle}" MouseLeftButtonUp="OnTitleClicked"/>
             <TextBlock Text="Внешний вид и поведение приложения" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
 
-            <!-- Карточки в две колонки: слева внешний вид и стекло, справа подсветка, запуск и перенос настроек -->
-            <Grid Margin="0,24,0,0">
+            <!-- Найдена новая версия: заметная плашка над карточками, а не только строка в «О приложении» -->
+            <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="{StaticResource RadiusControl}"
+                    Padding="{StaticResource PaddingBanner}" Margin="{StaticResource GapTop24}"
+                    Visibility="{Binding HasUpdate, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Скачать" controls:Appearance.Icon="&#xE896;"
+                            Command="{Binding OpenUpdateCommand}" Margin="{StaticResource GapLeft12}"/>
+                    <TextBlock Text="&#xE895;" Style="{StaticResource Icon}" Margin="{StaticResource GapRight12}"/>
+                    <TextBlock Text="{Binding UpdateText}" Style="{StaticResource BodyStrong}" VerticalAlignment="Center"/>
+                </DockPanel>
+            </Border>
+
+            <!-- Карточки в две колонки: слева то, чем пользуются чаще, — подсветка, запуск и версия; справа внешний вид и стекло -->
+            <Grid Margin="{StaticResource GapTop24}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="16"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0">
+            <StackPanel Grid.Column="2">
             <!-- Внешний вид -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -31,17 +43,17 @@
                         <StackPanel>
                             <TextBlock Text="Прозрачное стекло" Style="{StaticResource Body}"/>
                             <TextBlock Text="Сквозь окно видно, что под ним, — размыто, как через матовое стекло. Выключите, чтобы окно было матовым (Mica): спокойнее и чуть экономнее."
-                                       Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                                       Style="{StaticResource Hint}" Margin="{StaticResource GapTextPair}"/>
                         </StackPanel>
                     </CheckBox>
                     <TextBlock Text="Стекло доступно в Windows 11 22H2 и новее; в этой системе окно тёмное."
-                               Style="{StaticResource Warning}" Margin="0,10,0,0"
+                               Style="{StaticResource Warning}" Margin="{StaticResource GapTop12}"
                                Visibility="{Binding IsAcrylicSupported, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
                 </StackPanel>
             </Border>
 
             <!-- Тонированное стекло: пресет как отправная точка, дальше — ползунки -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
                 <StackPanel>
                     <TextBlock Text="Стекло" Style="{StaticResource CardTitle}"/>
                     <TextBlock Text="Готовые варианты" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}"/>
@@ -53,7 +65,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Style="{StaticResource ChipButton}" Margin="0,0,6,6"
+                                <Button Style="{StaticResource ChipButton}" Margin="{StaticResource GapWrap}"
                                         Command="{Binding DataContext.Glass.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}">
                                     <StackPanel Orientation="Horizontal">
@@ -66,10 +78,13 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
+                    <!-- Ползунки нужны редко: обычно хватает готового варианта, поэтому они в закрытом разделе -->
+                    <Expander Header="Тонкая настройка" Style="{StaticResource Disclosure}">
+                    <StackPanel>
                     <controls:ValueSlider Label="Прозрачность" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                          Value="{Binding Glass.Transparency}" Margin="0,14,0,0"/>
+                                          Value="{Binding Glass.Transparency}"/>
 
-                    <DockPanel Margin="0,14,0,0">
+                    <DockPanel Margin="{StaticResource GapTop16}">
                         <Border DockPanel.Dock="Right" Width="16" Height="16" CornerRadius="8" Margin="{StaticResource GapLeft12}"
                                 VerticalAlignment="Bottom" Background="{Binding Glass.TintSwatch}"
                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"/>
@@ -78,19 +93,21 @@
                     </DockPanel>
 
                     <controls:ValueSlider Label="Сила тонировки" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                          Value="{Binding Glass.TintStrength}" Margin="0,14,0,0"/>
+                                          Value="{Binding Glass.TintStrength}" Margin="{StaticResource GapTop16}"/>
                     <controls:ValueSlider Label="Плотность карточек" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                          Value="{Binding Glass.Frost}" Margin="0,14,0,0"/>
+                                          Value="{Binding Glass.Frost}" Margin="{StaticResource GapTop16}"/>
                     <controls:ValueSlider Label="Блик по краю" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                          Value="{Binding Glass.Shine}" Margin="0,14,0,0"/>
+                                          Value="{Binding Glass.Shine}" Margin="{StaticResource GapTop16}"/>
 
                     <TextBlock Text="Тонировка ложится поверх системного стекла: при выключенном «Прозрачном стекле» окно матовое, но цвет и блик всё равно меняются."
-                               Style="{StaticResource Hint}" Margin="0,10,0,0"/>
+                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop12}"/>
+                    </StackPanel>
+                    </Expander>
                 </StackPanel>
             </Border>
             </StackPanel>
 
-            <StackPanel Grid.Column="2">
+            <StackPanel Grid.Column="0">
             <!-- Подсветка -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -99,50 +116,44 @@
                         <StackPanel>
                             <TextBlock Text="Подсветка включена" Style="{StaticResource Body}"/>
                             <TextBlock Text="Выключает свет на всех устройствах сразу; то же есть в меню значка в трее"
-                                       Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                                       Style="{StaticResource Hint}" Margin="{StaticResource GapTextPair}"/>
                         </StackPanel>
                     </CheckBox>
 
-                    <controls:ValueSlider Label="Общая яркость" Unit="%" Minimum="0" Maximum="100" Step="1" Margin="0,14,0,0"
+                    <controls:ValueSlider Label="Общая яркость" Unit="%" Minimum="0" Maximum="100" Step="1" Margin="{StaticResource GapTop16}"
                                           Value="{Binding DataContext.MasterBrightness, RelativeSource={RelativeSource AncestorType=Window}}"/>
                     <TextBlock Text="Приглушает все устройства разом, их собственная яркость не меняется"
-                               Style="{StaticResource Hint}" Margin="0,6,0,0"/>
+                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
                 </StackPanel>
             </Border>
 
             <!-- Приложение -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
                 <StackPanel>
                     <TextBlock Text="Запуск" Style="{StaticResource CardTitle}"/>
                     <CheckBox IsChecked="{Binding StartWithWindows}">
                         <StackPanel>
                             <TextBlock Text="Запускать вместе с Windows" Style="{StaticResource Body}"/>
-                            <TextBlock Text="Light Space стартует сразу в трей, без окна" Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                            <TextBlock Text="Light Space стартует сразу в трей, без окна" Style="{StaticResource Hint}" Margin="{StaticResource GapTextPair}"/>
                         </StackPanel>
                     </CheckBox>
                     <TextBlock Text="Свернуть — окно прячется в трей, подсветка продолжает работать. Закрыть — приложение завершается."
-                               Style="{StaticResource Hint}" Margin="0,14,0,0"/>
+                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop16}"/>
                 </StackPanel>
             </Border>
 
-            <!-- О приложении: версия и найденное обновление -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <!-- О приложении: версия; найденное обновление — в плашке наверху страницы -->
+            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
                 <StackPanel>
                     <TextBlock Text="О приложении" Style="{StaticResource CardTitle}"/>
                     <TextBlock Text="{Binding VersionText}" Style="{StaticResource Body}"/>
-                    <DockPanel Margin="0,10,0,0"
-                               Visibility="{Binding HasUpdate, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <Button DockPanel.Dock="Right" Content="Скачать" controls:Appearance.Icon="&#xE896;"
-                                Command="{Binding OpenUpdateCommand}" Margin="8,0,0,0"/>
-                        <TextBlock Text="{Binding UpdateText}" Style="{StaticResource Body}" VerticalAlignment="Center"/>
-                    </DockPanel>
                 </StackPanel>
             </Border>
             </StackPanel>
             </Grid>
 
             <!-- Скрытый раздел: подробный журнал устройств для разбора неполадок -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0"
+            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}"
                     Visibility="{Binding Log.IsShown, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                 <StackPanel>
                     <TextBlock Text="Журнал устройств" Style="{StaticResource CardTitle}"/>
@@ -150,15 +161,15 @@
                         <StackPanel>
                             <TextBlock Text="Записывать подробный журнал" Style="{StaticResource Body}"/>
                             <TextBlock Text="Поиск, подключение и каждая команда, ушедшая на устройство. Включите, затем нажмите «Найти» на странице «Устройства» и повторите то, что не работает."
-                                       Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                                       Style="{StaticResource Hint}" Margin="{StaticResource GapTextPair}"/>
                         </StackPanel>
                     </CheckBox>
 
                     <StackPanel Orientation="Horizontal" Margin="{StaticResource GapTop16}">
                         <Button Content="Скопировать" controls:Appearance.Icon="&#xE8C8;" Command="{Binding Log.CopyCommand}"/>
                         <Button Content="Открыть папку" controls:Appearance.Icon="&#xE838;" Command="{Binding Log.OpenFolderCommand}"
-                                Style="{StaticResource GhostButton}" Margin="8,0,0,0"/>
-                        <Button Content="Очистить" Command="{Binding Log.ClearCommand}" Style="{StaticResource DangerButton}" Margin="8,0,0,0"/>
+                                Style="{StaticResource GhostButton}" Margin="{StaticResource GapLeft8}"/>
+                        <Button Content="Очистить" Command="{Binding Log.ClearCommand}" Style="{StaticResource DangerButton}" Margin="{StaticResource GapLeft8}"/>
                     </StackPanel>
 
                     <TextBox Text="{Binding Log.Text, Mode=OneWay}" IsReadOnly="True" TextWrapping="NoWrap"

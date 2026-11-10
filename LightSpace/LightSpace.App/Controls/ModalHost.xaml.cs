@@ -35,7 +35,7 @@ public partial class ModalHost : UserControl
         CancelButton.Visibility = cancelText is null ? Visibility.Collapsed : Visibility.Visible;
 
         Visibility = Visibility.Visible;
-        BeginAnimation(OpacityProperty, Fade(0, 1));
+        BeginAnimation(OpacityProperty, Fade(0, 1, "MotionNormal"));
         ConfirmButton.Focus();
 
         return _pending.Task;
@@ -68,7 +68,8 @@ public partial class ModalHost : UserControl
         var pending = _pending;
         _pending = null;
 
-        var fade = Fade(1, 0);
+        // Ответ уже дан — карточка уходит быстрее, чем появлялась
+        var fade = Fade(1, 0, "MotionFast");
         fade.Completed += (_, _) =>
         {
             // За время исчезновения могли открыть новую карточку — её не прячем
@@ -80,9 +81,9 @@ public partial class ModalHost : UserControl
         pending?.TrySetResult(result);
     }
 
-    private DoubleAnimation Fade(double from, double to)
+    private DoubleAnimation Fade(double from, double to, string durationKey)
     {
-        return new DoubleAnimation(from, to, (Duration)FindResource("MotionNormal"))
+        return new DoubleAnimation(from, to, (Duration)FindResource(durationKey))
         {
             EasingFunction = (IEasingFunction)FindResource("EaseOut")
         };

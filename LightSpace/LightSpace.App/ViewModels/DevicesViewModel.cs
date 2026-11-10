@@ -69,6 +69,18 @@ public sealed partial class DevicesViewModel : ObservableObject
     public int ProblemCount => Items.Count(i => i.Device.Status is DeviceStatus.NotFound or DeviceStatus.Failing);
 
     /// <summary>
+    /// Сколько известных устройств на связи, например «На связи 3 из 4».
+    /// </summary>
+    public string ConnectionText => Items.Count == 0
+        ? "Устройства не найдены"
+        : $"На связи {Items.Count(i => i.Device.Status == DeviceStatus.Connected)} из {Items.Count}";
+
+    /// <summary>
+    /// Сколько устройств не на связи, например «Нет связи: 1»; пусто, если все на связи.
+    /// </summary>
+    public string ProblemText => ProblemCount > 0 ? $"Нет связи: {ProblemCount}" : "";
+
+    /// <summary>
     /// Пробует переподключить пропавшие устройства сразу, не дожидаясь очередной попытки, — например, после сна компьютера.
     /// </summary>
     public void ReconnectSoon()
@@ -191,6 +203,8 @@ public sealed partial class DevicesViewModel : ObservableObject
 
         OnPropertyChanged(nameof(FrameTimeText));
         OnPropertyChanged(nameof(ProblemCount));
+        OnPropertyChanged(nameof(ConnectionText));
+        OnPropertyChanged(nameof(ProblemText));
     }
 
     /// <summary>

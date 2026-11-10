@@ -34,7 +34,7 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Style="{StaticResource ChipButton}" Margin="0,0,6,6" ToolTip="{Binding Title}"
+                            <Button Style="{StaticResource ChipButton}" Margin="{StaticResource GapWrap}" ToolTip="{Binding Title}"
                                     Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                     CommandParameter="{Binding}">
                                 <Border Width="18" Height="18" CornerRadius="9" Background="{Binding Swatch}"

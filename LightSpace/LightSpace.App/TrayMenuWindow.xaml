@@ -18,6 +18,16 @@
     <!-- Меню трея — своя карточка в стиле приложения, а не системное меню -->
     <Border Style="{StaticResource FlyoutCard}" MinWidth="{StaticResource FlyoutMinWidth}">
         <StackPanel>
+            <!-- Шапка: значок, название и сколько устройств на связи -->
+            <DockPanel Margin="{StaticResource PaddingMenuItem}">
+                <Image DockPanel.Dock="Left" Source="Assets/LightSpace.ico" Width="20" Height="20" VerticalAlignment="Center"/>
+                <StackPanel Margin="{StaticResource GapLeft12}">
+                    <TextBlock Text="Light Space" Style="{StaticResource BodyStrong}"/>
+                    <TextBlock Text="{Binding Devices.ConnectionText}" Style="{StaticResource Caption}"/>
+                    <TextBlock Text="{Binding Devices.ProblemText}" Style="{StaticResource Warning}"/>
+                </StackPanel>
+            </DockPanel>
+            <Border Style="{StaticResource Divider}"/>
             <Button Click="OnToggleLighting">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource MenuButton}">
@@ -32,8 +42,13 @@
                     </Style>
                 </Button.Style>
             </Button>
-            <controls:ValueSlider Label="Общая яркость" Unit="%" Minimum="0" Maximum="100" Step="1" Margin="12,8,12,8"
-                                  Value="{Binding MasterBrightness}"/>
+            <!-- Значок солнца у ползунка яркости, как в системном меню Windows -->
+            <DockPanel Margin="{StaticResource PaddingMenuItem}">
+                <TextBlock DockPanel.Dock="Left" Text="&#xE706;" Style="{StaticResource Icon}" VerticalAlignment="Bottom"
+                           Margin="{StaticResource SliderIconMargin}"/>
+                <controls:ValueSlider Label="Общая яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                      Value="{Binding MasterBrightness}"/>
+            </DockPanel>
             <Border Style="{StaticResource Divider}"
                     Visibility="{Binding HasProfiles, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
             <ItemsControl ItemsSource="{Binding Profiles}">

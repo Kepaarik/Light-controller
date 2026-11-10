@@ -25,6 +25,29 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Точка состояния у значка устройства в списке: те же цвета, что у подписи состояния -->
+        <Style x:Key="StatusDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Height" Value="8"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Margin" Value="0,0,-3,-3"/>
+            <Setter Property="Stroke" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="StrokeThickness" Value="{StaticResource StrokeWidth}"/>
+            <Setter Property="Fill" Value="{DynamicResource MutedBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="Connected">
+                    <Setter Property="Fill" Value="{DynamicResource SuccessBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="NeedsSetup">
+                    <Setter Property="Fill" Value="{DynamicResource WarningBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="Failing">
+                    <Setter Property="Fill" Value="{DynamicResource DangerBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- Строка «название — значение» в карточке: название слева, значение справа -->
         <Style x:Key="FactRow" TargetType="DockPanel">
             <Setter Property="Margin" Value="{StaticResource GapBottom4}"/>
@@ -77,12 +100,18 @@
 
             <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
                 <ListBox.ItemTemplate>
+                    <!-- Значок с точкой состояния связи (подсказка — словами), название и способ подключения -->
                     <DataTemplate DataType="vm:DeviceItemViewModel">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding Protocol}" Style="{StaticResource Caption}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="{Binding StatusTitle}" Style="{StaticResource StatusLabel}"/>
-                        </StackPanel>
+                        <DockPanel ToolTip="{Binding StatusTitle}">
+                            <Grid DockPanel.Dock="Left" Width="20" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}"/>
+                                <Ellipse Style="{StaticResource StatusDot}"/>
+                            </Grid>
+                            <StackPanel Margin="{StaticResource IconLabelGap}">
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Protocol}" Style="{StaticResource Caption}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </DockPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
@@ -97,20 +126,15 @@
                     <StackPanel MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Stretch"
                                 d:DataContext="{d:DesignInstance vm:DeviceItemViewModel}">
                         <!-- Название, способ подключения и состояние связи -->
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Content="Забыть" controls:Appearance.Icon="&#xE74D;"
-                                    VerticalAlignment="Top" CommandParameter="{Binding}"
-                                    Command="{Binding DataContext.ForgetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Name}" Style="{StaticResource Title}"/>
-                                <TextBlock Style="{StaticResource Caption}">
-                                    <Run Text="{Binding Protocol, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Address, Mode=OneWay}"/>
-                                </TextBlock>
-                                <TextBlock Text="{Binding StatusTitle}" Style="{StaticResource StatusLabel}" Margin="{StaticResource GapTop4}"/>
-                                <TextBlock Text="{Binding StatusText}" Style="{StaticResource Warning}" Margin="{StaticResource GapTop4}"/>
-                                <TextBlock Text="{Binding StatusAdvice}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
-                            </StackPanel>
-                        </DockPanel>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource Title}"/>
+                            <TextBlock Style="{StaticResource Caption}">
+                                <Run Text="{Binding Protocol, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Address, Mode=OneWay}"/>
+                            </TextBlock>
+                            <TextBlock Text="{Binding StatusTitle}" Style="{StaticResource StatusLabel}" Margin="{StaticResource GapTop4}"/>
+                            <TextBlock Text="{Binding StatusText}" Style="{StaticResource Warning}" Margin="{StaticResource GapTop4}"/>
+                            <TextBlock Text="{Binding StatusAdvice}" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
+                        </StackPanel>
 
                         <!-- Что играет на устройстве, выбирается на его собственной странице -->
                         <TextBlock Text="Подсветка" Style="{StaticResource SectionLabel}"/>
@@ -121,7 +145,7 @@
                                         Command="{Binding DataContext.OpenLightingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Margin="{StaticResource GapLeft12}"/>
                                 <TextBlock Style="{StaticResource Hint}" VerticalAlignment="Center"
-                                           Text="У каждого устройства свои эффект и яркость: эффекты приложения, встроенные эффекты контроллера, музыка, а у ленты за монитором — «Экран». Страница устройства открывается и из левого меню."/>
+                                           Text="Эффект, музыка, экран и яркость — на странице устройства."/>
                             </DockPanel>
                         </Border>
 
@@ -143,8 +167,8 @@
                             </Border>
                         </StackPanel>
 
-                        <!-- Возможности -->
-                        <TextBlock Text="Возможности" Style="{StaticResource SectionLabel}"/>
+                        <!-- Возможности: нужны не всем, поэтому раздел закрыт, пока его не откроют -->
+                        <Expander Header="Возможности" Style="{StaticResource Disclosure}">
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <DockPanel Style="{StaticResource FactRow}">
@@ -165,6 +189,7 @@
                                 </DockPanel>
                             </StackPanel>
                         </Border>
+                        </Expander>
 
                         <!-- Раскладка клавиатуры -->
                         <StackPanel Visibility="{Binding HasKeys, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
@@ -176,8 +201,8 @@
                             </Border>
                         </StackPanel>
 
-                        <!-- Диагностика вывода -->
-                        <TextBlock Text="Диагностика" Style="{StaticResource SectionLabel}"/>
+                        <!-- Диагностика вывода: для разбора неполадок, раздел закрыт, пока его не откроют -->
+                        <Expander Header="Диагностика" Style="{StaticResource Disclosure}">
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <DockPanel Style="{StaticResource FactRow}">
@@ -205,6 +230,12 @@
                                            Text="Кадр, который не успел уйти, заменяется более свежим: медленное устройство пропускает кадры, а не задерживает остальные."/>
                             </StackPanel>
                         </Border>
+                        </Expander>
+
+                        <!-- Забыть — внизу и красным, чтобы не нажать случайно; перед удалением спрашивается подтверждение -->
+                        <Button Style="{StaticResource DangerButton}" Content="Забыть устройство" controls:Appearance.Icon="&#xE74D;"
+                                HorizontalAlignment="Left" Margin="{StaticResource GapTop24}" CommandParameter="{Binding}"
+                                Command="{Binding DataContext.ForgetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>

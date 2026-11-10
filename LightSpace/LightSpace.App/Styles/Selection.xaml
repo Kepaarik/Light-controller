@@ -176,7 +176,7 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
-                                <Border x:Name="Root" CornerRadius="12" Background="{DynamicResource ControlBrush}" Padding="{StaticResource PaddingTile}"
+                                <Border x:Name="Root" CornerRadius="{StaticResource RadiusTile}" Background="{DynamicResource ControlBrush}" Padding="{StaticResource PaddingTile}"
                                         BorderBrush="Transparent" BorderThickness="{StaticResource StrokeThick}" SnapsToDevicePixels="True">
                                     <ContentPresenter/>
                                 </Border>
@@ -278,7 +278,7 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="{Binding Icon}" FontFamily="{StaticResource FontIcon}" FontSize="16" Width="20"
                                    VerticalAlignment="Center"/>
-                        <TextBlock x:Name="Label" Text="{Binding Title}" Margin="14,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="Label" Text="{Binding Title}" Margin="{StaticResource IconLabelGap}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <DataTemplate.Triggers>
                         <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">

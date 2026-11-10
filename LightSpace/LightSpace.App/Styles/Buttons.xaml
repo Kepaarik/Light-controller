@@ -7,29 +7,34 @@
         <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- Общий шаблон кнопок: под курсором фон заменяется на Appearance.HoverBrush, нажатая кнопка чуть прозрачнее.
+    <!-- Общий шаблон кнопок: под курсором фон быстро сменяется на Appearance.HoverBrush, нажатая кнопка чуть прозрачнее.
          Значок слева от подписи — из Appearance.Icon -->
     <ControlTemplate x:Key="ButtonTemplate" TargetType="ButtonBase">
-        <Border x:Name="Root"
-                Background="{TemplateBinding Background}"
-                BorderBrush="{TemplateBinding BorderBrush}"
-                BorderThickness="{TemplateBinding BorderThickness}"
-                CornerRadius="{Binding (controls:Appearance.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"
-                Padding="{TemplateBinding Padding}"
-                SnapsToDevicePixels="True">
-            <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="IconGlyph"
-                           Text="{Binding (controls:Appearance.Icon), RelativeSource={RelativeSource TemplatedParent}}"
-                           FontFamily="{StaticResource FontIcon}" FontSize="14"
-                           VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <ContentPresenter x:Name="Content" Grid.Column="1" RecognizesAccessKey="True" VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
+        <Grid x:Name="Root" SnapsToDevicePixels="True">
+            <!-- Обычный фон и фон под курсором лежат друг на друге: под курсором один быстро сменяется другим -->
+            <Border x:Name="Base" Background="{TemplateBinding Background}"
+                    CornerRadius="{Binding (controls:Appearance.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"/>
+            <Border x:Name="Hover" Opacity="0"
+                    Background="{Binding (controls:Appearance.HoverBrush), RelativeSource={RelativeSource TemplatedParent}}"
+                    CornerRadius="{Binding (controls:Appearance.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"/>
+            <Border BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{Binding (controls:Appearance.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"
+                    Padding="{TemplateBinding Padding}">
+                <Grid HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="IconGlyph"
+                               Text="{Binding (controls:Appearance.Icon), RelativeSource={RelativeSource TemplatedParent}}"
+                               FontFamily="{StaticResource FontIcon}" FontSize="14"
+                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ContentPresenter x:Name="Content" Grid.Column="1" RecognizesAccessKey="True" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </Grid>
         <ControlTemplate.Triggers>
             <Trigger Property="controls:Appearance.Icon" Value="{x:Null}">
                 <Setter TargetName="IconGlyph" Property="Visibility" Value="Collapsed"/>
@@ -39,8 +44,26 @@
                 <Setter TargetName="Content" Property="Visibility" Value="Collapsed"/>
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Root" Property="Background"
-                        Value="{Binding (controls:Appearance.HoverBrush), RelativeSource={RelativeSource TemplatedParent}}"/>
+                <Trigger.EnterActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1"
+                                             Duration="{StaticResource MotionFast}"/>
+                            <DoubleAnimation Storyboard.TargetName="Base" Storyboard.TargetProperty="Opacity" To="0"
+                                             Duration="{StaticResource MotionFast}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0"
+                                             Duration="{StaticResource MotionFast}"/>
+                            <DoubleAnimation Storyboard.TargetName="Base" Storyboard.TargetProperty="Opacity" To="1"
+                                             Duration="{StaticResource MotionFast}"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </Trigger.ExitActions>
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
                 <Setter TargetName="Root" Property="Opacity" Value="0.8"/>

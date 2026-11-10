@@ -50,10 +50,30 @@
                 <ListBox x:Name="NavList" DockPanel.Dock="Top" Style="{StaticResource NavList}"
                          ItemsSource="{Binding Pages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
                 <ListBox x:Name="BottomNavList" DockPanel.Dock="Bottom" Style="{StaticResource NavList}"
-                         ItemsSource="{Binding BottomPages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}"/>
+                         ItemsSource="{Binding BottomPages}" SelectedValuePath="Page" SelectedValue="{Binding SelectedPage}">
+                    <!-- У «Настроек» акцентная точка, когда найдена новая версия: её видно и при свёрнутом меню -->
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="vm:PageOption">
+                            <StackPanel Orientation="Horizontal">
+                                <Grid Width="20" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}"/>
+                                    <Ellipse Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-3,-3,0"
+                                             Fill="{DynamicResource AccentBrush}"
+                                             Visibility="{Binding DataContext.Settings.HasUpdate, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                                </Grid>
+                                <TextBlock x:Name="Label" Text="{Binding Title}" Margin="{StaticResource IconLabelGap}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                                    <Setter TargetName="Label" Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
                 <!-- Устройств может быть много: они прокручиваются, а разделы и настройки остаются на месте.
                      Панель списка — обычная, а не виртуализирующая: внутри чужой прокрутки та может не показать ни одного пункта -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,8,0,8">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="{StaticResource GapVertical8}">
                     <ListBox x:Name="DeviceNavList" Style="{StaticResource NavList}"
                              ItemsSource="{Binding DeviceNav}" SelectedValuePath="Id" SelectedValue="{Binding SelectedDeviceId}">
                         <!-- Значок устройства с точкой его живого цвета; при проблеме со связью точка — цвета состояния,
@@ -67,7 +87,7 @@
                                                  Margin="0,0,-3,-3" Fill="{Binding Device.Preview}"
                                                  Stroke="{DynamicResource BorderBrush}" StrokeThickness="{StaticResource StrokeWidth}"/>
                                     </Grid>
-                                    <TextBlock x:Name="Label" Text="{Binding Title}" Margin="14,0,0,0" VerticalAlignment="Center"
+                                    <TextBlock x:Name="Label" Text="{Binding Title}" Margin="{StaticResource IconLabelGap}" VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis" MaxWidth="150"/>
                                 </StackPanel>
                                 <DataTemplate.Triggers>
@@ -108,16 +128,17 @@
         <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource LayerBrush}" CornerRadius="{StaticResource RadiusLayer}"
                 Margin="{StaticResource LayerMargin}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeThin}">
+            <!-- Страница, которая становится видимой, плавно проявляется -->
             <Grid>
-                <views:DevicePage DataContext="{Binding Scene}"
+                <views:DevicePage DataContext="{Binding Scene}" controls:PageTransition.IsEnabled="True"
                                   Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Device}"/>
-                <views:DevicesPage DataContext="{Binding Devices}"
+                <views:DevicesPage DataContext="{Binding Devices}" controls:PageTransition.IsEnabled="True"
                                    Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Devices}"/>
-                <views:MonitorsPage DataContext="{Binding Monitors}"
+                <views:MonitorsPage DataContext="{Binding Monitors}" controls:PageTransition.IsEnabled="True"
                                     Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Monitors}"/>
-                <views:ProfilesPage
+                <views:ProfilesPage controls:PageTransition.IsEnabled="True"
                                     Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Profiles}"/>
-                <views:SettingsPage DataContext="{Binding Settings}"
+                <views:SettingsPage DataContext="{Binding Settings}" controls:PageTransition.IsEnabled="True"
                                     Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Settings}"/>
             </Grid>
         </Border>
