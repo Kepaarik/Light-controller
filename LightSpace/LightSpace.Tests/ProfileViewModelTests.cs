@@ -219,6 +219,139 @@ public sealed class ProfileViewModelTests
     }
 
     [Fact]
+    public void EditOpensGalleryForDeviceAndSecondEditClosesIt()
+    {
+        var option = new ProfileOption(Profile(("a", 30), ("b", 80)), id => Device(id), () => { });
+
+        Assert.False(option.HasEditedDevice);
+
+        option.Devices[1].EditCommand.Execute(null);
+
+        Assert.Same(option.Devices[1], option.EditedDevice);
+        Assert.True(option.HasEditedDevice);
+        Assert.True(option.Editor.IsPlaying);
+        Assert.Equal("solid", option.Editor.SelectedTile?.Definition.Id);
+
+        option.Devices[1].EditCommand.Execute(null);
+
+        Assert.Null(option.EditedDevice);
+        Assert.False(option.HasEditedDevice);
+    }
+
+    [Fact]
+    public void EditingAnotherDeviceSwitchesGallery()
+    {
+        var profile = Profile(("a", 30), ("b", 80));
+        var other = EffectLibrary.All.First(e => e.Id != "solid");
+
+        profile.DeviceLighting[1].DefaultContent.EffectId = other.Id;
+
+        var option = new ProfileOption(profile, id => Device(id), () => { });
+
+        option.Devices[0].EditCommand.Execute(null);
+        option.Devices[1].EditCommand.Execute(null);
+
+        Assert.Same(option.Devices[1], option.EditedDevice);
+        Assert.Equal(other.Id, option.Editor.SelectedTile?.Definition.Id);
+    }
+
+    [Fact]
+    public void ChosenEffectGoesIntoProfile()
+    {
+        var changes = 0;
+        var profile = Profile(("a", 30));
+        var option = new ProfileOption(profile, id => Device(id), () => changes++);
+        var other = EffectLibrary.All.First(e => e.Id != "solid");
+        var changed = new List<string?>();
+
+        option.Devices[0].EditCommand.Execute(null);
+        option.Devices[0].PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        option.Editor.SelectedTile = option.Editor.Tiles.Single(t => t.Definition.Id == other.Id);
+
+        var content = profile.DeviceLighting[0].DefaultContent;
+
+        Assert.Equal(ContentKind.Effect, content.Kind);
+        Assert.Equal(other.Id, content.EffectId);
+        Assert.Equal($"Эффект · {other.Title}", option.Devices[0].ContentText);
+        Assert.Contains(nameof(ProfileDeviceViewModel.ContentText), changed);
+        Assert.Contains(other.Title, option.SummaryText);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public void ChoosingEffectSwitchesOtherContentToEffect()
+    {
+        var changes = 0;
+        var profile = Profile(("a", 30));
+
+        profile.DeviceLighting[0].DefaultContent.Kind = ContentKind.Music;
+
+        var option = new ProfileOption(profile, id => Device(id), () => changes++);
+
+        option.Devices[0].EditCommand.Execute(null);
+
+        // Пока в профиле музыка, ни одна плитка не выделена и настроек эффекта не видно
+        Assert.False(option.Editor.IsPlaying);
+        Assert.Null(option.Editor.SelectedTile);
+
+        // Плитка того же эффекта, что сохранён в содержимом, тоже включает эффект
+        option.Editor.SelectedTile = option.Editor.Tiles.Single(t => t.Definition.Id == "solid");
+
+        Assert.Equal(ContentKind.Effect, profile.DeviceLighting[0].DefaultContent.Kind);
+        Assert.True(option.Editor.IsPlaying);
+        Assert.Equal($"Эффект · {EffectLibrary.Solid.Title}", option.Devices[0].ContentText);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public void RemovingEditedDeviceClosesGallery()
+    {
+        var option = new ProfileOption(Profile(("a", 30), ("b", 80)), id => Device(id), () => { });
+
+        option.Devices[0].EditCommand.Execute(null);
+        option.Devices[0].RemoveCommand.Execute(null);
+
+        Assert.Null(option.EditedDevice);
+    }
+
+    [Fact]
+    public void RemovingOtherDeviceKeepsGalleryOpen()
+    {
+        var option = new ProfileOption(Profile(("a", 30), ("b", 80)), id => Device(id), () => { });
+        var edited = option.Devices[1];
+
+        edited.EditCommand.Execute(null);
+        option.Devices[0].RemoveCommand.Execute(null);
+
+        Assert.Same(edited, option.EditedDevice);
+    }
+
+    [Fact]
+    public void ReloadClosesGallery()
+    {
+        var option = new ProfileOption(Profile(("a", 30)), id => Device(id), () => { });
+
+        option.Devices[0].EditCommand.Execute(null);
+        option.Reload();
+
+        Assert.Null(option.EditedDevice);
+    }
+
+    [Fact]
+    public void ClosedGalleryChangesNothing()
+    {
+        var changes = 0;
+        var profile = Profile(("a", 30));
+        var option = new ProfileOption(profile, id => Device(id), () => changes++);
+        var other = EffectLibrary.All.First(e => e.Id != "solid");
+
+        option.Editor.SelectedTile = option.Editor.Tiles.Single(t => t.Definition.Id == other.Id);
+
+        Assert.Equal("solid", profile.DeviceLighting[0].DefaultContent.EffectId);
+        Assert.Equal(0, changes);
+    }
+
+    [Fact]
     public void IconsToChooseFromAreDistinctFluentGlyphs()
     {
         Assert.Contains(DeviceIcons.Strip, DeviceIcons.All);

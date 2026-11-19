@@ -165,6 +165,53 @@ public sealed class XamlTests
     }
 
     [Fact]
+    public void ProfileShowsEffectGalleryForEditedDevice()
+    {
+        var errors = UiThread.InvokeCollectingBindingErrors(() =>
+        {
+            var vm = new MainViewModel(ConfigWithProfile());
+            var window = new MainWindow(vm);
+
+            try
+            {
+                vm.SelectedPage = AppPage.Profiles;
+                vm.SelectedProfile = vm.Profiles[0];
+                UiThread.ShowOffscreen(window);
+
+                var page = UiThread.Descendants<ProfilesPage>(window).Single();
+
+                Assert.DoesNotContain(UiThread.Descendants<EffectEditor>(page), e => e.IsVisible);
+
+                vm.Profiles[0].Devices[0].EditCommand.Execute(null);
+                window.UpdateLayout();
+
+                var editor = Assert.Single(UiThread.Descendants<EffectEditor>(page), e => e.IsVisible);
+
+                Assert.Same(vm.Profiles[0].Editor, editor.DataContext);
+                Assert.True(editor.ShowsSettings);
+
+                // Заголовок собран из нескольких Run — TextBlock.Text у такого пустой, текст берётся из самих Run
+                var title = Assert.Single(UiThread.Descendants<TextBlock>(page), t => RunsText(t).StartsWith("Эффект в профиле", StringComparison.Ordinal));
+
+                Assert.Equal($"Эффект в профиле: {vm.Profiles[0].Devices[0].Name}", RunsText(title));
+                Assert.True(title.IsVisible);
+
+                vm.Profiles[0].Devices[0].EditCommand.Execute(null);
+                window.UpdateLayout();
+
+                Assert.DoesNotContain(UiThread.Descendants<EffectEditor>(page), e => e.IsVisible);
+            }
+            finally
+            {
+                window.Close();
+                vm.Shutdown();
+            }
+        });
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
     public void SettingsKeepGlassSlidersFolded()
     {
         UiThread.Invoke(() =>
@@ -333,6 +380,11 @@ public sealed class XamlTests
 
             window.UpdateLayout();
         }
+    }
+
+    private static string RunsText(TextBlock text)
+    {
+        return string.Concat(text.Inlines.OfType<System.Windows.Documents.Run>().Select(r => r.Text));
     }
 
     private static AppConfig ConfigWithProfile()

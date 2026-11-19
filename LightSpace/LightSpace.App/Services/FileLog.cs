@@ -49,7 +49,7 @@ public static class FileLog
     /// <summary>
     /// Пишет перед каждой строкой журнала дату и время.
     /// </summary>
-    private sealed class TimedTraceListener : TextWriterTraceListener
+    public sealed class TimedTraceListener : TextWriterTraceListener
     {
         public TimedTraceListener(TextWriter writer) : base(writer)
         {
