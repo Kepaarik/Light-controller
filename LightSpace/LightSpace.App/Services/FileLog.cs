@@ -35,12 +35,29 @@ public static class FileLog
             var stream = new FileStream(FilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
             var writer = new StreamWriter(stream) { AutoFlush = true };
 
-            Trace.Listeners.Add(new TextWriterTraceListener(writer) { TraceOutputOptions = TraceOptions.DateTime });
+            Trace.Listeners.Add(new TimedTraceListener(writer));
             Trace.AutoFlush = true;
+
+            Trace.WriteLine($"Light Space {UpdateCheck.Current}: запуск");
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             // Без журнала приложение работает так же
+        }
+    }
+
+    /// <summary>
+    /// Пишет перед каждой строкой журнала дату и время.
+    /// </summary>
+    private sealed class TimedTraceListener : TextWriterTraceListener
+    {
+        public TimedTraceListener(TextWriter writer) : base(writer)
+        {
+        }
+
+        public override void WriteLine(string? message)
+        {
+            base.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}");
         }
     }
 }

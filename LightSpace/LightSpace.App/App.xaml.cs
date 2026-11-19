@@ -74,6 +74,9 @@ public partial class App : Application
         _tray?.Dispose();
         _viewModel?.Shutdown();
         _viewModel?.Settings.SaveNow();
+
+        // Без этой строки после запуска в журнале — приложение не вышло само, а упало
+        Trace.WriteLine($"Light Space {UpdateCheck.Current}: выход");
     }
 
     private static void LogCrash(string where, object error)
