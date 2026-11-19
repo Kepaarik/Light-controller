@@ -207,11 +207,17 @@ public sealed class FrameLoop : IDisposable
         {
             if (!playbacks.TryGetValue(group.Id, out var playback))
             {
-                playbacks[group.Id] = new GroupPlayback(group.Active);
+                playbacks[group.Id] = new GroupPlayback(group.Active) { IsDark = group.Brightness == 0 };
                 continue;
             }
 
-            if (playback.Advance(group.Active, seconds, sources))
+            var wasDark = playback.IsDark;
+            playback.IsDark = group.Brightness == 0;
+
+            // Встроенный эффект после чёрного кадра запускается со сброса — иначе контроллер ELK теряет запуск и остаётся чёрным
+            var isLitAgain = wasDark && !playback.IsDark && group.Active.Builtin != null;
+
+            if (playback.Advance(group.Active, seconds, sources) || isLitAgain)
                 ResetDevices(group);
         }
 
@@ -264,6 +270,26 @@ public sealed class FrameLoop : IDisposable
 
             foreach (var device in group.Devices)
             {
+                // Нулевая яркость гасит устройство целиком: и кадры, и встроенный эффект, который свою яркость может не уметь
+                if (group.Brightness == 0)
+                {
+                    var dark = new RgbColor[Math.Max(device.Geometry.Points.Count, 1)];
+
+                    try
+                    {
+                        device.Output.Submit(device.Geometry.IsAddressable ? OutputFrame.PerLed(dark, 0) : OutputFrame.Solid(dark[0], 0));
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Устройство отключили в потоке окна; новый снимок без него придёт со следующим кадром
+                    }
+
+                    if (live != null)
+                        live[device.Id] = new LiveDeviceColors(dark, 0);
+
+                    continue;
+                }
+
                 // Встроенный эффект устройство играет само: ему уходит запуск эффекта, а не кадр. Живых цветов у него нет
                 if (builtin?.StartFor(device.Id, device.Output.Device, group.Brightness) is { } start)
                 {
@@ -401,6 +427,11 @@ public sealed class FrameLoop : IDisposable
         public FrameContent Content { get; private set; }
 
         public EffectClock Clock { get; private set; }
+
+        /// <summary>
+        /// Яркость группы на прошлом кадре была нулевой: её устройства погашены чёрным кадром.
+        /// </summary>
+        public bool IsDark { get; set; }
 
         /// <summary>
         /// Встроенный эффект, который устройства группы играют сами; null — играет что-то другое.
