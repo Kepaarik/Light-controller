@@ -53,6 +53,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     private string? _firmware;
     private byte? _sentBrightness;
 
+    // Встроенный эффект и скорость, которые сейчас играет лента; null — она показывает цвет, кадры или выключена
+    private (int EffectId, int Speed)? _playingBuiltin;
+
     // Отдельной команды включения у ленты нет: включение — это повторная отправка последнего цвета
     private RgbColor _lastColor = RgbColor.White;
     private int _lastBrightness = 100;
@@ -104,6 +107,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
     public override async Task SetPowerAsync(bool isOn, CancellationToken ct = default)
     {
+        // После включения эффект запускается заново целиком
+        _playingBuiltin = null;
+
         if (isOn)
         {
             await SetColorAsync(_lastColor, _lastBrightness, ct);
@@ -121,6 +127,8 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
     public override async Task SetColorAsync(RgbColor color, int brightness, CancellationToken ct = default)
     {
+        // Цвет останавливает встроенный эффект
+        _playingBuiltin = null;
         _lastColor = color;
         _lastBrightness = brightness;
 
@@ -130,6 +138,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
     public async Task SetLedColorsAsync(IReadOnlyList<RgbColor> colors, int brightness, CancellationToken ct = default)
     {
+        // Кадр останавливает встроенный эффект
+        _playingBuiltin = null;
+
         // Каждый диапазон — пять байт: первый светодиод (с 1), R, G, B, последний светодиод
         var payload = MergeRanges(colors, MaxColorRanges)
             .SelectMany(r => new[] { (byte)r.Start, r.Color.R, r.Color.G, r.Color.B, (byte)r.End })
@@ -140,14 +151,22 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     }
 
     /// <summary>
-    /// Лента играет эффект своими цветами: меняется только скорость.
+    /// Лента играет эффект своими цветами: меняются скорость и яркость. Если тот же эффект с той же скоростью уже играет,
+    /// меняется только яркость — эффект не начинается заново.
     /// </summary>
     public async Task StartBuiltinEffectAsync(int effectId, int speed, int brightness, RgbColor? color, CancellationToken ct = default)
     {
-        await SendAsync(new[] { CommandSetEffect, EffectCategoryDynamic, (byte)effectId }, ct);
+        if (_playingBuiltin != (effectId, speed))
+        {
+            await SendAsync(new[] { CommandSetEffect, EffectCategoryDynamic, (byte)effectId }, ct);
 
-        // Лента ждёт обратную шкалу: 0 — быстро, 100 — медленно
-        await SendAsync(new[] { CommandSetEffectSpeed, (byte)(100 - Math.Clamp(speed, 0, 100)) }, ct);
+            // Лента ждёт обратную шкалу: 0 — быстро, 100 — медленно
+            await SendAsync(new[] { CommandSetEffectSpeed, (byte)(100 - Math.Clamp(speed, 0, 100)) }, ct);
+
+            _playingBuiltin = (effectId, speed);
+        }
+
+        await SendBrightnessAsync(brightness, ct);
     }
 
     /// <summary>
@@ -155,6 +174,8 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     /// </summary>
     public override async Task ResetAsync(CancellationToken ct = default)
     {
+        _playingBuiltin = null;
+
         await SendAsync(new[] { CommandTurnOff }, ct);
         await SendColorAsync(new RgbColor(0, 0, 0), ct);
     }

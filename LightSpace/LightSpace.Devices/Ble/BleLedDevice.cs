@@ -36,6 +36,9 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
     private readonly ulong _address;
     private int? _sentBrightness;
 
+    // Встроенный эффект и скорость, которые сейчас играет контроллер; null — он показывает цвет или выключен
+    private (int EffectId, int Speed)? _playingBuiltin;
+
     public BleLedDevice(BluetoothLEDevice device, GattCharacteristic characteristic, BleVariant variant, string name)
     {
         _device = device;
@@ -70,6 +73,9 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
 
     public override Task SetPowerAsync(bool isOn, CancellationToken ct = default)
     {
+        // После включения эффект запускается заново целиком
+        _playingBuiltin = null;
+
         var command = _variant switch
         {
             BleVariant.ElkBledom when isOn => new byte[] { 0x7E, 0x04, 0x04, 0xF0, 0x00, 0x01, 0xFF, 0x00, 0xEF },
@@ -83,6 +89,9 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
 
     public override async Task SetColorAsync(RgbColor color, int brightness, CancellationToken ct = default)
     {
+        // Цвет останавливает встроенный эффект
+        _playingBuiltin = null;
+
         // У известной модели есть своя яркость: без неё лента остаётся на яркости из приложения телефона
         if (_model != null)
         {
@@ -101,18 +110,31 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
     }
 
     /// <summary>
-    /// Лента играет эффект своими цветами и со своей яркостью: цвет и яркость не меняются.
+    /// Лента играет эффект своими цветами: цвет не меняется. Если тот же эффект с той же скоростью уже играет,
+    /// меняется только яркость — эффект не начинается заново.
     /// </summary>
     public async Task StartBuiltinEffectAsync(int effectId, int speed, int brightness, RgbColor? color, CancellationToken ct = default)
     {
         if (_model == null)
             throw new NotSupportedException("У этой модели нет известных встроенных эффектов");
 
-        await WriteAsync(ElkModel.EffectCommand(effectId), ct);
+        if (_playingBuiltin != (effectId, speed))
+        {
+            await WriteAsync(ElkModel.EffectCommand(effectId), ct);
 
-        // Некоторые контроллеры ELK теряют команду, пришедшую сразу за предыдущей
+            // Некоторые контроллеры ELK теряют команду, пришедшую сразу за предыдущей
+            await Task.Delay(150, ct);
+            await WriteAsync(ElkModel.EffectSpeedCommand(speed), ct);
+
+            _playingBuiltin = (effectId, speed);
+        }
+
+        if (brightness == _sentBrightness)
+            return;
+
         await Task.Delay(150, ct);
-        await WriteAsync(ElkModel.EffectSpeedCommand(speed), ct);
+        await WriteAsync(ElkModel.BrightnessCommand(brightness), ct);
+        _sentBrightness = brightness;
     }
 
     /// <summary>
@@ -120,6 +142,8 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
     /// </summary>
     public override async Task ResetAsync(CancellationToken ct = default)
     {
+        _playingBuiltin = null;
+
         await SetScaledColorAsync(new RgbColor(0, 0, 0), 0, ct);
 
         // Следом обычно идёт запуск встроенного эффекта — без паузы контроллер ELK его теряет и остаётся на цвете
