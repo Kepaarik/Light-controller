@@ -22,10 +22,33 @@ public sealed partial class ProfileOption : ObservableObject
         _findDevice = findDevice;
         _changed = changed;
 
+        Editor = new EffectEditorViewModel(OnEditorChanged);
+
         Reload();
     }
 
     public ProfileConfig Settings { get; }
+
+    /// <summary>
+    /// Галерея эффектов для устройства, открытого в профиле; правит профиль, а не то, что играет на устройстве.
+    /// </summary>
+    public EffectEditorViewModel Editor { get; }
+
+    /// <summary>
+    /// Устройство, эффект которого выбирают в профиле; null — галерея закрыта.
+    /// </summary>
+    [ObservableProperty]
+    private ProfileDeviceViewModel? _editedDevice;
+
+    public bool HasEditedDevice => EditedDevice != null;
+
+    partial void OnEditedDeviceChanged(ProfileDeviceViewModel? value)
+    {
+        Editor.Edit(value?.Lighting.DefaultContent);
+        Editor.IsPlaying = value?.Lighting.DefaultContent.Kind == ContentKind.Effect;
+
+        OnPropertyChanged(nameof(HasEditedDevice));
+    }
 
     /// <summary>
     /// Сейчас играет этот профиль: его применили или записали в него текущую подсветку, и с тех пор её не меняли.
@@ -76,10 +99,12 @@ public sealed partial class ProfileOption : ObservableObject
     /// </summary>
     public void Reload()
     {
+        // Открытое устройство пересоздаётся вместе с остальными — галерея закрывается
+        EditedDevice = null;
         Devices.Clear();
 
         foreach (var lighting in Settings.DeviceLighting)
-            Devices.Add(new ProfileDeviceViewModel(lighting, _findDevice(lighting.DeviceIds[0]), OnDeviceChanged, Remove));
+            Devices.Add(new ProfileDeviceViewModel(lighting, _findDevice(lighting.DeviceIds[0]), OnDeviceChanged, Remove, Edit));
 
         OnPropertyChanged(nameof(DevicesText));
         OnPropertyChanged(nameof(SummaryText));
@@ -91,8 +116,34 @@ public sealed partial class ProfileOption : ObservableObject
         _changed();
     }
 
+    /// <summary>
+    /// Открывает галерею для устройства; повторный щелчок по тому же устройству её закрывает.
+    /// </summary>
+    private void Edit(ProfileDeviceViewModel device)
+    {
+        EditedDevice = EditedDevice == device ? null : device;
+    }
+
+    /// <summary>
+    /// В галерее выбрали эффект или поменяли его настройки: устройство в профиле играет эффект из галереи.
+    /// </summary>
+    private void OnEditorChanged()
+    {
+        if (EditedDevice == null)
+            return;
+
+        EditedDevice.Lighting.DefaultContent.Kind = ContentKind.Effect;
+        Editor.IsPlaying = true;
+        EditedDevice.RefreshContent();
+
+        OnDeviceChanged();
+    }
+
     private void Remove(ProfileDeviceViewModel device)
     {
+        if (EditedDevice == device)
+            EditedDevice = null;
+
         Settings.DeviceLighting.Remove(device.Lighting);
         Devices.Remove(device);
 
