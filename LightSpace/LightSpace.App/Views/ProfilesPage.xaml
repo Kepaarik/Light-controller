@@ -139,6 +139,17 @@
                                             Visibility="{Binding Scene.HasScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                         <StackPanel>
                                             <TextBlock Text="Эффект сцены" Style="{StaticResource CardTitle}"/>
+
+                                            <!-- У каких-то устройств свой эффект: одной кнопкой вся сцена играет эффект сцены -->
+                                            <DockPanel Margin="{StaticResource GapBottom12}"
+                                                       Visibility="{Binding Scene.HasOwnEffects, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                                <Button DockPanel.Dock="Right" Content="Всем устройствам" controls:Appearance.Icon="&#xE8B3;"
+                                                        VerticalAlignment="Center" Margin="{StaticResource GapLeft12}"
+                                                        ToolTip="Выключить свой эффект у всех устройств сцены" Command="{Binding Scene.PlaySceneEffectEverywhereCommand}"/>
+                                                <TextBlock Style="{StaticResource Hint}" VerticalAlignment="Center"
+                                                           Text="У некоторых устройств свой эффект — они играют его, а не эффект сцены."/>
+                                            </DockPanel>
+
                                             <views:EffectEditor DataContext="{Binding Scene.Editor}" ShowsSettings="{Binding IsPlaying}"/>
                                         </StackPanel>
                                     </Border>

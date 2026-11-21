@@ -15,7 +15,10 @@
         <StackPanel>
             <DockPanel>
                 <Button DockPanel.Dock="Right" Style="{StaticResource DangerButton}" Content="Удалить сцену" controls:Appearance.Icon="&#xE74D;"
-                        VerticalAlignment="Center" Command="{Binding RemoveCommand}"/>
+                        VerticalAlignment="Center" Margin="{StaticResource GapLeft8}" Command="{Binding RemoveCommand}"/>
+                <!-- Эффект всей сцены открывается справа вместо настроек выбранного устройства -->
+                <Button DockPanel.Dock="Right" Content="Эффект сцены" controls:Appearance.Icon="&#xE790;"
+                        VerticalAlignment="Center" Command="{Binding ShowEffectCommand}"/>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Сцена" Style="{StaticResource CardTitle}" Margin="{StaticResource SpaceNone}"/>
                     <TextBlock Text="{Binding SummaryText}" Style="{StaticResource Hint}" TextTrimming="CharacterEllipsis"/>

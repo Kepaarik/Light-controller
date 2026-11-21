@@ -237,6 +237,31 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Открывает эффект всей сцены: выбор устройства снимается, справа — галерея эффекта сцены.
+    /// </summary>
+    [RelayCommand]
+    private void ShowEffect()
+    {
+        Pick(null);
+    }
+
+    /// <summary>
+    /// У каких-то устройств сцены свой эффект: они не играют эффект сцены.
+    /// </summary>
+    public bool HasOwnEffects => Devices.Any(d => d.HasOwnEffect);
+
+    /// <summary>
+    /// Выключает свой эффект у всех устройств: вся сцена играет один эффект сцены. Свои эффекты не забываются —
+    /// включённый снова, у устройства тот же эффект, что был.
+    /// </summary>
+    [RelayCommand]
+    private void PlaySceneEffectEverywhere()
+    {
+        foreach (var device in Devices)
+            device.HasOwnEffect = false;
+    }
+
+    /// <summary>
     /// Поворачивает выбранное устройство на четверть оборота.
     /// </summary>
     [RelayCommand]
@@ -274,6 +299,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     /// </summary>
     public void OnPlacementChanged()
     {
+        OnPropertyChanged(nameof(HasOwnEffects));
         Render();
         _changed();
     }
@@ -323,6 +349,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
         OnPropertyChanged(nameof(HasScene));
         OnPropertyChanged(nameof(HasDevices));
+        OnPropertyChanged(nameof(HasOwnEffects));
         OnPropertyChanged(nameof(IsSynced));
         OnPropertyChanged(nameof(IsSpaceSpread));
         OnPropertyChanged(nameof(SelectedDirection));
@@ -414,6 +441,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
     private void OnSceneChanged()
     {
+        OnPropertyChanged(nameof(HasOwnEffects));
         Render();
         _changed();
     }

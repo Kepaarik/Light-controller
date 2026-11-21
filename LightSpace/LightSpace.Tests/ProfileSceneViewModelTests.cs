@@ -279,6 +279,40 @@ public sealed class ProfileSceneViewModelTests
     }
 
     [Fact]
+    public void WholeSceneGetsSceneEffectBack()
+    {
+        var (scene, profile, _) = SceneOf("a", "b");
+        var picked = new List<string?>();
+
+        scene.BuildCommand.Execute(null);
+        scene.DevicePicked += picked.Add;
+
+        Assert.False(scene.HasOwnEffects);
+
+        scene.Devices[0].HasOwnEffect = true;
+        scene.Devices[1].Content.Editor.SelectedTile = scene.Devices[1].Content.Editor.Tiles.Single(t => t.Definition.Id == "fire");
+
+        Assert.True(scene.HasOwnEffects);
+
+        // «Эффект сцены» снимает выбор устройства
+        scene.SelectedDevice = scene.Devices[0];
+        scene.ShowEffectCommand.Execute(null);
+
+        Assert.Null(scene.SelectedDevice);
+        Assert.Equal(new string?[] { null }, picked);
+
+        // «Всем устройствам» — вся сцена играет эффект сцены, свои эффекты не забываются
+        scene.PlaySceneEffectEverywhereCommand.Execute(null);
+
+        Assert.False(scene.HasOwnEffects);
+        Assert.All(profile.Scene!.Devices, d => Assert.Null(d.Effect));
+
+        scene.Devices[1].HasOwnEffect = true;
+
+        Assert.Equal("fire", profile.Scene.Devices[1].Effect!.EffectId);
+    }
+
+    [Fact]
     public void DeviceWithBuiltinEffectIsGrayInPreview()
     {
         var (scene, profile, _) = SceneOf("a");
