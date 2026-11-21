@@ -16,6 +16,9 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
 {
     private readonly Action _changed;
 
+    // Свой эффект устройства; пока устройство играет эффект сцены — тот, что включится при выборе в галерее
+    private readonly ContentConfig _ownEffect;
+
     /// <summary>
     /// icon — значок устройства, как в левом меню; own — собственное пространство устройства: по нему расставляются
     /// светодиоды на холсте; monitor — монитор, за которым висит лента; findDevice находит устройство для его
@@ -33,17 +36,19 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
         _changed = changed;
         Colors = new RgbColor[Math.Max(own.Points.Count, 1)];
 
-        Content = new DeviceContentViewModel(findDevice, changed);
-        Content.Edit(placement.Effect, placement.DeviceId);
+        _ownEffect = placement.Effect ?? new ContentConfig { Kind = ContentKind.Effect };
+
+        Content = new DeviceContentViewModel(findDevice, OnContentChanged);
+        Content.Edit(_ownEffect, placement.DeviceId, placement.Effect != null);
     }
 
     /// <summary>
-    /// Свой эффект устройства в сцене: галерея и встроенные эффекты устройства.
+    /// Свой эффект устройства в сцене: галерея и встроенные эффекты устройства. Выбор в них включает свой эффект.
     /// </summary>
     public DeviceContentViewModel Content { get; }
 
     /// <summary>
-    /// Устройство играет свой эффект, а не эффект сцены. Только что включённый свой эффект — сплошной цвет из галереи.
+    /// Устройство играет свой эффект, а не эффект сцены. Выключенный и снова включённый свой эффект — тот же, что был.
     /// </summary>
     public bool HasOwnEffect
     {
@@ -53,12 +58,26 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
             if (value == HasOwnEffect)
                 return;
 
-            Placement.Effect = value ? new ContentConfig { Kind = ContentKind.Effect } : null;
-            Content.Edit(Placement.Effect, Placement.DeviceId);
+            Placement.Effect = value ? _ownEffect : null;
+            Content.Edit(_ownEffect, Placement.DeviceId, value);
 
             OnPropertyChanged();
             _changed();
         }
+    }
+
+    /// <summary>
+    /// В галерее или во встроенных эффектах что-то выбрали или поменяли: устройство играет свой эффект.
+    /// </summary>
+    private void OnContentChanged()
+    {
+        if (Placement.Effect == null)
+        {
+            Placement.Effect = _ownEffect;
+            OnPropertyChanged(nameof(HasOwnEffect));
+        }
+
+        _changed();
     }
 
     /// <summary>

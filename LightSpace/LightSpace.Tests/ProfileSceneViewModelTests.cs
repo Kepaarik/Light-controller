@@ -250,6 +250,35 @@ public sealed class ProfileSceneViewModelTests
     }
 
     [Fact]
+    public void PickingEffectTurnsOnOwnEffect()
+    {
+        var (scene, profile, edits) = SceneOf("a");
+
+        scene.BuildCommand.Execute(null);
+
+        var device = scene.Devices[0];
+
+        // Пока играет эффект сцены, в галерее ничего не выделено
+        Assert.False(device.Content.Editor.IsPlaying);
+
+        device.Content.Editor.SelectedTile = device.Content.Editor.Tiles.Single(t => t.Definition.Id == "fire");
+
+        Assert.True(device.HasOwnEffect);
+        Assert.True(device.Content.Editor.IsPlaying);
+        Assert.Equal("fire", profile.Scene!.Devices[0].Effect!.EffectId);
+        Assert.Equal(2, edits.Count);
+
+        // Выключенный и снова включённый свой эффект — тот же
+        device.HasOwnEffect = false;
+
+        Assert.False(device.Content.Editor.IsPlaying);
+
+        device.HasOwnEffect = true;
+
+        Assert.Equal("fire", profile.Scene.Devices[0].Effect!.EffectId);
+    }
+
+    [Fact]
     public void DeviceWithBuiltinEffectIsGrayInPreview()
     {
         var (scene, profile, _) = SceneOf("a");

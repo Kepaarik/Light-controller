@@ -173,7 +173,20 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- Место устройства в сцене: играет ли оно её, вид, яркость в сцене и свой эффект -->
+                                    <!-- Эффект устройства в сцене: галерея и встроенные эффекты видны сразу, выбор в них включает свой эффект -->
+                                    <StackPanel Visibility="{Binding IsEditedInScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                        <TextBlock Text="Эффект" Style="{StaticResource SectionLabel}"/>
+                                        <Border Style="{StaticResource Card}">
+                                            <StackPanel>
+                                                <CheckBox Content="Свой эффект" IsChecked="{Binding EditedSceneDevice.HasOwnEffect}" HorizontalAlignment="Left"/>
+                                                <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"
+                                                           Text="Выключено — устройство играет эффект сцены. Выберите эффект ниже, и устройство заиграет его вместо эффекта сцены."/>
+                                                <views:DeviceContentEditor DataContext="{Binding EditedSceneDevice.Content}" Margin="{StaticResource GapTop16}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- Место устройства в сцене: играет ли оно её, вид и яркость в сцене -->
                                     <StackPanel Visibility="{Binding Scene.HasScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                         <TextBlock Text="В сцене" Style="{StaticResource SectionLabel}"/>
                                         <Border Style="{StaticResource Card}">
@@ -196,14 +209,6 @@
                                                                           Visibility="{Binding EditedSceneDevice.IsHexagons, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                                                     <controls:ValueSlider Label="Яркость в сцене" Unit="%" Minimum="0" Maximum="100" Step="1"
                                                                           Value="{Binding EditedSceneDevice.Brightness}" Margin="{StaticResource GapTop16}"/>
-
-                                                    <CheckBox Content="Свой эффект" IsChecked="{Binding EditedSceneDevice.HasOwnEffect}"
-                                                              HorizontalAlignment="Left" Margin="{StaticResource GapTop16}"/>
-                                                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"
-                                                               Text="Выключено — устройство играет эффект сцены. Включено — свой эффект из галереи или встроенный эффект устройства."/>
-                                                    <StackPanel Visibility="{Binding EditedSceneDevice.HasOwnEffect, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                                                        <views:DeviceContentEditor DataContext="{Binding EditedSceneDevice.Content}" Margin="{StaticResource GapTop8}"/>
-                                                    </StackPanel>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Border>

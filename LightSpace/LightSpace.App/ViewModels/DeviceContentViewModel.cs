@@ -14,6 +14,7 @@ public sealed class DeviceContentViewModel : ObservableObject
     private readonly Action _changed;
 
     private ContentConfig? _content;
+    private bool _isPlaying;
 
     /// <summary>
     /// findDevice находит известное устройство: встроенные эффекты есть только у подключённого. changed вызывается
@@ -40,14 +41,16 @@ public sealed class DeviceContentViewModel : ObservableObject
     /// <summary>
     /// Играет встроенный эффект устройства — видны его настройки.
     /// </summary>
-    public bool IsBuiltinPlaying => _content?.Kind == ContentKind.Builtin;
+    public bool IsBuiltinPlaying => _isPlaying && _content?.Kind == ContentKind.Builtin;
 
     /// <summary>
-    /// Открывает для правки содержимое устройства deviceId; null — ничего не открыто.
+    /// Открывает для правки содержимое устройства deviceId; null — ничего не открыто. isPlaying false — содержимое
+    /// пока не играет, например устройство играет эффект сцены: ни одна плитка не выделена, выбор любой включает его.
     /// </summary>
-    public void Edit(ContentConfig? content, string? deviceId)
+    public void Edit(ContentConfig? content, string? deviceId, bool isPlaying = true)
     {
         _content = content;
+        _isPlaying = isPlaying;
 
         Editor.Edit(content);
         Builtin.Edit(content, deviceId);
@@ -64,6 +67,7 @@ public sealed class DeviceContentViewModel : ObservableObject
             return;
 
         _content.Kind = kind;
+        _isPlaying = true;
 
         ShowPlaying();
         _changed();
@@ -74,8 +78,8 @@ public sealed class DeviceContentViewModel : ObservableObject
     /// </summary>
     private void ShowPlaying()
     {
-        Editor.IsPlaying = _content?.Kind == ContentKind.Effect;
-        Builtin.IsPlaying = _content?.Kind == ContentKind.Builtin;
+        Editor.IsPlaying = _isPlaying && _content?.Kind == ContentKind.Effect;
+        Builtin.IsPlaying = _isPlaying && _content?.Kind == ContentKind.Builtin;
 
         OnPropertyChanged(nameof(IsBuiltinPlaying));
     }
