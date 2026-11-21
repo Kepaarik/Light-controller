@@ -15,10 +15,16 @@
             <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}" TextWrapping="Wrap"
                        Text="Лента вокруг монитора, пока её группа играет «Экран», повторяет цвета именно этого монитора: обычная лента — средним цветом картинки, адресная — цветами краёв по раскладке. Лента без монитора берёт экран по своему месту на сцене."/>
 
-            <ItemsControl ItemsSource="{Binding Items}">
+            <!-- Карточки мониторов колонками, сколько влезает по ширине окна -->
+            <ItemsControl ItemsSource="{Binding Items}" Margin="{StaticResource GapTop16}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <controls:CardColumnsPanel MinColumnWidth="{StaticResource MonitorCardMinWidth}"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:MonitorItemViewModel}">
-                        <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
+                        <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE7F4;" Style="{StaticResource Icon}" Foreground="{DynamicResource AccentBrush}"

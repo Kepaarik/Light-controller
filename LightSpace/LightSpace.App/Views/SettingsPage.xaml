@@ -26,15 +26,28 @@
                 </DockPanel>
             </Border>
 
-            <!-- Карточки в две колонки: слева то, чем пользуются чаще, — подсветка, запуск и версия; справа внешний вид и стекло -->
-            <Grid Margin="{StaticResource GapTop24}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="16"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+            <!-- Карточки колонками, сколько влезает по ширине окна. Сначала то, чем пользуются чаще, — подсветка;
+                 в две колонки слева подсветка, запуск и версия, справа внешний вид и стекло -->
+            <controls:CardColumnsPanel MinColumnWidth="{StaticResource SettingsCardMinWidth}" Margin="{StaticResource GapTop24}">
+            <!-- Подсветка -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Подсветка" Style="{StaticResource CardTitle}"/>
+                    <CheckBox IsChecked="{Binding LightingEnabled}">
+                        <StackPanel>
+                            <TextBlock Text="Подсветка включена" Style="{StaticResource Body}"/>
+                            <TextBlock Text="Выключает свет на всех устройствах сразу; то же есть в меню значка в трее"
+                                       Style="{StaticResource Hint}" Margin="{StaticResource GapTextPair}"/>
+                        </StackPanel>
+                    </CheckBox>
 
-            <StackPanel Grid.Column="2">
+                    <controls:ValueSlider Label="Общая яркость" Unit="%" Minimum="0" Maximum="100" Step="1" Margin="{StaticResource GapTop16}"
+                                          Value="{Binding DataContext.MasterBrightness, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                    <TextBlock Text="Приглушает все устройства разом, их собственная яркость не меняется"
+                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
+                </StackPanel>
+            </Border>
+
             <!-- Внешний вид -->
             <Border Style="{StaticResource Card}">
                 <StackPanel>
@@ -52,8 +65,23 @@
                 </StackPanel>
             </Border>
 
+            <!-- Приложение -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Запуск" Style="{StaticResource CardTitle}"/>
+                    <CheckBox IsChecked="{Binding StartWithWindows}">
+                        <StackPanel>
+                            <TextBlock Text="Запускать вместе с Windows" Style="{StaticResource Body}"/>
+                            <TextBlock Text="Light Space стартует сразу в трей, без окна" Style="{StaticResource Hint}" Margin="{StaticResource GapTextPair}"/>
+                        </StackPanel>
+                    </CheckBox>
+                    <TextBlock Text="Свернуть — окно прячется в трей, подсветка продолжает работать. Закрыть — приложение завершается."
+                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop16}"/>
+                </StackPanel>
+            </Border>
+
             <!-- Тонированное стекло: пресет как отправная точка, дальше — ползунки -->
-            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
+            <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="Стекло" Style="{StaticResource CardTitle}"/>
                     <TextBlock Text="Готовые варианты" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom8}"/>
@@ -105,52 +133,15 @@
                     </Expander>
                 </StackPanel>
             </Border>
-            </StackPanel>
-
-            <StackPanel Grid.Column="0">
-            <!-- Подсветка -->
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="Подсветка" Style="{StaticResource CardTitle}"/>
-                    <CheckBox IsChecked="{Binding LightingEnabled}">
-                        <StackPanel>
-                            <TextBlock Text="Подсветка включена" Style="{StaticResource Body}"/>
-                            <TextBlock Text="Выключает свет на всех устройствах сразу; то же есть в меню значка в трее"
-                                       Style="{StaticResource Hint}" Margin="{StaticResource GapTextPair}"/>
-                        </StackPanel>
-                    </CheckBox>
-
-                    <controls:ValueSlider Label="Общая яркость" Unit="%" Minimum="0" Maximum="100" Step="1" Margin="{StaticResource GapTop16}"
-                                          Value="{Binding DataContext.MasterBrightness, RelativeSource={RelativeSource AncestorType=Window}}"/>
-                    <TextBlock Text="Приглушает все устройства разом, их собственная яркость не меняется"
-                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Приложение -->
-            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
-                <StackPanel>
-                    <TextBlock Text="Запуск" Style="{StaticResource CardTitle}"/>
-                    <CheckBox IsChecked="{Binding StartWithWindows}">
-                        <StackPanel>
-                            <TextBlock Text="Запускать вместе с Windows" Style="{StaticResource Body}"/>
-                            <TextBlock Text="Light Space стартует сразу в трей, без окна" Style="{StaticResource Hint}" Margin="{StaticResource GapTextPair}"/>
-                        </StackPanel>
-                    </CheckBox>
-                    <TextBlock Text="Свернуть — окно прячется в трей, подсветка продолжает работать. Закрыть — приложение завершается."
-                               Style="{StaticResource Hint}" Margin="{StaticResource GapTop16}"/>
-                </StackPanel>
-            </Border>
 
             <!-- О приложении: версия; найденное обновление — в плашке наверху страницы -->
-            <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
+            <Border Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="О приложении" Style="{StaticResource CardTitle}"/>
                     <TextBlock Text="{Binding VersionText}" Style="{StaticResource Body}"/>
                 </StackPanel>
             </Border>
-            </StackPanel>
-            </Grid>
+            </controls:CardColumnsPanel>
 
             <!-- Скрытый раздел: подробный журнал устройств для разбора неполадок -->
             <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}"

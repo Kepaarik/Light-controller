@@ -144,6 +144,9 @@
     <GridLength x:Key="ListPaneWidth">300</GridLength>
     <!-- Панель эффекта сцены или выбранного устройства справа от сцены профиля растёт с окном, но не уже галереи в три плитки -->
     <sys:Double x:Key="ProfilePanelMinWidth">460</sys:Double>
+    <!-- Самые узкие колонки карточек: уже них колонок становится меньше. Карточка монитора шире — в ней две колонки полей -->
+    <sys:Double x:Key="SettingsCardMinWidth">380</sys:Double>
+    <sys:Double x:Key="MonitorCardMinWidth">640</sys:Double>
     <!-- Раскладка клавиатуры: сторона стандартной клавиши и зазор между клавишами -->
     <sys:Double x:Key="KeyUnitSize">32</sys:Double>
     <sys:Double x:Key="KeyGap">4</sys:Double>
