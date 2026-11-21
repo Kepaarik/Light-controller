@@ -338,9 +338,10 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     private SceneDeviceViewModel NewDevice(SceneDeviceConfig placement)
     {
         var device = _findDevice(placement.DeviceId);
+        var icon = device?.Settings.Icon ?? (device?.Capabilities?.IsKeyboard == true ? DeviceIcons.Keyboard : DeviceIcons.Strip);
 
-        return new SceneDeviceViewModel(placement, device?.Name ?? "Забытое устройство", device?.Geometry ?? DeviceGeometry.Single(placement.DeviceId),
-            OnPlacementChanged);
+        return new SceneDeviceViewModel(placement, device?.Name ?? "Забытое устройство", icon,
+            device?.Geometry ?? DeviceGeometry.Single(placement.DeviceId), OnPlacementChanged);
     }
 
     /// <summary>

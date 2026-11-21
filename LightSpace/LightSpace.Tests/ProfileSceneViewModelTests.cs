@@ -158,6 +158,36 @@ public sealed class ProfileSceneViewModelTests
     }
 
     [Fact]
+    public void SingleColorDeviceIsDrawnAsStripOfItsLength()
+    {
+        var (scene, profile, _) = SceneOf("a");
+
+        scene.BuildCommand.Execute(null);
+
+        var placement = profile.Scene!.Devices[0];
+
+        placement.X = 0.5;
+        placement.Y = 0.5;
+        placement.Size = 0.4;
+
+        var (start, end) = scene.Devices[0].CanvasLine;
+
+        // Не подключённое устройство светится одним цветом, но на холсте у него есть длина
+        Assert.Empty(scene.Devices[0].CanvasPoints.Points);
+        Assert.Equal(0.3, start.X, 9);
+        Assert.Equal(0.7, end.X, 9);
+        Assert.Equal(0.5 * SceneConfig.CanvasHeight, start.Y, 9);
+        Assert.Equal(DeviceIcons.Strip, scene.Devices[0].Icon);
+
+        scene.Devices[0].Rotate();
+        (start, end) = scene.Devices[0].CanvasLine;
+
+        Assert.Equal(0.5, start.X, 9);
+        Assert.Equal(0.5 * SceneConfig.CanvasHeight - 0.2, start.Y, 9);
+        Assert.Equal(0.5 * SceneConfig.CanvasHeight + 0.2, end.Y, 9);
+    }
+
+    [Fact]
     public void DeviceMovesInsideCanvas()
     {
         var (scene, profile, _) = SceneOf("a");

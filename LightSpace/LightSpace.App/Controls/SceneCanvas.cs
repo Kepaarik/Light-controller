@@ -12,8 +12,9 @@ using LightSpace.Engine.Effects;
 namespace LightSpace.App.Controls;
 
 /// <summary>
-/// Холст сцены: устройства на своих местах с живыми цветами эффекта. Лента — линия точек, клавиатура — точки клавиш,
-/// устройство одного цвета — круг. Устройство перетаскивают мышью, колесо над выбранным меняет его размер.
+/// Холст сцены: устройства на своих местах с живыми цветами эффекта. Лента — полоса своей длины: адресная светится
+/// каждым светодиодом, лента одного цвета — целиком. Клавиатура — корпус с клавишами. Под каждым устройством —
+/// его значок и название. Устройство перетаскивают мышью, колесо над выбранным меняет его размер.
 /// </summary>
 public sealed class SceneCanvas : FrameworkElement
 {
@@ -27,14 +28,21 @@ public sealed class SceneCanvas : FrameworkElement
     // Шаг размера устройства на одно деление колеса, в процентах ширины холста
     private const double WheelSizeStep = 5;
 
-    // Насколько далеко от точки устройства щелчок ещё попадает в него, в пикселях
-    private const double HitDistance = 14;
+    // Насколько далеко от устройства щелчок ещё попадает в него, в пикселях
+    private const double HitDistance = 8;
+
+    // Примерно столько клавиш в ряду у полноразмерной клавиатуры: по нему считается размер клавиши на холсте
+    private const double KeysPerRow = 22;
 
     private static readonly Brush CanvasFill = Freeze(new SolidColorBrush(Color.FromRgb(0x1A, 0x1C, 0x24)));
     private static readonly Pen CanvasPen = Freeze(new Pen(Freeze(new SolidColorBrush(Color.FromRgb(0x3A, 0x3E, 0x4C))), 1.5));
-    private static readonly Pen StripPen = Freeze(new Pen(Freeze(new SolidColorBrush(Color.FromArgb(0x60, 0x8A, 0x8F, 0xA3))), 1));
+    private static readonly Brush BodyFill = Freeze(new SolidColorBrush(Color.FromRgb(0x2A, 0x2D, 0x38)));
+    private static readonly Pen BodyPen = Freeze(new Pen(Freeze(new SolidColorBrush(Color.FromRgb(0x4A, 0x4F, 0x60))), 1));
     private static readonly Pen SelectedPen = Freeze(new Pen(Brushes.White, 1.5) { DashStyle = DashStyles.Dash });
-    private static readonly Brush LabelText = Freeze(new SolidColorBrush(Color.FromRgb(0xC8, 0xCC, 0xD8)));
+    private static readonly Brush LabelFill = Freeze(new SolidColorBrush(Color.FromArgb(0xC0, 0x10, 0x11, 0x16)));
+    private static readonly Brush LabelText = Freeze(new SolidColorBrush(Color.FromRgb(0xE4, 0xE7, 0xEF)));
+    private static readonly Typeface LabelFont = new("Segoe UI Variable Text, Segoe UI");
+    private static readonly Typeface IconFont = new("Segoe Fluent Icons, Segoe MDL2 Assets");
 
     private readonly DispatcherTimer _timer;
     private readonly Stopwatch _clock = new();
@@ -111,7 +119,15 @@ public sealed class SceneCanvas : FrameworkElement
 
     private static Point ToScreen(EffectPixel pixel, Rect canvas)
     {
-        return new Point(canvas.X + pixel.X * canvas.Width, canvas.Y + pixel.Y * canvas.Width);
+        return ToScreen(new Point(pixel.X, pixel.Y), canvas);
+    }
+
+    /// <summary>
+    /// Точка холста (X от 0 до 1, Y от 0 до высоты холста) — в точку контрола.
+    /// </summary>
+    private static Point ToScreen(Point point, Rect canvas)
+    {
+        return new Point(canvas.X + point.X * canvas.Width, canvas.Y + point.Y * canvas.Width);
     }
 
     protected override void OnRender(DrawingContext dc)
@@ -132,53 +148,101 @@ public sealed class SceneCanvas : FrameworkElement
 
     private void DrawDevice(DrawingContext dc, SceneDeviceViewModel device, Rect canvas)
     {
-        var (points, center) = device.CanvasPoints;
-        var colors = device.Colors;
-        var centerPoint = ToScreen(center, canvas);
-
-        // Устройство одного цвета — круг в своей середине
-        if (points.Count == 0)
-        {
-            var radius = Math.Max(device.Placement.Size * canvas.Width / 6, 8);
-
-            dc.DrawEllipse(BrushOf(colors, 0), null, centerPoint, radius, radius);
-
-            if (device.IsSelected)
-                dc.DrawEllipse(null, SelectedPen, centerPoint, radius + 4, radius + 4);
-
-            DrawLabel(dc, device.Name, centerPoint + new Vector(0, radius + 12));
-            return;
-        }
-
-        var screenPoints = points.Select(p => p is { } pixel ? ToScreen(pixel, canvas) : (Point?)null).ToArray();
-        var placed = screenPoints.OfType<Point>().ToArray();
-
-        if (placed.Length == 0)
-            return;
-
-        var dotRadius = Math.Clamp(canvas.Width / 160, 2, 5);
-
-        // Лента — линия через свои светодиоды
-        if (device.Own.IsLinear && placed.Length > 1)
-            dc.DrawLine(StripPen, placed[0], placed[^1]);
-
-        for (var i = 0; i < screenPoints.Length; i++)
-        {
-            if (screenPoints[i] is { } point)
-                dc.DrawEllipse(BrushOf(colors, i), null, point, dotRadius, dotRadius);
-        }
-
-        var bounds = new Rect(placed[0], placed[0]);
-
-        foreach (var point in placed)
-            bounds.Union(point);
-
-        bounds.Inflate(dotRadius + 4, dotRadius + 4);
+        var bounds = device.Own.IsLinear ? DrawStrip(dc, device, canvas) : DrawKeyboard(dc, device, canvas);
 
         if (device.IsSelected)
-            dc.DrawRoundedRectangle(null, SelectedPen, bounds, 4, 4);
+        {
+            var outline = bounds;
 
-        DrawLabel(dc, device.Name, new Point(centerPoint.X, bounds.Bottom + 10));
+            outline.Inflate(5, 5);
+            dc.DrawRoundedRectangle(null, SelectedPen, outline, 6, 6);
+        }
+
+        DrawLabel(dc, device.Icon, device.Name, new Point(bounds.X + bounds.Width / 2, bounds.Bottom + 16));
+    }
+
+    /// <summary>
+    /// Толщина полосы ленты на холсте.
+    /// </summary>
+    private static double StripThickness(Rect canvas)
+    {
+        return Math.Clamp(canvas.Width / 70, 8, 14);
+    }
+
+    /// <summary>
+    /// Лента — полоса своей длины и поворота: адресная светится каждым светодиодом, лента одного цвета — целиком.
+    /// Возвращает прямоугольник вокруг полосы.
+    /// </summary>
+    private static Rect DrawStrip(DrawingContext dc, SceneDeviceViewModel device, Rect canvas)
+    {
+        var (start, end) = device.CanvasLine;
+        var from = ToScreen(start, canvas);
+        var to = ToScreen(end, canvas);
+        var thickness = StripThickness(canvas);
+        var (points, _) = device.CanvasPoints;
+
+        // Корпус ленты: светодиоды лежат на нём, у ленты одного цвета он виден ободком
+        dc.DrawLine(RoundPen(BodyFill, thickness + 4), from, to);
+
+        if (points.Count == 0)
+        {
+            dc.DrawLine(RoundPen(BrushOf(device.Colors, 0), thickness), from, to);
+        }
+        else
+        {
+            var radius = thickness / 2 - 1;
+
+            for (var i = 0; i < points.Count; i++)
+            {
+                if (points[i] is { } pixel)
+                    dc.DrawEllipse(BrushOf(device.Colors, i), null, ToScreen(pixel, canvas), radius, radius);
+            }
+        }
+
+        var bounds = new Rect(from, to);
+
+        bounds.Inflate(thickness / 2 + 2, thickness / 2 + 2);
+
+        return bounds;
+    }
+
+    /// <summary>
+    /// Клавиатура — корпус вокруг клавиш, каждая клавиша светится своим цветом. Возвращает прямоугольник корпуса.
+    /// </summary>
+    private static Rect DrawKeyboard(DrawingContext dc, SceneDeviceViewModel device, Rect canvas)
+    {
+        var (points, center) = device.CanvasPoints;
+        var keySize = Math.Max(device.Placement.Size * canvas.Width / KeysPerRow * 0.8, 2);
+        var placed = points.OfType<EffectPixel>().Select(p => ToScreen(p, canvas)).ToList();
+
+        if (placed.Count == 0)
+            placed.Add(ToScreen(center, canvas));
+
+        var body = new Rect(placed[0], placed[0]);
+
+        foreach (var point in placed)
+            body.Union(point);
+
+        body.Inflate(keySize, keySize);
+        dc.DrawRoundedRectangle(BodyFill, BodyPen, body, 6, 6);
+
+        for (var i = 0; i < points.Count; i++)
+        {
+            if (points[i] is not { } pixel)
+                continue;
+
+            var point = ToScreen(pixel, canvas);
+            var key = new Rect(point.X - keySize / 2, point.Y - keySize / 2, keySize, keySize);
+
+            dc.DrawRoundedRectangle(BrushOf(device.Colors, i), null, key, keySize / 5, keySize / 5);
+        }
+
+        return body;
+    }
+
+    private static Pen RoundPen(Brush brush, double thickness)
+    {
+        return Freeze(new Pen(brush, thickness) { StartLineCap = PenLineCap.Round, EndLineCap = PenLineCap.Round });
     }
 
     private static Brush BrushOf(IReadOnlyList<RgbColor> colors, int index)
@@ -188,25 +252,33 @@ public sealed class SceneCanvas : FrameworkElement
 
         var color = colors[index];
 
-        return new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B));
-    }
-
-    private void DrawLabel(DrawingContext dc, string text, Point center)
-    {
-        var formatted = new FormattedText(
-            text,
-            CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight,
-            new Typeface("Segoe UI Variable Text, Segoe UI"),
-            11,
-            LabelText,
-            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-
-        dc.DrawText(formatted, new Point(center.X - formatted.Width / 2, center.Y - formatted.Height / 2));
+        return Freeze(new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B)));
     }
 
     /// <summary>
-    /// Устройство под точкой: ближайшее, у которого середина или хоть один светодиод рядом; null — мимо.
+    /// Подпись устройства на подложке: значок и название, по середине center.
+    /// </summary>
+    private void DrawLabel(DrawingContext dc, string icon, string name, Point center)
+    {
+        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var glyph = new FormattedText(icon, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, IconFont, 12, LabelText, pixelsPerDip);
+        var text = new FormattedText(name, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, LabelFont, 11, LabelText, pixelsPerDip);
+
+        const double gap = 5;
+        const double padding = 6;
+
+        var width = glyph.Width + gap + text.Width + padding * 2;
+        var height = Math.Max(glyph.Height, text.Height) + 4;
+        var pill = new Rect(center.X - width / 2, center.Y - height / 2, width, height);
+
+        dc.DrawRoundedRectangle(LabelFill, null, pill, height / 2, height / 2);
+        dc.DrawText(glyph, new Point(pill.X + padding, center.Y - glyph.Height / 2));
+        dc.DrawText(text, new Point(pill.X + padding + glyph.Width + gap, center.Y - text.Height / 2));
+    }
+
+    /// <summary>
+    /// Устройство под точкой: лента — если точка рядом с её полосой, клавиатура — если внутри корпуса.
+    /// Из нескольких — ближайшее к своей середине; null — мимо.
     /// </summary>
     private SceneDeviceViewModel? DeviceAt(Point position, Rect canvas)
     {
@@ -218,22 +290,47 @@ public sealed class SceneCanvas : FrameworkElement
 
         foreach (var device in Scene.Devices)
         {
-            var (points, center) = device.CanvasPoints;
-            var reach = points.Count == 0 ? Math.Max(device.Placement.Size * canvas.Width / 6, 8) + 4 : HitDistance;
+            var (_, center) = device.CanvasPoints;
+            var isHit = device.Own.IsLinear ? IsNearStrip(device, position, canvas) : IsInsideKeyboard(device, position, canvas);
 
-            foreach (var pixel in points.OfType<EffectPixel>().Append(center))
+            if (!isHit)
+                continue;
+
+            var distance = (ToScreen(center, canvas) - position).Length;
+
+            if (distance < nearestDistance)
             {
-                var distance = (ToScreen(pixel, canvas) - position).Length;
-
-                if (distance <= reach && distance < nearestDistance)
-                {
-                    nearest = device;
-                    nearestDistance = distance;
-                }
+                nearest = device;
+                nearestDistance = distance;
             }
         }
 
         return nearest;
+    }
+
+    private static bool IsNearStrip(SceneDeviceViewModel device, Point position, Rect canvas)
+    {
+        var (start, end) = device.CanvasLine;
+        var from = ToScreen(start, canvas);
+        var line = ToScreen(end, canvas) - from;
+        var along = line.LengthSquared > 0 ? Math.Clamp(Vector.Multiply(position - from, line) / line.LengthSquared, 0, 1) : 0;
+        var nearestOnLine = from + line * along;
+
+        return (position - nearestOnLine).Length <= StripThickness(canvas) / 2 + HitDistance;
+    }
+
+    private static bool IsInsideKeyboard(SceneDeviceViewModel device, Point position, Rect canvas)
+    {
+        var (points, center) = device.CanvasPoints;
+        var keySize = Math.Max(device.Placement.Size * canvas.Width / KeysPerRow * 0.8, 2);
+        var body = new Rect(ToScreen(center, canvas), ToScreen(center, canvas));
+
+        foreach (var pixel in points.OfType<EffectPixel>())
+            body.Union(ToScreen(pixel, canvas));
+
+        body.Inflate(keySize + HitDistance, keySize + HitDistance);
+
+        return body.Contains(position);
     }
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)

@@ -1,3 +1,4 @@
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LightSpace.Core;
 using LightSpace.Core.Config;
@@ -15,13 +16,14 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     private readonly Action _resized;
 
     /// <summary>
-    /// own — собственное пространство устройства: по нему расставляются светодиоды на холсте.
-    /// resized вызывается, когда устройству поменяли размер.
+    /// icon — значок устройства, как в левом меню; own — собственное пространство устройства: по нему расставляются
+    /// светодиоды на холсте. resized вызывается, когда устройству поменяли размер.
     /// </summary>
-    public SceneDeviceViewModel(SceneDeviceConfig placement, string name, DeviceGeometry own, Action resized)
+    public SceneDeviceViewModel(SceneDeviceConfig placement, string name, string icon, DeviceGeometry own, Action resized)
     {
         Placement = placement;
         Name = name;
+        Icon = icon;
         Own = own;
         _resized = resized;
         Colors = new RgbColor[Math.Max(own.Points.Count, 1)];
@@ -35,6 +37,11 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     public string DeviceId => Placement.DeviceId;
 
     public string Name { get; }
+
+    /// <summary>
+    /// Значок устройства (символ Segoe Fluent Icons): выбранный пользователем или по типу устройства.
+    /// </summary>
+    public string Icon { get; }
 
     /// <summary>
     /// Собственное пространство устройства.
@@ -56,6 +63,22 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     /// Места светодиодов на холсте: X от 0 до 1, Y от 0 до высоты холста. У устройства одного цвета — только середина.
     /// </summary>
     public (IReadOnlyList<EffectPixel?> Points, EffectPixel Center) CanvasPoints => SceneSpace.Place(Own, Placement);
+
+    /// <summary>
+    /// Начало и конец ленты на холсте — и у адресной, и у ленты одного цвета: линия длиной в размер устройства через
+    /// его середину, повёрнутая вместе с ним.
+    /// </summary>
+    public (Point Start, Point End) CanvasLine
+    {
+        get
+        {
+            var radians = Placement.Angle * Math.PI / 180;
+            var half = new Vector(Math.Cos(radians), Math.Sin(radians)) * (Placement.Size / 2);
+            var center = new Point(Placement.X, Placement.Y * SceneConfig.CanvasHeight);
+
+            return (center - half, center + half);
+        }
+    }
 
     /// <summary>
     /// Ставит середину устройства в точку x, y холста в долях его ширины и высоты; середина не уходит за край.
