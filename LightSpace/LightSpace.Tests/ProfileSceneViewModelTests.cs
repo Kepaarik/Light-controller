@@ -17,7 +17,7 @@ public sealed class ProfileSceneViewModelTests
         Assert.False(scene.HasScene);
         Assert.Empty(scene.Members);
         Assert.Empty(scene.Devices);
-        Assert.Null(scene.SelectedSpread);
+        Assert.False(scene.IsSynced);
         Assert.Null(scene.SummaryText);
     }
 
@@ -69,7 +69,7 @@ public sealed class ProfileSceneViewModelTests
 
         scene.BuildCommand.Execute(null);
 
-        scene.SelectedSpread = scene.Spreads.Single(s => s.Value == SceneSpread.Synced);
+        scene.IsSynced = true;
         scene.SelectedDirection = scene.Directions.Single(d => d.Value == SceneDirection.BottomToTop);
         scene.Brightness = 35.4;
 
@@ -81,7 +81,7 @@ public sealed class ProfileSceneViewModelTests
 
         // Тот же выбор ещё раз — не правка
         scene.Brightness = 35;
-        scene.SelectedSpread = scene.Spreads.Single(s => s.Value == SceneSpread.Synced);
+        scene.IsSynced = true;
 
         Assert.Equal(4, edits.Count);
     }
@@ -122,6 +122,39 @@ public sealed class ProfileSceneViewModelTests
         scene.Devices[0].SizePercent = 500;
 
         Assert.Equal(SceneDeviceConfig.MaxSize, profile.Scene.Devices[0].Size);
+    }
+
+    [Fact]
+    public void SelectedDeviceLeavesScene()
+    {
+        var (scene, profile, edits) = SceneOf("a", "b");
+
+        scene.BuildCommand.Execute(null);
+        scene.SelectedDevice = scene.Devices[0];
+
+        scene.RemoveSelectedCommand.Execute(null);
+
+        Assert.Equal("b", Assert.Single(profile.Scene!.Devices).DeviceId);
+        Assert.Equal("b", Assert.Single(scene.Devices).DeviceId);
+        Assert.Null(scene.SelectedDevice);
+        Assert.False(scene.Members.Single(m => m.DeviceId == "a").IsIncluded);
+        Assert.Equal(2, edits.Count);
+    }
+
+    [Fact]
+    public void ForgottenDeviceLeavesScene()
+    {
+        var (scene, profile, _) = SceneOf("a");
+
+        scene.BuildCommand.Execute(null);
+        profile.Scene!.Devices.Add(new SceneDeviceConfig { DeviceId = "забытое" });
+        scene.Reload();
+        scene.SelectedDevice = scene.Devices.Single(d => d.DeviceId == "забытое");
+
+        scene.RemoveSelectedCommand.Execute(null);
+
+        Assert.Equal("a", Assert.Single(profile.Scene.Devices).DeviceId);
+        Assert.Equal("a", Assert.Single(scene.Devices).DeviceId);
     }
 
     [Fact]

@@ -16,7 +16,7 @@
 
         <!-- Откуда звук: источник и устройство -->
         <TextBlock Text="Звук" Style="{StaticResource SectionLabel}"/>
-        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Inputs}" SelectedItem="{Binding SelectedInput}"/>
+        <CheckBox Content="Микрофон вместо системного звука" IsChecked="{Binding IsMicrophone}" HorizontalAlignment="Left"/>
         <controls:SearchPicker ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
                                OpenCommand="{Binding RefreshDevicesCommand}" Placeholder="Выберите устройство"
                                Margin="{StaticResource GapTop16}"/>
@@ -31,8 +31,7 @@
         <DockPanel>
             <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}" VerticalAlignment="Center"
                                   Visibility="{Binding IsSingleColor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ColorOptions}" SelectedItem="{Binding SelectedColors}"
-                     HorizontalAlignment="Left"/>
+            <CheckBox Content="Свой цвет вместо радуги" IsChecked="{Binding IsSingleColor}" HorizontalAlignment="Left"/>
         </DockPanel>
 
         <TextBlock Text="Отклик" Style="{StaticResource SectionLabel}"/>

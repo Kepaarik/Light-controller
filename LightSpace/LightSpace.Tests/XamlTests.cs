@@ -241,11 +241,12 @@ public sealed class XamlTests
                 Assert.Contains(UiThread.Descendants<Button>(page), b => b.Content as string == "Удалить сцену" && b.IsVisible);
                 Assert.Contains(UiThread.Descendants<SceneCanvas>(editor), c => c.IsVisible);
 
-                // Выбранное на холсте устройство: видны поворот и размер
+                // Выбранное на холсте устройство: видны поворот, размер и выход из сцены
                 vm.Profiles[0].Scene.SelectedDevice = vm.Profiles[0].Scene.Devices[0];
                 window.UpdateLayout();
 
                 Assert.Contains(UiThread.Descendants<ValueSlider>(editor), s => s.Label == "Размер" && s.IsVisible);
+                Assert.Contains(UiThread.Descendants<Button>(editor), b => b.Content as string == "Убрать из сцены" && b.IsVisible);
 
                 vm.Profiles[0].RemoveSceneCommand.Execute(null);
                 window.UpdateLayout();

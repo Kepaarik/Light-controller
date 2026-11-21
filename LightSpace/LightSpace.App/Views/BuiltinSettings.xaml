@@ -35,8 +35,7 @@
         <!-- Цвет — только у устройств, которые умеют играть эффект одним цветом -->
         <StackPanel Visibility="{Binding IsColorShown, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
             <TextBlock Text="Цвета" Style="{StaticResource SectionLabel}"/>
-            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding ColorOptions}" SelectedItem="{Binding SelectedColors}"
-                     HorizontalAlignment="Left"/>
+            <CheckBox Content="Свой цвет вместо цветов эффекта" IsChecked="{Binding UseColor}" HorizontalAlignment="Left"/>
             <DockPanel Margin="{StaticResource GapTop8}"
                        Visibility="{Binding UseColor, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                 <controls:ColorPicker DockPanel.Dock="Right" SelectedColor="{Binding Color}"/>

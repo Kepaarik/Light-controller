@@ -9,20 +9,6 @@ using LightSpace.Engine;
 namespace LightSpace.App.ViewModels;
 
 /// <summary>
-/// Цвета встроенного эффекта в сегментах: свои цвета эффекта или один выбранный цвет.
-/// </summary>
-public sealed record BuiltinColorsOption(bool UseColor, string Title)
-{
-    public static readonly IReadOnlyList<BuiltinColorsOption> All = new BuiltinColorsOption[]
-    {
-        new(false, "Цвета эффекта"),
-        new(true, "Свой цвет")
-    };
-
-    public override string ToString() => Title;
-}
-
-/// <summary>
 /// Встроенный эффект со всеми его вариантами: в списке он один, вариант выбирается ползунком.
 /// </summary>
 /// <param name="Variants">Варианты эффекта по порядку; у эффекта без вариантов — он сам.</param>
@@ -280,28 +266,22 @@ public sealed partial class BuiltinEditorViewModel : ObservableObject
     /// </summary>
     public bool IsColorShown => _devices.Any(d => d.HasColor);
 
-    public IReadOnlyList<BuiltinColorsOption> ColorOptions => BuiltinColorsOption.All;
-
-    public BuiltinColorsOption? SelectedColors
+    /// <summary>
+    /// Эффекты играют одним своим цветом — тогда виден выбор цвета; false — цветами самого эффекта.
+    /// </summary>
+    public bool UseColor
     {
-        get => _builtin == null ? null : ColorOptions.First(o => o.UseColor == _builtin.UseColor);
+        get => _builtin?.UseColor == true;
         set
         {
-            // Сегменты сбрасывают выбор в null, когда пересобираются
-            if (value == null || _builtin == null || value.UseColor == _builtin.UseColor)
+            if (_builtin == null || value == _builtin.UseColor)
                 return;
 
-            _builtin.UseColor = value.UseColor;
+            _builtin.UseColor = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(UseColor));
             _changed();
         }
     }
-
-    /// <summary>
-    /// Эффекты играют одним цветом — тогда виден выбор цвета.
-    /// </summary>
-    public bool UseColor => _builtin?.UseColor == true;
 
     public RgbColor Color
     {
@@ -349,7 +329,6 @@ public sealed partial class BuiltinEditorViewModel : ObservableObject
 
         RefreshDevices();
         OnPropertyChanged(nameof(IsOneDevice));
-        OnPropertyChanged(nameof(SelectedColors));
         OnPropertyChanged(nameof(UseColor));
         OnPropertyChanged(nameof(Color));
         OnPropertyChanged(nameof(Speed));

@@ -30,19 +30,21 @@
         <TextBlock Text="Холст" Style="{StaticResource SectionLabel}"/>
         <Border Style="{StaticResource Card}">
             <StackPanel>
-                <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Spreads}" SelectedItem="{Binding SelectedSpread}"/>
+                <CheckBox Content="Синхронно" IsChecked="{Binding IsSynced}" HorizontalAlignment="Left"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
-                           Text="«По пространству» — эффект идёт по холсту и переходит с устройства на устройство. «Синхронно» — каждое устройство играет эффект целиком, все в такт."/>
+                           Text="Выключено — эффект идёт по холсту и переходит с устройства на устройство. Включено — каждое устройство играет эффект целиком, все в такт."/>
 
                 <controls:SceneCanvas Scene="{Binding}" Height="{StaticResource SceneCanvasHeight}" Margin="{StaticResource GapTop16}"/>
                 <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"
                            Text="Перетащите устройство мышью, чтобы поставить его на место. Колесо над выбранным устройством меняет его размер."/>
 
-                <!-- Выбранное на холсте устройство: поворот и размер -->
+                <!-- Выбранное на холсте устройство: поворот, размер и выход из сцены -->
                 <DockPanel Margin="{StaticResource GapTop16}"
                            Visibility="{Binding HasSelectedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                     <Button DockPanel.Dock="Left" Content="Повернуть" controls:Appearance.Icon="&#xE7AD;"
                             VerticalAlignment="Center" Margin="{StaticResource GapRight12}" Command="{Binding RotateSelectedCommand}"/>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource DangerButton}" Content="Убрать из сцены" controls:Appearance.Icon="&#xE711;"
+                            VerticalAlignment="Center" Margin="{StaticResource GapLeft12}" Command="{Binding RemoveSelectedCommand}"/>
                     <controls:ValueSlider Label="Размер" Unit="%" Minimum="5" Maximum="100" Step="1"
                                           Value="{Binding SelectedDevice.SizePercent}"/>
                 </DockPanel>

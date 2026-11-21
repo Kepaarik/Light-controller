@@ -47,15 +47,6 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     public EffectEditorViewModel Editor { get; }
 
     /// <summary>
-    /// Как эффект ложится на устройства сцены.
-    /// </summary>
-    public IReadOnlyList<SceneChoice<SceneSpread>> Spreads { get; } = new[]
-    {
-        new SceneChoice<SceneSpread>(SceneSpread.Space, "По пространству"),
-        new SceneChoice<SceneSpread>(SceneSpread.Synced, "Синхронно")
-    };
-
-    /// <summary>
     /// Куда идёт эффект сцены.
     /// </summary>
     public IReadOnlyList<SceneChoice<SceneDirection>> Directions { get; } = new[]
@@ -109,17 +100,19 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     public event Action? Rendered;
 
     /// <summary>
-    /// Как эффект ложится на устройства; null — сцены нет.
+    /// Каждое устройство играет эффект целиком, все в такт; false — эффект идёт по холсту с устройства на устройство.
     /// </summary>
-    public SceneChoice<SceneSpread>? SelectedSpread
+    public bool IsSynced
     {
-        get => _profile.Scene is { } scene ? Spreads.First(s => s.Value == scene.Spread) : null;
+        get => _profile.Scene?.Spread == SceneSpread.Synced;
         set
         {
-            if (value == null || _profile.Scene is not { } scene || scene.Spread == value.Value)
+            var spread = value ? SceneSpread.Synced : SceneSpread.Space;
+
+            if (_profile.Scene is not { } scene || scene.Spread == spread)
                 return;
 
-            scene.Spread = value.Value;
+            scene.Spread = spread;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsSpaceSpread));
             OnSceneChanged();
@@ -235,6 +228,26 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Убирает выбранное устройство из сцены — и подключённое, и забытое: оно снова играет то, что профиль включает на нём.
+    /// </summary>
+    [RelayCommand]
+    private void RemoveSelected()
+    {
+        if (SelectedDevice is not { } device || _profile.Scene is not { } scene)
+            return;
+
+        scene.Devices.RemoveAll(d => d.DeviceId == device.DeviceId);
+
+        SelectedDevice = null;
+        Devices.Remove(device);
+        ReloadMembers();
+
+        OnPropertyChanged(nameof(HasDevices));
+        OnPropertyChanged(nameof(SummaryText));
+        OnSceneChanged();
+    }
+
+    /// <summary>
     /// Место, размер или поворот устройства на холсте поменяли: превью и сохранённая сцена показывают новое.
     /// </summary>
     public void OnPlacementChanged()
@@ -288,7 +301,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
         OnPropertyChanged(nameof(HasScene));
         OnPropertyChanged(nameof(HasDevices));
-        OnPropertyChanged(nameof(SelectedSpread));
+        OnPropertyChanged(nameof(IsSynced));
         OnPropertyChanged(nameof(IsSpaceSpread));
         OnPropertyChanged(nameof(SelectedDirection));
         OnPropertyChanged(nameof(Brightness));

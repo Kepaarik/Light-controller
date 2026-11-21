@@ -105,7 +105,8 @@
         </Setter>
     </Style>
 
-    <!-- Сегменты: 2–5 вариантов в строку, выбранный залит акцентом. Замена ComboBox и RadioButton.
+    <!-- Сегменты: 3–5 вариантов в строку, выбранный залит акцентом. Замена ComboBox и RadioButton; выбор из двух
+         постоянных вариантов — переключатель (CheckBox в стиле Switch), а не сегменты.
          Варианты — ItemsSource, выбор — SelectedItem или SelectedValue. В узкой панели варианты переносятся на новую строку -->
     <Style x:Key="Segments" TargetType="ListBox">
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>

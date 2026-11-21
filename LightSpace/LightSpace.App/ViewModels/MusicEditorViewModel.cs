@@ -11,20 +11,6 @@ using LightSpace.Engine.Space;
 namespace LightSpace.App.ViewModels;
 
 /// <summary>
-/// Откуда звук, в сегментах редактора музыки: системный звук или микрофон.
-/// </summary>
-public sealed record AudioInputOption(AudioInputKind Kind, string Title)
-{
-    public static readonly IReadOnlyList<AudioInputOption> All = new AudioInputOption[]
-    {
-        new(AudioInputKind.Output, "Системный звук"),
-        new(AudioInputKind.Microphone, "Микрофон")
-    };
-
-    public override string ToString() => Title;
-}
-
-/// <summary>
 /// Устройство звука в выпадающей панели выбора устройства.
 /// </summary>
 /// <param name="Id">Системный идентификатор устройства; пусто — устройство Windows по умолчанию.</param>
@@ -43,20 +29,6 @@ public sealed record MusicModeOption(MusicMode Mode, string Title)
         new(MusicMode.Spectrum, "Спектр"),
         new(MusicMode.Rhythm, "Ритм"),
         new(MusicMode.Pulse, "Пульс")
-    };
-
-    public override string ToString() => Title;
-}
-
-/// <summary>
-/// Цвета музыки в сегментах: радуга или один цвет.
-/// </summary>
-public sealed record MusicColorsOption(MusicColors Colors, string Title)
-{
-    public static readonly IReadOnlyList<MusicColorsOption> All = new MusicColorsOption[]
-    {
-        new(MusicColors.Rainbow, "Радуга"),
-        new(MusicColors.Single, "Свой цвет")
     };
 
     public override string ToString() => Title;
@@ -98,25 +70,23 @@ public sealed partial class MusicEditorViewModel : ObservableObject
     /// </summary>
     public Brush Preview => _bitmap.Brush;
 
-    public IReadOnlyList<AudioInputOption> Inputs => AudioInputOption.All;
-
     public IReadOnlyList<MusicModeOption> Modes => MusicModeOption.All;
 
-    public IReadOnlyList<MusicColorsOption> ColorOptions => MusicColorsOption.All;
-
     /// <summary>
-    /// Откуда звук. Смена источника возвращает устройство по умолчанию: устройства вывода и записи разные.
+    /// Звук берётся с микрофона; false — системный звук. Смена источника возвращает устройство по умолчанию:
+    /// устройства вывода и записи разные.
     /// </summary>
-    public AudioInputOption? SelectedInput
+    public bool IsMicrophone
     {
-        get => _music == null ? null : Inputs.First(o => o.Kind == _music.Input);
+        get => _music?.Input == AudioInputKind.Microphone;
         set
         {
-            // Сегменты сбрасывают выбор в null, когда пересобираются
-            if (value == null || _music == null || value.Kind == _music.Input)
+            var input = value ? AudioInputKind.Microphone : AudioInputKind.Output;
+
+            if (_music == null || input == _music.Input)
                 return;
 
-            _music.Input = value.Kind;
+            _music.Input = input;
             _music.DeviceId = "";
 
             OnPropertyChanged();
@@ -166,25 +136,24 @@ public sealed partial class MusicEditorViewModel : ObservableObject
         }
     }
 
-    public MusicColorsOption? SelectedColors
+    /// <summary>
+    /// Музыка светится одним своим цветом — тогда виден выбор цвета; false — радугой.
+    /// </summary>
+    public bool IsSingleColor
     {
-        get => _music == null ? null : ColorOptions.First(o => o.Colors == _music.Colors);
+        get => _music?.Colors == MusicColors.Single;
         set
         {
-            if (value == null || _music == null || value.Colors == _music.Colors)
+            var colors = value ? MusicColors.Single : MusicColors.Rainbow;
+
+            if (_music == null || colors == _music.Colors)
                 return;
 
-            _music.Colors = value.Colors;
+            _music.Colors = colors;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(IsSingleColor));
             _changed();
         }
     }
-
-    /// <summary>
-    /// Музыка светится одним цветом — тогда виден выбор цвета.
-    /// </summary>
-    public bool IsSingleColor => _music?.Colors == MusicColors.Single;
 
     public RgbColor Color
     {
@@ -223,9 +192,8 @@ public sealed partial class MusicEditorViewModel : ObservableObject
         _playback = new MusicPlayback();
 
         ShowDevices();
-        OnPropertyChanged(nameof(SelectedInput));
+        OnPropertyChanged(nameof(IsMicrophone));
         OnPropertyChanged(nameof(SelectedMode));
-        OnPropertyChanged(nameof(SelectedColors));
         OnPropertyChanged(nameof(IsSingleColor));
         OnPropertyChanged(nameof(Color));
         OnPropertyChanged(nameof(Sensitivity));

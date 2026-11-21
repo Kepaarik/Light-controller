@@ -32,38 +32,35 @@
                              ActionText="Сохранить текущую подсветку" ActionIcon="&#xE74E;" Command="{Binding NewProfileCommand}"
                              Visibility="{Binding HasProfiles, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
 
-        <!-- Список профилей слева, выбранный профиль справа -->
+        <!-- Профили строкой переключателей сверху, выбранный профиль под ними на всю ширину -->
         <Grid Grid.Row="1" Visibility="{Binding HasProfiles, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="{StaticResource ListPaneWidth}"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-            <ListBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
+            <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:ProfileOption">
-                        <DockPanel>
+                        <StackPanel Orientation="Horizontal" ToolTip="{Binding DevicesText}">
+                            <TextBlock Text="{Binding Name}" MaxWidth="220" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                             <!-- Профиль, который сейчас играет -->
-                            <TextBlock DockPanel.Dock="Right" Text="&#xE73E;" Style="{StaticResource Icon}" Foreground="{DynamicResource SuccessBrush}"
-                                       ToolTip="Сейчас играет этот профиль"
+                            <TextBlock Text="&#xE73E;" Style="{StaticResource Icon}" FontSize="12" VerticalAlignment="Center"
+                                       Margin="{StaticResource GapLeft8}" ToolTip="Сейчас играет этот профиль"
                                        Visibility="{Binding IsActive, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-                            <StackPanel>
-                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrong}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding DevicesText}" Style="{StaticResource Caption}"/>
-                            </StackPanel>
-                        </DockPanel>
+                        </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <Grid Grid.Column="1" Margin="{StaticResource GapLeft24}">
+            <Grid Grid.Row="1" Margin="{StaticResource GapTop16}">
                 <controls:EmptyState Icon="&#xE728;" Title="Выберите профиль"
                                      Hint="Здесь будет видно, что он включает на каждом устройстве."
                                      Visibility="{Binding HasSelectedProfile, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding HasSelectedProfile, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                    <StackPanel MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Stretch"
+                    <StackPanel MaxWidth="{StaticResource WideContentMaxWidth}" HorizontalAlignment="Stretch"
                                 DataContext="{Binding SelectedProfile}" d:DataContext="{d:DesignInstance vm:ProfileOption}">
                         <!-- Название и действия с профилем -->
                         <Border Style="{StaticResource Card}">

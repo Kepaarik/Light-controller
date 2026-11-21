@@ -162,10 +162,10 @@
                                     <DockPanel Margin="{StaticResource GapTop8}">
                                         <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Сохранить"
                                                 Command="{Binding SaveNetworkKeyCommand}"/>
-                                        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding DataPointSchemes}" SelectedItem="{Binding DataPoints}"/>
+                                        <CheckBox Content="Старый контроллер" IsChecked="{Binding IsOldController}" HorizontalAlignment="Left"/>
                                     </DockPanel>
                                     <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
-                                               Text="Без локального ключа Tuya не принимает команды. V2 — точки данных 20–24 у большинства лент, V1 — 1–5 у старых контроллеров."/>
+                                               Text="Без локального ключа Tuya не принимает команды. У большинства лент точки данных 20–24; у старых контроллеров — 1–5, для них включите «Старый контроллер»."/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>

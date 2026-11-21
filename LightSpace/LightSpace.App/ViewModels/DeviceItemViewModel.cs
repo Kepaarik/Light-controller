@@ -26,6 +26,7 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     private string _localKey;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsOldController))]
     private TuyaDpScheme _dataPoints;
 
     public DeviceItemViewModel(ManagedDevice device, DeviceManager manager, Action settingsChanged)
@@ -126,7 +127,14 @@ public sealed partial class DeviceItemViewModel : ObservableObject
     /// </summary>
     public bool NeedsNetworkKey => Device.Device is TuyaDevice || Device.Id.StartsWith("tuya:", StringComparison.Ordinal);
 
-    public IReadOnlyList<TuyaDpScheme> DataPointSchemes { get; } = Enum.GetValues<TuyaDpScheme>();
+    /// <summary>
+    /// Старый контроллер Tuya: точки данных 1–5 (V1); false — 20–24 (V2), как у большинства лент.
+    /// </summary>
+    public bool IsOldController
+    {
+        get => DataPoints == TuyaDpScheme.V1;
+        set => DataPoints = value ? TuyaDpScheme.V1 : TuyaDpScheme.V2;
+    }
 
     public string SentFramesText => Device.Output?.Diagnostics.SentFrames.ToString("N0") ?? "—";
 
