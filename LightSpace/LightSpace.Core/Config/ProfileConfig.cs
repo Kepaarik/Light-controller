@@ -19,6 +19,11 @@ public sealed class ProfileConfig
     public List<DeviceLightingConfig> DeviceLighting { get; set; } = new();
 
     /// <summary>
+    /// Сцена профиля: начинает играть, когда профиль применяют; null — сцены у профиля нет.
+    /// </summary>
+    public SceneConfig? Scene { get; set; }
+
+    /// <summary>
     /// Новый уникальный идентификатор профиля.
     /// </summary>
     public static string NewId()
@@ -44,5 +49,7 @@ public sealed class ProfileConfig
 
         foreach (var lighting in DeviceLighting)
             lighting.Normalize();
+
+        Scene?.Normalize();
     }
 }

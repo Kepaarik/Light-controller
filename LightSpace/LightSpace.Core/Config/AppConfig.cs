@@ -51,6 +51,12 @@ public sealed class AppConfig
     public List<DeviceLightingConfig> DeviceLighting { get; set; } = new();
 
     /// <summary>
+    /// Сцена, которая сейчас играет: копия сцены последнего применённого профиля. Её устройства играют сцену
+    /// вместо своей подсветки. null — сцена не играет.
+    /// </summary>
+    public SceneConfig? Scene { get; set; }
+
+    /// <summary>
     /// Подсветка мониторов: ленты вокруг мониторов, повороты мониторов и раскладки лент.
     /// </summary>
     public List<MonitorConfig> Monitors { get; set; } = new();
@@ -66,7 +72,7 @@ public sealed class AppConfig
     public List<ProfileConfig> Profiles { get; set; } = new();
 
     /// <summary>
-    /// Сохраняет то, что сейчас играет на устройствах, новым профилем.
+    /// Сохраняет то, что сейчас играет на устройствах, новым профилем — вместе со сценой, если она играет.
     /// </summary>
     public ProfileConfig SaveProfile(string name)
     {
@@ -74,7 +80,8 @@ public sealed class AppConfig
         {
             Id = ProfileConfig.NewId(),
             Name = name,
-            DeviceLighting = CurrentLighting()
+            DeviceLighting = CurrentLighting(),
+            Scene = Scene?.Clone()
         };
 
         Profiles.Add(profile);
@@ -83,7 +90,8 @@ public sealed class AppConfig
     }
 
     /// <summary>
-    /// Записывает в профиль то, что сейчас играет на устройствах, вместо сохранённого раньше.
+    /// Записывает в профиль то, что сейчас играет на устройствах, вместо сохранённого раньше. Сцену профиля это
+    /// не трогает: её собирают в самом профиле.
     /// </summary>
     public void UpdateProfile(ProfileConfig profile)
     {
@@ -97,8 +105,8 @@ public sealed class AppConfig
     }
 
     /// <summary>
-    /// Возвращает устройствам яркость и содержимое из профиля. Устройства, которых в профиле нет, играют своё;
-    /// забытые с тех пор устройства пропускаются.
+    /// Возвращает устройствам яркость и содержимое из профиля и включает его сцену; сцена прежнего профиля
+    /// перестаёт играть. Устройства, которых в профиле нет, играют своё; забытые с тех пор устройства пропускаются.
     /// </summary>
     public void ApplyProfile(ProfileConfig profile)
     {
@@ -111,6 +119,9 @@ public sealed class AppConfig
             lighting.Brightness = saved.Brightness;
             lighting.Content = saved.Content.Clone();
         }
+
+        Scene = profile.Scene?.Clone();
+        Scene?.Devices.RemoveAll(d => !devices.Contains(d.DeviceId));
     }
 
     /// <summary>
@@ -132,6 +143,10 @@ public sealed class AppConfig
         // Пустые разделы в файле дали бы null вместо содержимого и настроек эффектов
         NormalizeDeviceLighting();
         NormalizeMonitors();
+
+        // Забытое устройство сцену не играет
+        Scene?.Normalize();
+        Scene?.Devices.RemoveAll(d => Devices.All(known => known.Id != d.DeviceId));
 
         MasterBrightness = Math.Clamp(MasterBrightness, 0, 100);
 
@@ -158,11 +173,12 @@ public sealed class AppConfig
     }
 
     /// <summary>
-    /// Убирает подсветку забытого устройства.
+    /// Убирает подсветку забытого устройства; из сцены, которая сейчас играет, оно тоже уходит.
     /// </summary>
     public void RemoveDeviceLighting(string deviceId)
     {
         DeviceLighting.RemoveAll(l => l.DeviceId == deviceId);
+        Scene?.Devices.RemoveAll(d => d.DeviceId == deviceId);
     }
 
     /// <summary>

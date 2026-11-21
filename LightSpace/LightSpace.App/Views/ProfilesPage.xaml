@@ -128,6 +128,34 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Сцена: несколько устройств профиля играют один эффект -->
+                        <TextBlock Text="Сцена" Style="{StaticResource SectionLabel}"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Сцена объединяет устройства профиля: один эффект переходит с устройства на устройство по их местам на холсте или играет на всех синхронно. Устройства сцены играют её вместо своего эффекта."/>
+                                <TextBlock Text="{Binding Scene.SummaryText}" Style="{StaticResource BodyStrong}" Margin="{StaticResource GapTop8}"
+                                           Visibility="{Binding Scene.HasScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+
+                                <WrapPanel Margin="{StaticResource GapTop16}">
+                                    <Button Style="{StaticResource AccentButton}" Content="Собрать сцену" controls:Appearance.Icon="&#xE710;"
+                                            Margin="{StaticResource GapWrap}" Command="{Binding OpenSceneCommand}"
+                                            Visibility="{Binding Scene.HasScene, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+                                    <Button Content="Настроить сцену" controls:Appearance.Icon="&#xE70F;"
+                                            Margin="{StaticResource GapWrap}" Command="{Binding OpenSceneCommand}"
+                                            Visibility="{Binding Scene.HasScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                                    <Button Style="{StaticResource DangerButton}" Content="Удалить сцену" controls:Appearance.Icon="&#xE74D;"
+                                            Margin="{StaticResource GapWrap}" Command="{Binding RemoveSceneCommand}"
+                                            Visibility="{Binding Scene.HasScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Настройки сцены: состав, холст, режим, направление, яркость и эффект -->
+                        <Grid Visibility="{Binding IsSceneOpen, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                            <views:SceneEditor DataContext="{Binding Scene}"/>
+                        </Grid>
+
                         <!-- Эффект открытого устройства: та же галерея, что на странице устройства, но правит профиль -->
                         <StackPanel Visibility="{Binding HasEditedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                             <TextBlock Style="{StaticResource SectionLabel}">

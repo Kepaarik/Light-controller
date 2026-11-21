@@ -1,0 +1,68 @@
+<UserControl x:Class="LightSpace.App.Views.SceneEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             xmlns:views="clr-namespace:LightSpace.App.Views"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:ProfileSceneViewModel}">
+
+    <StackPanel>
+        <!-- Какие устройства профиля играют сцену -->
+        <TextBlock Text="Состав сцены" Style="{StaticResource SectionLabel}"/>
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding Members}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:SceneMemberViewModel">
+                            <CheckBox Content="{Binding Name}" IsChecked="{Binding IsIncluded}" Margin="{StaticResource GapBottom8}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="В сцену можно взять подключённые устройства профиля. Устройство вне сцены играет то, что профиль включает на нём."
+                           Style="{StaticResource Hint}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Холст: где стоят устройства, и живое превью эффекта на них -->
+        <TextBlock Text="Холст" Style="{StaticResource SectionLabel}"/>
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Spreads}" SelectedItem="{Binding SelectedSpread}"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop8}"
+                           Text="«По пространству» — эффект идёт по холсту и переходит с устройства на устройство. «Синхронно» — каждое устройство играет эффект целиком, все в такт."/>
+
+                <controls:SceneCanvas Scene="{Binding}" Height="{StaticResource SceneCanvasHeight}" Margin="{StaticResource GapTop16}"/>
+                <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"
+                           Text="Перетащите устройство мышью, чтобы поставить его на место. Колесо над выбранным устройством меняет его размер."/>
+
+                <!-- Выбранное на холсте устройство: поворот и размер -->
+                <DockPanel Margin="{StaticResource GapTop16}"
+                           Visibility="{Binding HasSelectedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                    <Button DockPanel.Dock="Left" Content="Повернуть" controls:Appearance.Icon="&#xE7AD;"
+                            VerticalAlignment="Center" Margin="{StaticResource GapRight12}" Command="{Binding RotateSelectedCommand}"/>
+                    <controls:ValueSlider Label="Размер" Unit="%" Minimum="5" Maximum="100" Step="1"
+                                          Value="{Binding SelectedDevice.SizePercent}"/>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Куда идёт эффект и насколько ярко -->
+        <TextBlock Text="Направление и яркость" Style="{StaticResource SectionLabel}"/>
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Directions}" SelectedItem="{Binding SelectedDirection}"/>
+                <controls:ValueSlider Label="Яркость сцены" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                      Value="{Binding Brightness}" Margin="{StaticResource GapTop16}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Эффект сцены: та же галерея, что на странице устройства -->
+        <TextBlock Text="Эффект сцены" Style="{StaticResource SectionLabel}"/>
+        <Border Style="{StaticResource Card}">
+            <views:EffectEditor DataContext="{Binding Editor}" ShowsSettings="{Binding IsPlaying}"/>
+        </Border>
+    </StackPanel>
+</UserControl>

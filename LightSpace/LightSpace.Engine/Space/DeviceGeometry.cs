@@ -145,4 +145,13 @@ public sealed class DeviceGeometry
     {
         return new DeviceGeometry(false, width, height, Array.Empty<EffectPixel?>(), new EffectPixel(width / 2, height / 2, 0));
     }
+
+    /// <summary>
+    /// Пространство с заданными местами светодиодов, например устройство внутри сцены. Пустой points — устройство
+    /// одного цвета, его цвет берётся в center.
+    /// </summary>
+    public static DeviceGeometry FromPoints(bool isLinear, double width, double height, IReadOnlyList<EffectPixel?> points, EffectPixel center)
+    {
+        return new DeviceGeometry(isLinear, width, height, points, center);
+    }
 }

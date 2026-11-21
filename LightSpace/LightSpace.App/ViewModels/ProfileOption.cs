@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using LightSpace.Core.Config;
 using LightSpace.Engine;
 
@@ -23,6 +24,7 @@ public sealed partial class ProfileOption : ObservableObject
         _changed = changed;
 
         Editor = new EffectEditorViewModel(OnEditorChanged);
+        Scene = new ProfileSceneViewModel(settings, findDevice, OnSceneChanged);
 
         Reload();
     }
@@ -33,6 +35,43 @@ public sealed partial class ProfileOption : ObservableObject
     /// Галерея эффектов для устройства, открытого в профиле; правит профиль, а не то, что играет на устройстве.
     /// </summary>
     public EffectEditorViewModel Editor { get; }
+
+    /// <summary>
+    /// Сцена профиля: несколько устройств играют один эффект.
+    /// </summary>
+    public ProfileSceneViewModel Scene { get; }
+
+    /// <summary>
+    /// Редактор сцены открыт.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isSceneOpen;
+
+    /// <summary>
+    /// Открывает редактор сцены; у профиля без сцены сначала собирает её. Повторное нажатие закрывает редактор.
+    /// </summary>
+    [RelayCommand]
+    private void OpenScene()
+    {
+        if (!Scene.HasScene)
+        {
+            Scene.BuildCommand.Execute(null);
+            IsSceneOpen = true;
+            return;
+        }
+
+        IsSceneOpen = !IsSceneOpen;
+    }
+
+    /// <summary>
+    /// Убирает сцену из профиля и закрывает её редактор.
+    /// </summary>
+    [RelayCommand]
+    private void RemoveScene()
+    {
+        Scene.RemoveCommand.Execute(null);
+        IsSceneOpen = false;
+    }
 
     /// <summary>
     /// Устройство, эффект которого выбирают в профиле; null — галерея закрыта.
@@ -90,9 +129,14 @@ public sealed partial class ProfileOption : ObservableObject
     /// <summary>
     /// Что профиль включает на каждом устройстве, по строке на устройство — для подсказки в меню трея.
     /// </summary>
-    public string SummaryText => Devices.Count > 0
-        ? string.Join(Environment.NewLine, Devices.Select(d => $"{d.Name}: {d.ContentText}, {d.Brightness:0} %"))
-        : "В профиле нет устройств";
+    public string SummaryText => string.Join(Environment.NewLine, DeviceLines().Append(Scene.SummaryText).OfType<string>());
+
+    private IEnumerable<string> DeviceLines()
+    {
+        return Devices.Count > 0
+            ? Devices.Select(d => $"{d.Name}: {d.ContentText}, {d.Brightness:0} %")
+            : new[] { "В профиле нет устройств" };
+    }
 
     /// <summary>
     /// Перечитывает устройства из настроек профиля, например после записи в него текущей подсветки.
@@ -106,11 +150,19 @@ public sealed partial class ProfileOption : ObservableObject
         foreach (var lighting in Settings.DeviceLighting)
             Devices.Add(new ProfileDeviceViewModel(lighting, _findDevice(lighting.DeviceId), OnDeviceChanged, Remove, Edit));
 
+        Scene.Reload();
+
         OnPropertyChanged(nameof(DevicesText));
         OnPropertyChanged(nameof(SummaryText));
     }
 
     private void OnDeviceChanged()
+    {
+        OnPropertyChanged(nameof(SummaryText));
+        _changed();
+    }
+
+    private void OnSceneChanged()
     {
         OnPropertyChanged(nameof(SummaryText));
         _changed();
@@ -146,6 +198,7 @@ public sealed partial class ProfileOption : ObservableObject
 
         Settings.DeviceLighting.Remove(device.Lighting);
         Devices.Remove(device);
+        Scene.RemoveDevice(device.Lighting.DeviceId);
 
         OnPropertyChanged(nameof(DevicesText));
         OnPropertyChanged(nameof(SummaryText));

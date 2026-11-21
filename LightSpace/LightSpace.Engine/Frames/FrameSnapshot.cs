@@ -1,6 +1,7 @@
 using LightSpace.Core.Config;
 using LightSpace.Engine.Effects;
 using LightSpace.Engine.Output;
+using LightSpace.Engine.Scene;
 using LightSpace.Engine.Sources;
 using LightSpace.Engine.Space;
 
@@ -99,6 +100,11 @@ public sealed record FrameGroup(string Id, FrameContent Active, int Brightness, 
 public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGroup> Groups)
 {
     /// <summary>
+    /// Идентификатор группы сцены; группы устройств называются идентификаторами своих устройств.
+    /// </summary>
+    public const string SceneGroupId = "scene";
+
+    /// <summary>
     /// Снимок текущих настроек и подключённых устройств, готовых принимать кадры.
     /// Вызывается в потоке окна: копирует всё, что потом может поменяться в настройках.
     /// </summary>
@@ -121,17 +127,45 @@ public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGr
             };
         }
 
-        foreach (var lighting in config.DeviceLighting)
+        // Устройства сцены играют её вместо своей подсветки
+        var scene = config.Scene;
+        var inScene = scene?.Devices.Select(d => d.DeviceId).ToHashSet() ?? new HashSet<string>();
+
+        foreach (var lighting in config.DeviceLighting.Where(l => !inScene.Contains(l.DeviceId)))
         {
             var targets = ready.TryGetValue(lighting.DeviceId, out var target) ? new[] { target } : Array.Empty<FrameDevice>();
 
-            // Общая яркость приглушает все устройства разом, не трогая их собственную яркость
-            var brightness = (int)Math.Round(lighting.Brightness * config.MasterBrightness / 100.0);
-
-            groups.Add(new FrameGroup(lighting.DeviceId, FrameContent.From(lighting.Content), brightness, targets));
+            groups.Add(new FrameGroup(lighting.DeviceId, FrameContent.From(lighting.Content), Dimmed(lighting.Brightness, config), targets));
         }
 
+        if (scene is { Devices.Count: > 0 })
+            groups.Add(SceneGroup(scene, ready, config));
+
         return new FrameSnapshot(config.LightingEnabled, groups);
+    }
+
+    /// <summary>
+    /// Группа сцены: один эффект с общими часами; у каждого устройства — его пространство в сцене.
+    /// </summary>
+    private static FrameGroup SceneGroup(SceneConfig scene, Dictionary<string, FrameDevice> ready, AppConfig config)
+    {
+        var devices = new List<FrameDevice>();
+
+        foreach (var placement in scene.Devices)
+        {
+            if (ready.TryGetValue(placement.DeviceId, out var device))
+                devices.Add(device with { Geometry = SceneSpace.Of(device.Geometry, placement, scene.Spread, scene.Direction) });
+        }
+
+        return new FrameGroup(SceneGroupId, FrameContent.From(scene.Effect), Dimmed(scene.Brightness, config), devices);
+    }
+
+    /// <summary>
+    /// Яркость с учётом общей: общая яркость приглушает все устройства разом, не трогая их собственную яркость.
+    /// </summary>
+    private static int Dimmed(int brightness, AppConfig config)
+    {
+        return (int)Math.Round(brightness * config.MasterBrightness / 100.0);
     }
 
     /// <summary>

@@ -175,6 +175,27 @@ public sealed partial class DeviceLightingViewModel : ObservableObject
     public bool IsMusicContent => SelectedContentKind == ContentKindOption.Music;
 
     /// <summary>
+    /// Открытое устройство играет сцену применённого профиля вместо своей подсветки.
+    /// </summary>
+    public bool IsInScene => Device is { } device && _config.Scene?.Devices.Any(d => d.DeviceId == device.Id) == true;
+
+    /// <summary>
+    /// Убирает открытое устройство из сцены, которая сейчас играет: оно снова играет свою подсветку, остальные
+    /// устройства сцены играют её дальше. Сцену в профиле это не меняет.
+    /// </summary>
+    [RelayCommand]
+    private void LeaveScene()
+    {
+        if (Device is not { } device || _config.Scene == null)
+            return;
+
+        _config.Scene.Devices.RemoveAll(d => d.DeviceId == device.Id);
+
+        OnPropertyChanged(nameof(IsInScene));
+        _changed();
+    }
+
+    /// <summary>
     /// Мониторы, за которыми может висеть лента: «Без монитора» и все подключённые мониторы.
     /// </summary>
     public IReadOnlyList<DeviceMonitorOption> MonitorOptions { get; private set; } = Array.Empty<DeviceMonitorOption>();
@@ -264,6 +285,9 @@ public sealed partial class DeviceLightingViewModel : ObservableObject
     public void Reload()
     {
         SyncDevices();
+
+        // Применённый профиль мог включить или выключить сцену
+        OnPropertyChanged(nameof(IsInScene));
     }
 
     /// <summary>
@@ -365,6 +389,7 @@ public sealed partial class DeviceLightingViewModel : ObservableObject
 
         OnPropertyChanged(nameof(Device));
         OnPropertyChanged(nameof(Brightness));
+        OnPropertyChanged(nameof(IsInScene));
         OnPropertyChanged(nameof(IsStripSelected));
         OnPropertyChanged(nameof(SelectedMonitor));
         OnPropertyChanged(nameof(HasMonitor));

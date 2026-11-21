@@ -169,6 +169,19 @@
                 </StackPanel>
             </Border>
 
+            <!-- Устройство играет сцену профиля: своя подсветка вернётся, если убрать его из сцены -->
+            <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="{StaticResource RadiusControl}"
+                    Padding="{StaticResource PaddingBanner}" Margin="{StaticResource GapTop16}"
+                    Visibility="{Binding IsInScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Убрать из сцены" controls:Appearance.Icon="&#xE711;"
+                            Command="{Binding LeaveSceneCommand}"/>
+                    <TextBlock DockPanel.Dock="Left" Text="&#xE946;" Style="{StaticResource Icon}" Margin="{StaticResource GapRight12}"/>
+                    <TextBlock Text="Устройство играет сцену профиля. Эффект ниже включится, когда его уберут из сцены."
+                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+                </DockPanel>
+            </Border>
+
             <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}">
                 <StackPanel>
                     <!-- Что играет: тип содержимого, ниже его настройки. Новый эффект останавливает и стирает прежний -->

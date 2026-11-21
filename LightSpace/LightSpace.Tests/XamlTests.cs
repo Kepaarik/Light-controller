@@ -212,6 +212,58 @@ public sealed class XamlTests
     }
 
     [Fact]
+    public void ProfileBuildsSceneAndShowsItsEditor()
+    {
+        var errors = UiThread.InvokeCollectingBindingErrors(() =>
+        {
+            var vm = new MainViewModel(ConfigWithProfile());
+            var window = new MainWindow(vm);
+
+            try
+            {
+                vm.SelectedPage = AppPage.Profiles;
+                vm.SelectedProfile = vm.Profiles[0];
+                UiThread.ShowOffscreen(window);
+
+                var page = UiThread.Descendants<ProfilesPage>(window).Single();
+                var build = Assert.Single(UiThread.Descendants<Button>(page), b => b.Content as string == "Собрать сцену");
+
+                Assert.True(build.IsVisible);
+                Assert.DoesNotContain(UiThread.Descendants<SceneEditor>(page), e => e.IsVisible);
+
+                build.Command.Execute(build.CommandParameter);
+                window.UpdateLayout();
+
+                var editor = Assert.Single(UiThread.Descendants<SceneEditor>(page), e => e.IsVisible);
+
+                Assert.Same(vm.Profiles[0].Scene, editor.DataContext);
+                Assert.False(build.IsVisible);
+                Assert.Contains(UiThread.Descendants<Button>(page), b => b.Content as string == "Удалить сцену" && b.IsVisible);
+                Assert.Contains(UiThread.Descendants<SceneCanvas>(editor), c => c.IsVisible);
+
+                // Выбранное на холсте устройство: видны поворот и размер
+                vm.Profiles[0].Scene.SelectedDevice = vm.Profiles[0].Scene.Devices[0];
+                window.UpdateLayout();
+
+                Assert.Contains(UiThread.Descendants<ValueSlider>(editor), s => s.Label == "Размер" && s.IsVisible);
+
+                vm.Profiles[0].RemoveSceneCommand.Execute(null);
+                window.UpdateLayout();
+
+                Assert.DoesNotContain(UiThread.Descendants<SceneEditor>(page), e => e.IsVisible);
+                Assert.True(build.IsVisible);
+            }
+            finally
+            {
+                window.Close();
+                vm.Shutdown();
+            }
+        });
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
     public void SettingsKeepGlassSlidersFolded()
     {
         UiThread.Invoke(() =>
