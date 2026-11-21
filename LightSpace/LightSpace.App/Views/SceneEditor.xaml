@@ -38,16 +38,35 @@
                 <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"
                            Text="Перетащите устройство мышью, чтобы поставить его на место. Колесо над выбранным устройством меняет его размер."/>
 
-                <!-- Выбранное на холсте устройство: поворот, размер и выход из сцены -->
-                <DockPanel Margin="{StaticResource GapTop16}"
-                           Visibility="{Binding HasSelectedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                    <Button DockPanel.Dock="Left" Content="Повернуть" controls:Appearance.Icon="&#xE7AD;"
-                            VerticalAlignment="Center" Margin="{StaticResource GapRight12}" Command="{Binding RotateSelectedCommand}"/>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource DangerButton}" Content="Убрать из сцены" controls:Appearance.Icon="&#xE711;"
-                            VerticalAlignment="Center" Margin="{StaticResource GapLeft12}" Command="{Binding RemoveSelectedCommand}"/>
-                    <controls:ValueSlider Label="Размер" Unit="%" Minimum="5" Maximum="100" Step="1"
-                                          Value="{Binding SelectedDevice.SizePercent}"/>
-                </DockPanel>
+                <!-- Выбранное на холсте устройство: вид, поворот, размер, шестигранники, яркость и выход из сцены -->
+                <StackPanel Margin="{StaticResource GapTop16}"
+                            Visibility="{Binding HasSelectedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                    <TextBlock Style="{StaticResource BodyStrong}" Margin="{StaticResource GapBottom8}">
+                        <Run Text="{Binding SelectedDevice.Icon, Mode=OneWay}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+                        <Run Text="{Binding SelectedDevice.Name, Mode=OneWay}"/>
+                    </TextBlock>
+
+                    <TextBlock Text="Вид" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
+                    <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding SelectedDevice.Shapes}"
+                             SelectedItem="{Binding SelectedDevice.SelectedShape}"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"
+                               Text="Вид — как устройство выглядит на самом деле: эффект ложится на его светодиоды так, как они стоят в этом виде."/>
+
+                    <DockPanel Margin="{StaticResource GapTop16}">
+                        <Button DockPanel.Dock="Left" Content="Повернуть" controls:Appearance.Icon="&#xE7AD;"
+                                VerticalAlignment="Center" Margin="{StaticResource GapRight12}" Command="{Binding RotateSelectedCommand}"/>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource DangerButton}" Content="Убрать из сцены" controls:Appearance.Icon="&#xE711;"
+                                VerticalAlignment="Center" Margin="{StaticResource GapLeft12}" Command="{Binding RemoveSelectedCommand}"/>
+                        <controls:ValueSlider Label="Размер" Unit="%" Minimum="5" Maximum="100" Step="1"
+                                              Value="{Binding SelectedDevice.SizePercent}"/>
+                    </DockPanel>
+
+                    <controls:ValueSlider Label="Шестигранников" Minimum="1" Maximum="30" Step="1"
+                                          Value="{Binding SelectedDevice.Panels}" Margin="{StaticResource GapTop16}"
+                                          Visibility="{Binding SelectedDevice.IsHexagons, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                    <controls:ValueSlider Label="Яркость устройства" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                          Value="{Binding SelectedDevice.Brightness}" Margin="{StaticResource GapTop16}"/>
+                </StackPanel>
             </StackPanel>
         </Border>
 

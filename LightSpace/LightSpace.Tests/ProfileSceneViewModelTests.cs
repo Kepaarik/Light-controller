@@ -188,6 +188,39 @@ public sealed class ProfileSceneViewModelTests
     }
 
     [Fact]
+    public void SelectedDeviceGetsItsShapePanelsAndBrightness()
+    {
+        var (scene, profile, edits) = SceneOf("a");
+
+        scene.BuildCommand.Execute(null);
+
+        var device = scene.Devices[0];
+
+        // По умолчанию вид — по самому устройству: не подключённое светится одним цветом и показано лентой
+        Assert.Equal(SceneDeviceShape.Strip, device.SelectedShape!.Value);
+        Assert.False(device.IsHexagons);
+
+        device.SelectedShape = device.Shapes.Single(s => s.Value == SceneDeviceShape.Hexagons);
+        device.Panels = 12.4;
+        device.Brightness = 55.6;
+
+        var placement = profile.Scene!.Devices[0];
+
+        Assert.Equal(SceneDeviceShape.Hexagons, placement.Shape);
+        Assert.True(device.IsHexagons);
+        Assert.Equal(12, placement.Panels);
+        Assert.Equal(56, placement.Brightness);
+        Assert.Equal(12, device.CanvasShape.Panels.Count);
+        Assert.Equal(4, edits.Count);
+
+        // Тот же выбор ещё раз — не правка
+        device.SelectedShape = device.Shapes.Single(s => s.Value == SceneDeviceShape.Hexagons);
+        device.Panels = 12;
+
+        Assert.Equal(4, edits.Count);
+    }
+
+    [Fact]
     public void DeviceMovesInsideCanvas()
     {
         var (scene, profile, _) = SceneOf("a");

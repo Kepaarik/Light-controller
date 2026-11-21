@@ -261,8 +261,11 @@ public sealed class FrameLoop : IDisposable
 
             foreach (var device in group.Devices)
             {
+                // Своя яркость устройства в группе приглушает его поверх яркости группы
+                var brightness = (int)Math.Round(group.Brightness * device.Brightness / 100.0);
+
                 // Нулевая яркость гасит устройство целиком: и кадры, и встроенный эффект, который свою яркость может не уметь
-                if (group.Brightness == 0)
+                if (brightness == 0)
                 {
                     var dark = new RgbColor[Math.Max(device.Geometry.Points.Count, 1)];
 
@@ -282,7 +285,7 @@ public sealed class FrameLoop : IDisposable
                 }
 
                 // Встроенный эффект устройство играет само: ему уходит запуск эффекта, а не кадр. Живых цветов у него нет
-                if (builtin?.StartFor(device.Id, device.Output.Device, group.Brightness) is { } start)
+                if (builtin?.StartFor(device.Id, device.Output.Device, brightness) is { } start)
                 {
                     try
                     {
@@ -295,7 +298,7 @@ public sealed class FrameLoop : IDisposable
 
                     // Окно вместо цветов показывает, что устройство играет встроенный эффект
                     if (live != null)
-                        live[device.Id] = new LiveDeviceColors(Array.Empty<RgbColor>(), group.Brightness, true);
+                        live[device.Id] = new LiveDeviceColors(Array.Empty<RgbColor>(), brightness, true);
 
                     continue;
                 }
@@ -303,8 +306,8 @@ public sealed class FrameLoop : IDisposable
                 var colors = playback.Render(device);
 
                 var frame = device.Geometry.IsAddressable
-                    ? OutputFrame.PerLed(colors, group.Brightness)
-                    : OutputFrame.Solid(colors[0], group.Brightness);
+                    ? OutputFrame.PerLed(colors, brightness)
+                    : OutputFrame.Solid(colors[0], brightness);
 
                 try
                 {
@@ -316,7 +319,7 @@ public sealed class FrameLoop : IDisposable
                 }
 
                 if (live != null)
-                    live[device.Id] = new LiveDeviceColors(colors, group.Brightness);
+                    live[device.Id] = new LiveDeviceColors(colors, brightness);
             }
         }
 

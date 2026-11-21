@@ -17,6 +17,11 @@ public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry 
     /// null — устройство ни к какому монитору не привязано.
     /// </summary>
     public MonitorBinding? Monitor { get; init; }
+
+    /// <summary>
+    /// Своя яркость устройства в группе, 0–100 %: умножается на яркость группы. Например, яркость устройства в сцене.
+    /// </summary>
+    public int Brightness { get; init; } = 100;
 }
 
 /// <summary>
@@ -135,7 +140,7 @@ public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGr
     }
 
     /// <summary>
-    /// Группа сцены: один эффект с общими часами; у каждого устройства — его пространство в сцене.
+    /// Группа сцены: один эффект с общими часами; у каждого устройства — его пространство в сцене по его виду и своя яркость.
     /// </summary>
     private static FrameGroup SceneGroup(SceneConfig scene, Dictionary<string, FrameDevice> ready, AppConfig config)
     {
@@ -143,8 +148,17 @@ public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGr
 
         foreach (var placement in scene.Devices)
         {
-            if (ready.TryGetValue(placement.DeviceId, out var device))
-                devices.Add(device with { Geometry = SceneSpace.Of(device.Geometry, placement, scene.Spread, scene.Direction) });
+            if (!ready.TryGetValue(placement.DeviceId, out var device))
+                continue;
+
+            // Монитор, за которым висит лента: вид «Монитор» берёт её раскладку по краям
+            var monitor = config.Monitors.FirstOrDefault(m => m.DeviceId == placement.DeviceId);
+
+            devices.Add(device with
+            {
+                Geometry = SceneSpace.Of(device.Geometry, placement, scene.Spread, scene.Direction, monitor),
+                Brightness = placement.Brightness
+            });
         }
 
         return new FrameGroup(SceneGroupId, FrameContent.From(scene.Effect), Dimmed(scene.Brightness, config), devices);

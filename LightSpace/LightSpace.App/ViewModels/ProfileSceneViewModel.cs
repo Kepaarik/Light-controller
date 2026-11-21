@@ -23,17 +23,21 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
     private readonly ProfileConfig _profile;
     private readonly Func<string, ManagedDevice?> _findDevice;
+    private readonly Func<string, MonitorConfig?> _findMonitor;
     private readonly Action _changed;
 
     private double _time = PreviewStartTime;
 
     /// <summary>
     /// findDevice находит известное устройство по идентификатору; changed вызывается после каждой правки сцены.
+    /// findMonitor находит монитор, за которым висит лента; без него вид «Монитор» берёт раскладку по умолчанию.
     /// </summary>
-    public ProfileSceneViewModel(ProfileConfig profile, Func<string, ManagedDevice?> findDevice, Action changed)
+    public ProfileSceneViewModel(ProfileConfig profile, Func<string, ManagedDevice?> findDevice, Action changed,
+        Func<string, MonitorConfig?>? findMonitor = null)
     {
         _profile = profile;
         _findDevice = findDevice;
+        _findMonitor = findMonitor ?? (_ => null);
         _changed = changed;
 
         Editor = new EffectEditorViewModel(OnEditorChanged);
@@ -341,7 +345,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
         var icon = device?.Settings.Icon ?? (device?.Capabilities?.IsKeyboard == true ? DeviceIcons.Keyboard : DeviceIcons.Strip);
 
         return new SceneDeviceViewModel(placement, device?.Name ?? "Забытое устройство", icon,
-            device?.Geometry ?? DeviceGeometry.Single(placement.DeviceId), OnPlacementChanged);
+            device?.Geometry ?? DeviceGeometry.Single(placement.DeviceId), _findMonitor(placement.DeviceId), OnPlacementChanged);
     }
 
     /// <summary>
@@ -408,7 +412,8 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
         var values = ValuesOf(scene, effect);
 
         foreach (var device in Devices)
-            device.Colors = EffectRenderer.Render(effect, values, SceneSpace.Of(device.Own, device.Placement, scene.Spread, scene.Direction), _time);
+            device.Colors = EffectRenderer.Render(effect, values,
+                SceneSpace.Of(device.Own, device.Placement, scene.Spread, scene.Direction, device.Monitor), _time);
 
         Rendered?.Invoke();
     }

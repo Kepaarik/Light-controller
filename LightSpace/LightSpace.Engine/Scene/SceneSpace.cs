@@ -12,43 +12,69 @@ namespace LightSpace.Engine.Scene;
 public static class SceneSpace
 {
     /// <summary>
-    /// Пространство устройства own в сцене: светодиоды с теми же номерами, что у own.
+    /// Пространство устройства own в сцене: светодиоды с теми же номерами, что у own, стоят так, как устройство
+    /// выглядит в своём виде. monitor — монитор, за которым висит лента: вид «Монитор» берёт её раскладку.
     /// </summary>
-    public static DeviceGeometry Of(DeviceGeometry own, SceneDeviceConfig placement, SceneSpread spread, SceneDirection direction)
+    public static DeviceGeometry Of(DeviceGeometry own, SceneDeviceConfig placement, SceneSpread spread, SceneDirection direction,
+        MonitorConfig? monitor = null)
     {
-        if (spread == SceneSpread.Synced)
-            return Directed(own, direction);
+        var local = SceneShapes.Of(own, placement, monitor).Local;
 
-        var (points, center) = Place(own, placement);
+        if (spread == SceneSpread.Synced)
+            return Directed(local, direction);
+
+        var (points, center) = Place(local, placement);
 
         return DirectedPlane(points, center, 1, SceneConfig.CanvasHeight, direction);
     }
 
     /// <summary>
-    /// Места светодиодов устройства на холсте: X от 0 до 1, Y от 0 до высоты холста. У устройства одного цвета
+    /// Места светодиодов пространства local на холсте: X от 0 до 1, Y от 0 до высоты холста. У устройства одного цвета
     /// светодиодов нет — только середина.
     /// </summary>
-    public static (IReadOnlyList<EffectPixel?> Points, EffectPixel Center) Place(DeviceGeometry own, SceneDeviceConfig placement)
+    public static (IReadOnlyList<EffectPixel?> Points, EffectPixel Center) Place(DeviceGeometry local, SceneDeviceConfig placement)
     {
-        var originX = placement.X;
-        var originY = placement.Y * SceneConfig.CanvasHeight;
+        var points = local.Points.Select(p => p is { } pixel ? ToCanvas(pixel, local, placement) : (EffectPixel?)null).ToArray();
+
+        return (points, ToCanvas(local.Center, local, placement));
+    }
+
+    /// <summary>
+    /// Устройство в своём виде на холсте: светодиоды, углы корпуса и шестигранников в точках холста.
+    /// </summary>
+    public static SceneShape Place(SceneShape shape, SceneDeviceConfig placement)
+    {
+        var local = shape.Local;
+        var (points, center) = Place(local, placement);
+
+        var body = shape.Body.Select(p => ToCanvas(p, local, placement)).ToList();
+        var panels = shape.Panels
+            .Select(p => p with { Corners = p.Corners.Select(c => ToCanvas(c, local, placement)).ToList() })
+            .ToList();
+
+        var placed = DeviceGeometry.FromPoints(false, 1, SceneConfig.CanvasHeight, points, center);
+
+        return shape with { Local = placed, Body = body, Panels = panels };
+    }
+
+    /// <summary>
+    /// Точка пространства local — в точку холста: лента лежит вдоль линии через свою середину, плоскость — вокруг
+    /// своей середины; размер и поворот — как у устройства.
+    /// </summary>
+    private static EffectPixel ToCanvas(EffectPixel pixel, DeviceGeometry local, SceneDeviceConfig placement)
+    {
         var radians = placement.Angle * Math.PI / 180;
         var cos = Math.Cos(radians);
         var sin = Math.Sin(radians);
 
-        EffectPixel Map(EffectPixel pixel)
-        {
-            // Лента лежит вдоль линии через свою середину, клавиатура — плоскостью вокруг своей середины
-            var localX = (own.IsLinear ? pixel.X - 0.5 : pixel.X - own.Width / 2) * placement.Size;
-            var localY = own.IsLinear ? 0 : (pixel.Y - own.Height / 2) * placement.Size;
+        var localX = (local.IsLinear ? pixel.X - 0.5 : pixel.X - local.Width / 2) * placement.Size;
+        var localY = local.IsLinear ? 0 : (pixel.Y - local.Height / 2) * placement.Size;
 
-            // Поворот по часовой стрелке: Y на холсте идёт вниз
-            return new EffectPixel(originX + localX * cos - localY * sin, originY + localX * sin + localY * cos, pixel.Seed);
-        }
-
-        var points = own.Points.Select(p => p is { } pixel ? Map(pixel) : (EffectPixel?)null).ToArray();
-
-        return (points, Map(own.Center));
+        // Поворот по часовой стрелке: Y на холсте идёт вниз
+        return new EffectPixel(
+            placement.X + localX * cos - localY * sin,
+            placement.Y * SceneConfig.CanvasHeight + localX * sin + localY * cos,
+            pixel.Seed);
     }
 
     /// <summary>

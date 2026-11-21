@@ -270,7 +270,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     private ProfileOption NewProfileOption(ProfileConfig profile)
     {
-        return new ProfileOption(profile, id => _deviceManager.Devices.FirstOrDefault(d => d.Id == id), OnProfileEdited);
+        return new ProfileOption(profile, id => _deviceManager.Devices.FirstOrDefault(d => d.Id == id), OnProfileEdited,
+            id => _config.Monitors.FirstOrDefault(m => m.DeviceId == id));
     }
 
     /// <summary>

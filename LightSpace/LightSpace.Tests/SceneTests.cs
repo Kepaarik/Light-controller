@@ -131,7 +131,7 @@ public sealed class SceneTests
             Effect = new ContentConfig { Kind = ContentKind.Music, EffectId = "wave" },
             Devices = new List<SceneDeviceConfig>
             {
-                new() { DeviceId = "a", X = 2, Y = double.NaN, Size = 0, Angle = -90 },
+                new() { DeviceId = "a", X = 2, Y = double.NaN, Size = 0, Angle = -90, Shape = (SceneDeviceShape)99, Panels = 500, Brightness = -5 },
                 new() { DeviceId = "a", X = 0.1 },
                 new() { DeviceId = "" }
             }
@@ -150,6 +150,9 @@ public sealed class SceneTests
         Assert.Equal(0.5, device.Y);
         Assert.Equal(SceneDeviceConfig.MinSize, device.Size);
         Assert.Equal(270, device.Angle);
+        Assert.Equal(SceneDeviceShape.Auto, device.Shape);
+        Assert.Equal(SceneDeviceConfig.MaxPanels, device.Panels);
+        Assert.Equal(0, device.Brightness);
     }
 
     [Fact]
@@ -242,7 +245,7 @@ public sealed class SceneTests
                 "Direction": "FromCenter",
                 "Brightness": 40,
                 "Effect": { "Kind": "Effect", "EffectId": "fire" },
-                "Devices": [ { "DeviceId": "a", "X": 0.2, "Angle": 90 }, { "DeviceId": "нет" } ]
+                "Devices": [ { "DeviceId": "a", "X": 0.2, "Angle": 90, "Shape": "Hexagons", "Panels": 12 }, { "DeviceId": "нет" } ]
               },
               "Profiles": [ { "Id": "p", "Name": "Вечер", "Scene": { "Devices": [ { "DeviceId": "b" } ] } } ]
             }
@@ -258,7 +261,15 @@ public sealed class SceneTests
 
         Assert.Equal(0.2, device.X);
         Assert.Equal(90, device.Angle);
-        Assert.Equal("b", Assert.Single(config.Profiles[0].Scene!.Devices).DeviceId);
+        Assert.Equal(SceneDeviceShape.Hexagons, device.Shape);
+        Assert.Equal(12, device.Panels);
+
+        // Чего нет в файле — по умолчанию: вид по самому устройству, полная яркость
+        var saved = Assert.Single(config.Profiles[0].Scene!.Devices);
+
+        Assert.Equal("b", saved.DeviceId);
+        Assert.Equal(SceneDeviceShape.Auto, saved.Shape);
+        Assert.Equal(100, saved.Brightness);
     }
 
     [Fact]
@@ -272,6 +283,7 @@ public sealed class SceneTests
 
         config.Scene = SceneOf("a");
         config.Scene.Brightness = 50;
+        config.Scene.Devices[0].Brightness = 60;
         config.MasterBrightness = 80;
 
         try
@@ -286,6 +298,9 @@ public sealed class SceneTests
             Assert.Equal("a", Assert.Single(scene.Devices).Id);
             Assert.Equal("rainbow", scene.Active.Effect.Id);
             Assert.Equal(40, scene.Brightness);
+
+            // Своя яркость устройства в сцене приглушает его поверх яркости сцены
+            Assert.Equal(60, scene.Devices[0].Brightness);
         }
         finally
         {

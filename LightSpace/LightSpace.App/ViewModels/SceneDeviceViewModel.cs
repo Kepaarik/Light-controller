@@ -9,25 +9,39 @@ using LightSpace.Engine.Space;
 namespace LightSpace.App.ViewModels;
 
 /// <summary>
-/// Устройство на холсте сцены: его место, поворот, размер и цвета превью.
+/// Устройство на холсте сцены: его место, поворот, размер, вид, число шестигранников, своя яркость и цвета превью.
 /// </summary>
 public sealed partial class SceneDeviceViewModel : ObservableObject
 {
-    private readonly Action _resized;
+    private readonly Action _changed;
 
     /// <summary>
     /// icon — значок устройства, как в левом меню; own — собственное пространство устройства: по нему расставляются
-    /// светодиоды на холсте. resized вызывается, когда устройству поменяли размер.
+    /// светодиоды на холсте; monitor — монитор, за которым висит лента. changed вызывается, когда устройству поменяли
+    /// размер, вид, число шестигранников или яркость.
     /// </summary>
-    public SceneDeviceViewModel(SceneDeviceConfig placement, string name, string icon, DeviceGeometry own, Action resized)
+    public SceneDeviceViewModel(SceneDeviceConfig placement, string name, string icon, DeviceGeometry own, MonitorConfig? monitor,
+        Action changed)
     {
         Placement = placement;
         Name = name;
         Icon = icon;
         Own = own;
-        _resized = resized;
+        Monitor = monitor;
+        _changed = changed;
         Colors = new RgbColor[Math.Max(own.Points.Count, 1)];
     }
+
+    /// <summary>
+    /// Виды устройства на холсте.
+    /// </summary>
+    public IReadOnlyList<SceneChoice<SceneDeviceShape>> Shapes { get; } = new[]
+    {
+        new SceneChoice<SceneDeviceShape>(SceneDeviceShape.Strip, "Лента"),
+        new SceneChoice<SceneDeviceShape>(SceneDeviceShape.Keyboard, "Клавиатура"),
+        new SceneChoice<SceneDeviceShape>(SceneDeviceShape.Monitor, "Монитор"),
+        new SceneChoice<SceneDeviceShape>(SceneDeviceShape.Hexagons, "Шестигранники")
+    };
 
     /// <summary>
     /// Место устройства в настройках сцены; правки места сразу попадают в него.
@@ -49,6 +63,11 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     public DeviceGeometry Own { get; }
 
     /// <summary>
+    /// Монитор, за которым висит лента: вид «Монитор» берёт её раскладку по краям; null — ленты за монитором нет.
+    /// </summary>
+    public MonitorConfig? Monitor { get; }
+
+    /// <summary>
     /// Устройство выбрано на холсте: его можно повернуть и поменять размер.
     /// </summary>
     [ObservableProperty]
@@ -60,9 +79,78 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     public RgbColor[] Colors { get; set; }
 
     /// <summary>
-    /// Места светодиодов на холсте: X от 0 до 1, Y от 0 до высоты холста. У устройства одного цвета — только середина.
+    /// Места светодиодов на холсте в виде устройства: X от 0 до 1, Y от 0 до высоты холста. У устройства одного цвета —
+    /// только середина.
     /// </summary>
-    public (IReadOnlyList<EffectPixel?> Points, EffectPixel Center) CanvasPoints => SceneSpace.Place(Own, Placement);
+    public (IReadOnlyList<EffectPixel?> Points, EffectPixel Center) CanvasPoints =>
+        SceneSpace.Place(SceneShapes.Of(Own, Placement, Monitor).Local, Placement);
+
+    /// <summary>
+    /// Устройство в своём виде на холсте: светодиоды, углы корпуса и шестигранников в точках холста.
+    /// </summary>
+    public SceneShape CanvasShape => SceneSpace.Place(SceneShapes.Of(Own, Placement, Monitor), Placement);
+
+    /// <summary>
+    /// Как устройство выглядит на холсте; «по самому устройству» показывается тем видом, который выбран за него.
+    /// </summary>
+    public SceneChoice<SceneDeviceShape>? SelectedShape
+    {
+        get => Shapes.First(s => s.Value == SceneShapes.KindOf(Own, Placement));
+        set
+        {
+            // Сегменты сбрасывают выбор в null, когда пересобираются
+            if (value == null || value.Value == SceneShapes.KindOf(Own, Placement))
+                return;
+
+            Placement.Shape = value.Value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsHexagons));
+            _changed();
+        }
+    }
+
+    /// <summary>
+    /// Устройство — шестигранники: видно, сколько их.
+    /// </summary>
+    public bool IsHexagons => SceneShapes.KindOf(Own, Placement) == SceneDeviceShape.Hexagons;
+
+    /// <summary>
+    /// Сколько шестигранников у устройства.
+    /// </summary>
+    public double Panels
+    {
+        get => Placement.Panels;
+        set
+        {
+            var panels = (int)Math.Round(Math.Clamp(value, SceneDeviceConfig.MinPanels, SceneDeviceConfig.MaxPanels));
+
+            if (panels == Placement.Panels)
+                return;
+
+            Placement.Panels = panels;
+            OnPropertyChanged();
+            _changed();
+        }
+    }
+
+    /// <summary>
+    /// Яркость устройства в сцене, 0–100 %.
+    /// </summary>
+    public double Brightness
+    {
+        get => Placement.Brightness;
+        set
+        {
+            var brightness = (int)Math.Round(Math.Clamp(value, 0, 100));
+
+            if (brightness == Placement.Brightness)
+                return;
+
+            Placement.Brightness = brightness;
+            OnPropertyChanged();
+            _changed();
+        }
+    }
 
     /// <summary>
     /// Начало и конец ленты на холсте — и у адресной, и у ленты одного цвета: линия длиной в размер устройства через
@@ -90,7 +178,7 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Длина ленты или ширина клавиатуры в процентах ширины холста.
+    /// Длина ленты или ширина клавиатуры, монитора, сот шестигранников в процентах ширины холста.
     /// </summary>
     public double SizePercent
     {
@@ -104,7 +192,7 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
 
             Placement.Size = size;
             OnPropertyChanged();
-            _resized();
+            _changed();
         }
     }
 

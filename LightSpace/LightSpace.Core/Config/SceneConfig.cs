@@ -25,6 +25,28 @@ public enum SceneDirection
 }
 
 /// <summary>
+/// Как устройство выглядит на холсте сцены. От вида зависит, где на холсте стоят его светодиоды, а значит, какие
+/// цвета эффекта оно получает.
+/// </summary>
+public enum SceneDeviceShape
+{
+    /// <summary>По самому устройству: клавиатура — клавиатурой, остальное — лентой.</summary>
+    Auto,
+
+    /// <summary>Полоса: светодиоды идут вдоль линии.</summary>
+    Strip,
+
+    /// <summary>Клавиатура: клавиши рядами; у настоящей клавиатуры — её раскладка.</summary>
+    Keyboard,
+
+    /// <summary>Монитор: лента по краям экрана; у ленты за монитором — её раскладка со страницы «Мониторы».</summary>
+    Monitor,
+
+    /// <summary>Шестигранники, собранные сотами: светодиоды поровну делятся между ними.</summary>
+    Hexagons
+}
+
+/// <summary>
 /// Сцена профиля: один эффект, который играют сразу несколько устройств — по пространству холста или синхронно.
 /// Устройства сцены играют её вместо своей подсветки.
 /// </summary>
@@ -99,12 +121,16 @@ public sealed class SceneConfig
 }
 
 /// <summary>
-/// Устройство сцены и его место на холсте.
+/// Устройство сцены: его место и вид на холсте, число шестигранников и своя яркость.
 /// </summary>
 public sealed class SceneDeviceConfig
 {
     public const double MinSize = 0.05;
     public const double MaxSize = 1;
+
+    public const int MinPanels = 1;
+    public const int MaxPanels = 30;
+    public const int DefaultPanels = 7;
 
     public string DeviceId { get; set; } = "";
 
@@ -119,7 +145,7 @@ public sealed class SceneDeviceConfig
     public double Y { get; set; } = 0.5;
 
     /// <summary>
-    /// Длина ленты или ширина клавиатуры в долях ширины холста.
+    /// Длина ленты или ширина клавиатуры, монитора, сот шестигранников в долях ширины холста.
     /// </summary>
     public double Size { get; set; } = 0.4;
 
@@ -128,9 +154,34 @@ public sealed class SceneDeviceConfig
     /// </summary>
     public double Angle { get; set; }
 
+    /// <summary>
+    /// Как устройство выглядит на холсте; по умолчанию — по самому устройству.
+    /// </summary>
+    public SceneDeviceShape Shape { get; set; } = SceneDeviceShape.Auto;
+
+    /// <summary>
+    /// Сколько шестигранников у устройства с видом «Шестигранники».
+    /// </summary>
+    public int Panels { get; set; } = DefaultPanels;
+
+    /// <summary>
+    /// Яркость устройства в сцене, 0–100 %: умножается на яркость сцены.
+    /// </summary>
+    public int Brightness { get; set; } = 100;
+
     public SceneDeviceConfig Clone()
     {
-        return new SceneDeviceConfig { DeviceId = DeviceId, X = X, Y = Y, Size = Size, Angle = Angle };
+        return new SceneDeviceConfig
+        {
+            DeviceId = DeviceId,
+            X = X,
+            Y = Y,
+            Size = Size,
+            Angle = Angle,
+            Shape = Shape,
+            Panels = Panels,
+            Brightness = Brightness
+        };
     }
 
     public void Normalize()
@@ -139,5 +190,11 @@ public sealed class SceneDeviceConfig
         Y = double.IsFinite(Y) ? Math.Clamp(Y, 0, 1) : 0.5;
         Size = double.IsFinite(Size) ? Math.Clamp(Size, MinSize, MaxSize) : 0.4;
         Angle = double.IsFinite(Angle) ? (Angle % 360 + 360) % 360 : 0;
+
+        if (!Enum.IsDefined(Shape))
+            Shape = SceneDeviceShape.Auto;
+
+        Panels = Math.Clamp(Panels, MinPanels, MaxPanels);
+        Brightness = Math.Clamp(Brightness, 0, 100);
     }
 }

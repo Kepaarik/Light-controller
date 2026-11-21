@@ -16,15 +16,17 @@ public sealed partial class ProfileOption : ObservableObject
 
     /// <summary>
     /// findDevice находит известное устройство по идентификатору; changed вызывается после каждой правки профиля.
+    /// findMonitor находит монитор, за которым висит лента, — для вида «Монитор» в сцене.
     /// </summary>
-    public ProfileOption(ProfileConfig settings, Func<string, ManagedDevice?> findDevice, Action changed)
+    public ProfileOption(ProfileConfig settings, Func<string, ManagedDevice?> findDevice, Action changed,
+        Func<string, MonitorConfig?>? findMonitor = null)
     {
         Settings = settings;
         _findDevice = findDevice;
         _changed = changed;
 
         Editor = new EffectEditorViewModel(OnEditorChanged);
-        Scene = new ProfileSceneViewModel(settings, findDevice, OnSceneChanged);
+        Scene = new ProfileSceneViewModel(settings, findDevice, OnSceneChanged, findMonitor);
 
         Reload();
     }
