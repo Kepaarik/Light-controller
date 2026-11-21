@@ -330,6 +330,50 @@ public sealed class ProfileSceneViewModelTests
     }
 
     [Fact]
+    public void ProfileListSelectsSceneOrDeviceWithAllItsSettings()
+    {
+        var config = ConfigWithDevices("a", "b");
+        var profile = config.SaveProfile("Вечер");
+        var devices = config.Devices.Select(d => new ManagedDevice(d)).ToList();
+        var option = new ProfileOption(profile, id => devices.FirstOrDefault(d => d.Id == id), () => { });
+
+        // Слева сцена, затем устройства; сначала выбрана сцена
+        Assert.Equal(new object[] { option.Scene, option.Devices[0], option.Devices[1] }, option.Items);
+        Assert.True(option.IsSceneSelected);
+        Assert.False(option.HasEditedDevice);
+
+        option.Devices[0].EditCommand.Execute(null);
+
+        Assert.Same(option.Devices[0], option.EditedDevice);
+        Assert.False(option.IsSceneSelected);
+        Assert.False(option.IsEditedInScene);
+        Assert.False(option.HasEditedMember);
+
+        option.OpenSceneCommand.Execute(null);
+        option.SelectedItem = option.Devices[0];
+
+        // В собранной сцене у устройства свои настройки сцены и переход к нему на холсте
+        Assert.True(option.HasEditedMember);
+        Assert.True(option.IsEditedInScene);
+        Assert.Equal("a", option.EditedSceneDevice!.DeviceId);
+
+        option.ShowOnCanvasCommand.Execute(null);
+
+        Assert.True(option.IsSceneOpen);
+        Assert.Same(option.Scene.Devices.First(d => d.DeviceId == "a"), option.Scene.SelectedDevice);
+
+        // «Все настройки устройства» на холсте возвращают к устройству
+        option.Scene.OpenSelectedDeviceCommand.Execute(null);
+
+        Assert.Same(option.Devices[0], option.EditedDevice);
+
+        option.EditedMember!.IsIncluded = false;
+
+        Assert.False(option.IsEditedInScene);
+        Assert.True(option.HasEditedMember);
+    }
+
+    [Fact]
     public void SceneEditMarksProfileAsNotPlaying()
     {
         UiThread.Invoke(() =>

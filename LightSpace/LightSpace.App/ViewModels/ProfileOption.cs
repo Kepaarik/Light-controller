@@ -28,6 +28,9 @@ public sealed partial class ProfileOption : ObservableObject
         Content = new DeviceContentViewModel(findDevice, OnContentChanged);
         Scene = new ProfileSceneViewModel(settings, findDevice, OnSceneChanged, findMonitor);
 
+        // «Все настройки устройства» на холсте сцены открывают это устройство в списке
+        Scene.DeviceOpenRequested += deviceId => SelectedItem = Devices.FirstOrDefault(d => d.Lighting.DeviceId == deviceId) ?? SelectedItem;
+
         Reload();
     }
 
@@ -50,50 +53,103 @@ public sealed partial class ProfileOption : ObservableObject
     public ProfileSceneViewModel Scene { get; }
 
     /// <summary>
-    /// Редактор сцены открыт.
+    /// Список слева: сцена, затем устройства профиля.
     /// </summary>
-    [ObservableProperty]
-    private bool _isSceneOpen;
+    public ObservableCollection<object> Items { get; } = new();
 
     /// <summary>
-    /// Открывает редактор сцены; у профиля без сцены сначала собирает её. Повторное нажатие закрывает редактор.
+    /// Выбранное в списке: сцена или устройство профиля; справа видны все его настройки. null — ничего не выбрано.
+    /// </summary>
+    [ObservableProperty]
+    private object? _selectedItem;
+
+    partial void OnSelectedItemChanged(object? value)
+    {
+        Content.Edit(EditedDevice?.Lighting.Content, EditedDevice?.Lighting.DeviceId);
+
+        OnPropertyChanged(nameof(EditedDevice));
+        OnPropertyChanged(nameof(HasEditedDevice));
+        OnPropertyChanged(nameof(IsSceneSelected));
+        OnPropertyChanged(nameof(IsSceneOpen));
+        OnEditedSceneChanged();
+    }
+
+    /// <summary>
+    /// Выбрана сцена: справа её настройки или предложение собрать её.
+    /// </summary>
+    public bool IsSceneSelected => SelectedItem == Scene;
+
+    /// <summary>
+    /// Выбрана собранная сцена: справа её редактор.
+    /// </summary>
+    public bool IsSceneOpen => IsSceneSelected && Scene.HasScene;
+
+    /// <summary>
+    /// Выбирает сцену; у профиля без сцены сначала собирает её.
     /// </summary>
     [RelayCommand]
     private void OpenScene()
     {
         if (!Scene.HasScene)
-        {
             Scene.BuildCommand.Execute(null);
-            IsSceneOpen = true;
-            return;
-        }
 
-        IsSceneOpen = !IsSceneOpen;
+        SelectedItem = Scene;
     }
 
     /// <summary>
-    /// Убирает сцену из профиля и закрывает её редактор.
+    /// Убирает сцену из профиля; выбранной остаётся сцена — с предложением собрать её заново.
     /// </summary>
     [RelayCommand]
     private void RemoveScene()
     {
         Scene.RemoveCommand.Execute(null);
-        IsSceneOpen = false;
     }
 
     /// <summary>
-    /// Устройство, эффект которого выбирают в профиле; null — галерея закрыта.
+    /// Устройство, выбранное в списке: справа его яркость, эффект и место в сцене; null — выбрана сцена или ничего.
     /// </summary>
-    [ObservableProperty]
-    private ProfileDeviceViewModel? _editedDevice;
+    public ProfileDeviceViewModel? EditedDevice => SelectedItem as ProfileDeviceViewModel;
 
     public bool HasEditedDevice => EditedDevice != null;
 
-    partial void OnEditedDeviceChanged(ProfileDeviceViewModel? value)
-    {
-        Content.Edit(value?.Lighting.Content, value?.Lighting.DeviceId);
+    /// <summary>
+    /// Выбранное устройство на холсте сцены; null — оно не в сцене или выбрано не устройство.
+    /// </summary>
+    public SceneDeviceViewModel? EditedSceneDevice =>
+        EditedDevice is { } device ? Scene.Devices.FirstOrDefault(d => d.DeviceId == device.Lighting.DeviceId) : null;
 
-        OnPropertyChanged(nameof(HasEditedDevice));
+    /// <summary>
+    /// Переключатель «В сцене» выбранного устройства; null — сцены нет или устройство не подключалось.
+    /// </summary>
+    public SceneMemberViewModel? EditedMember =>
+        EditedDevice is { } device ? Scene.Members.FirstOrDefault(m => m.DeviceId == device.Lighting.DeviceId) : null;
+
+    public bool HasEditedMember => EditedMember != null;
+
+    /// <summary>
+    /// Выбранное устройство играет сцену: его эффект в профиле включится, только когда его уберут из сцены.
+    /// </summary>
+    public bool IsEditedInScene => EditedSceneDevice != null;
+
+    /// <summary>
+    /// Показывает выбранное устройство на холсте сцены: там меняют его место, размер и поворот.
+    /// </summary>
+    [RelayCommand]
+    private void ShowOnCanvas()
+    {
+        if (EditedSceneDevice is not { } device)
+            return;
+
+        SelectedItem = Scene;
+        Scene.SelectedDevice = device;
+    }
+
+    private void OnEditedSceneChanged()
+    {
+        OnPropertyChanged(nameof(EditedSceneDevice));
+        OnPropertyChanged(nameof(EditedMember));
+        OnPropertyChanged(nameof(HasEditedMember));
+        OnPropertyChanged(nameof(IsEditedInScene));
     }
 
     /// <summary>
@@ -150,14 +206,22 @@ public sealed partial class ProfileOption : ObservableObject
     /// </summary>
     public void Reload()
     {
-        // Открытое устройство пересоздаётся вместе с остальными — галерея закрывается
-        EditedDevice = null;
+        // Открытое устройство пересоздаётся вместе с остальными — выбранной становится сцена
+        SelectedItem = null;
         Devices.Clear();
+        Items.Clear();
 
         foreach (var lighting in Settings.DeviceLighting)
             Devices.Add(new ProfileDeviceViewModel(lighting, _findDevice(lighting.DeviceId), OnDeviceChanged, Remove, Edit));
 
         Scene.Reload();
+
+        Items.Add(Scene);
+
+        foreach (var device in Devices)
+            Items.Add(device);
+
+        SelectedItem = Scene;
 
         OnPropertyChanged(nameof(DevicesText));
         OnPropertyChanged(nameof(SummaryText));
@@ -169,18 +233,23 @@ public sealed partial class ProfileOption : ObservableObject
         _changed();
     }
 
+    /// <summary>
+    /// Сцену правили: её состав мог поменяться — у выбранного устройства пересчитывается его место в сцене.
+    /// </summary>
     private void OnSceneChanged()
     {
         OnPropertyChanged(nameof(SummaryText));
+        OnPropertyChanged(nameof(IsSceneOpen));
+        OnEditedSceneChanged();
         _changed();
     }
 
     /// <summary>
-    /// Открывает галерею для устройства; повторный щелчок по тому же устройству её закрывает.
+    /// Выбирает устройство в списке; повторный выбор того же устройства снимает выбор.
     /// </summary>
     private void Edit(ProfileDeviceViewModel device)
     {
-        EditedDevice = EditedDevice == device ? null : device;
+        SelectedItem = SelectedItem == device ? null : device;
     }
 
     /// <summary>
@@ -198,12 +267,15 @@ public sealed partial class ProfileOption : ObservableObject
 
     private void Remove(ProfileDeviceViewModel device)
     {
-        if (EditedDevice == device)
-            EditedDevice = null;
+        // Убранное устройство больше не показать — выбранной становится сцена
+        if (SelectedItem == device)
+            SelectedItem = Scene;
 
         Settings.DeviceLighting.Remove(device.Lighting);
         Devices.Remove(device);
+        Items.Remove(device);
         Scene.RemoveDevice(device.Lighting.DeviceId);
+        OnEditedSceneChanged();
 
         OnPropertyChanged(nameof(DevicesText));
         OnPropertyChanged(nameof(SummaryText));

@@ -223,6 +223,21 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Просят открыть все настройки устройства сцены: передаётся идентификатор устройства.
+    /// </summary>
+    public event Action<string>? DeviceOpenRequested;
+
+    /// <summary>
+    /// Открывает все настройки выбранного на холсте устройства: вид, яркость в сцене, свой эффект.
+    /// </summary>
+    [RelayCommand]
+    private void OpenSelectedDevice()
+    {
+        if (SelectedDevice != null)
+            DeviceOpenRequested?.Invoke(SelectedDevice.DeviceId);
+    }
+
+    /// <summary>
     /// Поворачивает выбранное устройство на четверть оборота.
     /// </summary>
     [RelayCommand]

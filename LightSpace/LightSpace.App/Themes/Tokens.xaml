@@ -143,6 +143,8 @@
     <sys:Double x:Key="EmptyStateMaxWidth">360</sys:Double>
     <!-- Колонка списка слева от панели выбранного элемента -->
     <GridLength x:Key="ListPaneWidth">300</GridLength>
+    <!-- Список сцены и устройств профиля слева от панели их настроек: уже, чтобы панели осталось место -->
+    <GridLength x:Key="ProfileItemsWidth">260</GridLength>
     <!-- Раскладка клавиатуры: сторона стандартной клавиши и зазор между клавишами -->
     <sys:Double x:Key="KeyUnitSize">32</sys:Double>
     <sys:Double x:Key="KeyGap">4</sys:Double>
