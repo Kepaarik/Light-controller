@@ -169,6 +169,12 @@ public sealed class SceneDeviceConfig
     /// </summary>
     public int Brightness { get; set; } = 100;
 
+    /// <summary>
+    /// Свой эффект устройства в сцене — из галереи или встроенный; null — устройство играет эффект сцены.
+    /// Со своим эффектом устройство остаётся на холсте, но играет его в своём пространстве.
+    /// </summary>
+    public ContentConfig? Effect { get; set; }
+
     public SceneDeviceConfig Clone()
     {
         return new SceneDeviceConfig
@@ -180,7 +186,8 @@ public sealed class SceneDeviceConfig
             Angle = Angle,
             Shape = Shape,
             Panels = Panels,
-            Brightness = Brightness
+            Brightness = Brightness,
+            Effect = Effect?.Clone()
         };
     }
 
@@ -196,5 +203,14 @@ public sealed class SceneDeviceConfig
 
         Panels = Math.Clamp(Panels, MinPanels, MaxPanels);
         Brightness = Math.Clamp(Brightness, 0, 100);
+
+        if (Effect == null)
+            return;
+
+        Effect.Normalize();
+
+        // Свой эффект в сцене — эффект из галереи или встроенный; экран и музыку сцена не играет
+        if (Effect.Kind is not (ContentKind.Effect or ContentKind.Builtin))
+            Effect.Kind = ContentKind.Effect;
     }
 }

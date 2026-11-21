@@ -1,0 +1,28 @@
+<UserControl x:Class="LightSpace.App.Views.DeviceContentEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:LightSpace.App.ViewModels"
+             xmlns:controls="clr-namespace:LightSpace.App.Controls"
+             xmlns:views="clr-namespace:LightSpace.App.Views"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:DeviceContentViewModel}">
+
+    <!-- Эффект устройства в профиле или в сцене: сверху встроенные эффекты устройства и их настройки, ниже галерея
+         эффектов приложения с настройками выбранного -->
+    <StackPanel>
+        <StackPanel Visibility="{Binding Builtin.HasTiles, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <TextBlock Text="Встроенные эффекты устройства" Style="{StaticResource SectionLabel}"/>
+            <ListBox Style="{StaticResource TileGallery}" ItemsSource="{Binding Builtin.Tiles}"
+                     SelectedItem="{Binding Builtin.SelectedTile}"/>
+
+            <views:BuiltinSettings DataContext="{Binding Builtin}" Margin="{StaticResource GapTop8}"
+                                   Visibility="{Binding DataContext.IsBuiltinPlaying, RelativeSource={RelativeSource AncestorType=views:DeviceContentEditor}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+
+            <TextBlock Text="Эффекты приложения" Style="{StaticResource SectionLabel}"/>
+        </StackPanel>
+
+        <views:EffectEditor DataContext="{Binding Editor}" ShowsSettings="{Binding IsPlaying}"/>
+    </StackPanel>
+</UserControl>

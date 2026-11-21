@@ -221,6 +221,50 @@ public sealed class ProfileSceneViewModelTests
     }
 
     [Fact]
+    public void DeviceInSceneGetsItsOwnEffect()
+    {
+        var (scene, profile, edits) = SceneOf("a", "b");
+
+        scene.BuildCommand.Execute(null);
+
+        var device = scene.Devices[0];
+
+        Assert.False(device.HasOwnEffect);
+
+        device.HasOwnEffect = true;
+        device.Content.Editor.SelectedTile = device.Content.Editor.Tiles.Single(t => t.Definition.Id == "fire");
+
+        var own = profile.Scene!.Devices[0].Effect!;
+
+        Assert.Equal(ContentKind.Effect, own.Kind);
+        Assert.Equal("fire", own.EffectId);
+        Assert.True(device.Content.Editor.IsPlaying);
+        Assert.Null(profile.Scene.Devices[1].Effect);
+        Assert.Equal(3, edits.Count);
+
+        // Без своего эффекта устройство снова играет эффект сцены
+        device.HasOwnEffect = false;
+
+        Assert.Null(profile.Scene.Devices[0].Effect);
+        Assert.Equal(4, edits.Count);
+    }
+
+    [Fact]
+    public void DeviceWithBuiltinEffectIsGrayInPreview()
+    {
+        var (scene, profile, _) = SceneOf("a");
+
+        scene.BuildCommand.Execute(null);
+        profile.Scene!.Devices[0].Effect = new ContentConfig { Kind = ContentKind.Builtin };
+        scene.Reload();
+        scene.Advance(0.5);
+
+        Assert.Equal(new LightSpace.Core.RgbColor(0x60, 0x64, 0x70), Assert.Single(scene.Devices[0].Colors));
+        Assert.True(scene.Devices[0].HasOwnEffect);
+        Assert.True(scene.Devices[0].Content.IsBuiltinPlaying);
+    }
+
+    [Fact]
     public void DeviceMovesInsideCanvas()
     {
         var (scene, profile, _) = SceneOf("a");

@@ -25,7 +25,7 @@ public sealed partial class ProfileOption : ObservableObject
         _findDevice = findDevice;
         _changed = changed;
 
-        Editor = new EffectEditorViewModel(OnEditorChanged);
+        Content = new DeviceContentViewModel(findDevice, OnContentChanged);
         Scene = new ProfileSceneViewModel(settings, findDevice, OnSceneChanged, findMonitor);
 
         Reload();
@@ -34,9 +34,15 @@ public sealed partial class ProfileOption : ObservableObject
     public ProfileConfig Settings { get; }
 
     /// <summary>
-    /// Галерея эффектов для устройства, открытого в профиле; правит профиль, а не то, что играет на устройстве.
+    /// Эффект устройства, открытого в профиле: галерея и встроенные эффекты устройства. Правит профиль, а не то, что
+    /// играет на устройстве.
     /// </summary>
-    public EffectEditorViewModel Editor { get; }
+    public DeviceContentViewModel Content { get; }
+
+    /// <summary>
+    /// Галерея эффектов для устройства, открытого в профиле.
+    /// </summary>
+    public EffectEditorViewModel Editor => Content.Editor;
 
     /// <summary>
     /// Сцена профиля: несколько устройств играют один эффект.
@@ -85,8 +91,7 @@ public sealed partial class ProfileOption : ObservableObject
 
     partial void OnEditedDeviceChanged(ProfileDeviceViewModel? value)
     {
-        Editor.Edit(value?.Lighting.Content);
-        Editor.IsPlaying = value?.Lighting.Content.Kind == ContentKind.Effect;
+        Content.Edit(value?.Lighting.Content, value?.Lighting.DeviceId);
 
         OnPropertyChanged(nameof(HasEditedDevice));
     }
@@ -179,15 +184,13 @@ public sealed partial class ProfileOption : ObservableObject
     }
 
     /// <summary>
-    /// В галерее выбрали эффект или поменяли его настройки: устройство в профиле играет эффект из галереи.
+    /// В галерее или во встроенных эффектах что-то выбрали или поменяли: устройство в профиле играет то, что правили.
     /// </summary>
-    private void OnEditorChanged()
+    private void OnContentChanged()
     {
         if (EditedDevice == null)
             return;
 
-        EditedDevice.Lighting.Content.Kind = ContentKind.Effect;
-        Editor.IsPlaying = true;
         EditedDevice.RefreshContent();
 
         OnDeviceChanged();

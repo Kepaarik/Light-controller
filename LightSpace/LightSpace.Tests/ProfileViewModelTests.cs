@@ -302,6 +302,55 @@ public sealed class ProfileViewModelTests
     }
 
     [Fact]
+    public void BuiltinEffectOfDeviceIsChosenInProfile()
+    {
+        var changes = 0;
+        var profile = Profile(("a", 30));
+        var device = ConnectedDevice(new FakeBuiltinLed("a"));
+        var option = new ProfileOption(profile, id => id == "a" ? device : null, () => changes++);
+
+        try
+        {
+            option.Devices[0].EditCommand.Execute(null);
+
+            // У подключённого устройства со встроенными эффектами они видны рядом с галереей
+            Assert.Equal(new[] { "Радуга", "Пульс" }, option.Content.Builtin.Tiles.Select(t => t.Title));
+            Assert.False(option.Content.IsBuiltinPlaying);
+
+            option.Content.Builtin.SelectedTile = option.Content.Builtin.Tiles.Single(t => t.Title == "Пульс");
+
+            var content = profile.DeviceLighting[0].Content;
+
+            Assert.Equal(ContentKind.Builtin, content.Kind);
+            Assert.Equal(7, content.Builtin.Effects["a"]);
+            Assert.True(option.Content.IsBuiltinPlaying);
+            Assert.False(option.Editor.IsPlaying);
+            Assert.Equal("Встроенный · Пульс", option.Devices[0].ContentText);
+            Assert.Equal(1, changes);
+
+            // Плитка галереи возвращает эффект приложения
+            option.Editor.SelectedTile = option.Editor.Tiles.Single(t => t.Definition.Id == "fire");
+
+            Assert.Equal(ContentKind.Effect, content.Kind);
+            Assert.False(option.Content.IsBuiltinPlaying);
+        }
+        finally
+        {
+            device.Disconnect();
+        }
+    }
+
+    [Fact]
+    public void DeviceWithoutBuiltinEffectsShowsOnlyGallery()
+    {
+        var option = new ProfileOption(Profile(("a", 30)), id => Device(id), () => { });
+
+        option.Devices[0].EditCommand.Execute(null);
+
+        Assert.False(option.Content.Builtin.HasTiles);
+    }
+
+    [Fact]
     public void RemovingEditedDeviceClosesGallery()
     {
         var option = new ProfileOption(Profile(("a", 30), ("b", 80)), id => Device(id), () => { });

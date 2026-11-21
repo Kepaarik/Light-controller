@@ -2,6 +2,7 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using LightSpace.Core;
 using LightSpace.Core.Config;
+using LightSpace.Engine;
 using LightSpace.Engine.Effects;
 using LightSpace.Engine.Scene;
 using LightSpace.Engine.Space;
@@ -17,11 +18,12 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
 
     /// <summary>
     /// icon — значок устройства, как в левом меню; own — собственное пространство устройства: по нему расставляются
-    /// светодиоды на холсте; monitor — монитор, за которым висит лента. changed вызывается, когда устройству поменяли
-    /// размер, вид, число шестигранников или яркость.
+    /// светодиоды на холсте; monitor — монитор, за которым висит лента; findDevice находит устройство для его
+    /// встроенных эффектов. changed вызывается, когда устройству поменяли размер, вид, число шестигранников, яркость
+    /// или свой эффект.
     /// </summary>
     public SceneDeviceViewModel(SceneDeviceConfig placement, string name, string icon, DeviceGeometry own, MonitorConfig? monitor,
-        Action changed)
+        Func<string, ManagedDevice?> findDevice, Action changed)
     {
         Placement = placement;
         Name = name;
@@ -30,6 +32,33 @@ public sealed partial class SceneDeviceViewModel : ObservableObject
         Monitor = monitor;
         _changed = changed;
         Colors = new RgbColor[Math.Max(own.Points.Count, 1)];
+
+        Content = new DeviceContentViewModel(findDevice, changed);
+        Content.Edit(placement.Effect, placement.DeviceId);
+    }
+
+    /// <summary>
+    /// Свой эффект устройства в сцене: галерея и встроенные эффекты устройства.
+    /// </summary>
+    public DeviceContentViewModel Content { get; }
+
+    /// <summary>
+    /// Устройство играет свой эффект, а не эффект сцены. Только что включённый свой эффект — сплошной цвет из галереи.
+    /// </summary>
+    public bool HasOwnEffect
+    {
+        get => Placement.Effect != null;
+        set
+        {
+            if (value == HasOwnEffect)
+                return;
+
+            Placement.Effect = value ? new ContentConfig { Kind = ContentKind.Effect } : null;
+            Content.Edit(Placement.Effect, Placement.DeviceId);
+
+            OnPropertyChanged();
+            _changed();
+        }
     }
 
     /// <summary>

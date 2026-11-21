@@ -310,6 +310,58 @@ public sealed class SceneTests
     }
 
     [Fact]
+    public void DeviceWithOwnEffectPlaysItInsteadOfScene()
+    {
+        var config = ConfigWithDevices("a", "b");
+        var devices = config.Devices.Select(d => new ManagedDevice(d)).ToList();
+
+        foreach (var device in devices)
+            device.Connect(new FakeLed(device.Id), isLightingEnabled: true);
+
+        config.Scene = SceneOf("a", "b");
+        config.Scene.Brightness = 50;
+        config.Scene.Devices[1].Brightness = 80;
+        config.Scene.Devices[1].Effect = new ContentConfig { Kind = ContentKind.Effect, EffectId = "fire" };
+
+        try
+        {
+            var snapshot = FrameSnapshot.Build(config, devices);
+
+            // a играет сцену, b — свой эффект в своей группе, с яркостью сцены и своей
+            Assert.Equal(new[] { FrameSnapshot.SceneGroupId, "b" }, snapshot.Groups.Select(g => g.Id));
+            Assert.Equal("a", Assert.Single(snapshot.Groups[0].Devices).Id);
+
+            var own = snapshot.Groups[1];
+
+            Assert.Equal("b", Assert.Single(own.Devices).Id);
+            Assert.Equal("fire", own.Active.Effect.Id);
+            Assert.Equal(40, own.Brightness);
+        }
+        finally
+        {
+            foreach (var device in devices)
+                device.Disconnect();
+        }
+    }
+
+    [Fact]
+    public void OwnEffectInSceneIsEffectOrBuiltinAndIsCopied()
+    {
+        var scene = SceneOf("a");
+
+        scene.Devices[0].Effect = new ContentConfig { Kind = ContentKind.Music, EffectId = "wave" };
+        scene.Normalize();
+
+        Assert.Equal(ContentKind.Effect, scene.Devices[0].Effect!.Kind);
+
+        var copy = scene.Clone();
+
+        copy.Devices[0].Effect!.EffectId = "fire";
+
+        Assert.Equal("wave", scene.Devices[0].Effect!.EffectId);
+    }
+
+    [Fact]
     public void SnapshotSkipsSceneWithoutDevices()
     {
         var config = ConfigWithDevices("a");

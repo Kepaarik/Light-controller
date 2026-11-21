@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LightSpace.Core;
 using LightSpace.Core.Config;
 using LightSpace.Engine;
 using LightSpace.Engine.Effects;
@@ -20,6 +21,9 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
     // Момент эффекта, с которого начинается превью: не самое начало, чтобы картинка сразу была «живой»
     private const double PreviewStartTime = 3.3;
+
+    // Встроенный эффект играет сам контроллер — на холсте устройство с ним серое
+    private static readonly RgbColor BuiltinPreviewColor = new(0x60, 0x64, 0x70);
 
     private readonly ProfileConfig _profile;
     private readonly Func<string, ManagedDevice?> _findDevice;
@@ -281,7 +285,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
         var effect = EffectLibrary.FindOrSolid(scene.Effect.EffectId);
 
-        _time += seconds * effect.Number(ValuesOf(scene, effect), "speed");
+        _time += seconds * effect.Number(ValuesOf(scene.Effect, effect), "speed");
         Render();
     }
 
@@ -345,7 +349,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
         var icon = device?.Settings.Icon ?? (device?.Capabilities?.IsKeyboard == true ? DeviceIcons.Keyboard : DeviceIcons.Strip);
 
         return new SceneDeviceViewModel(placement, device?.Name ?? "Забытое устройство", icon,
-            device?.Geometry ?? DeviceGeometry.Single(placement.DeviceId), _findMonitor(placement.DeviceId), OnPlacementChanged);
+            device?.Geometry ?? DeviceGeometry.Single(placement.DeviceId), _findMonitor(placement.DeviceId), _findDevice, OnPlacementChanged);
     }
 
     /// <summary>
@@ -402,6 +406,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
     /// <summary>
     /// Цвета каждого устройства в текущий момент превью — тем же рендером и в том же пространстве, что на устройствах.
+    /// Устройство со своим эффектом показывает его в своём пространстве; встроенный эффект показать нельзя — оно серое.
     /// </summary>
     private void Render()
     {
@@ -409,17 +414,38 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
             return;
 
         var effect = EffectLibrary.FindOrSolid(scene.Effect.EffectId);
-        var values = ValuesOf(scene, effect);
+        var values = ValuesOf(scene.Effect, effect);
 
         foreach (var device in Devices)
+        {
+            if (device.Placement.Effect is { } own)
+            {
+                device.Colors = own.Kind == ContentKind.Builtin
+                    ? Enumerable.Repeat(BuiltinPreviewColor, device.Colors.Length).ToArray()
+                    : RenderOwn(own, device.Own);
+
+                continue;
+            }
+
             device.Colors = EffectRenderer.Render(effect, values,
                 SceneSpace.Of(device.Own, device.Placement, scene.Spread, scene.Direction, device.Monitor), _time);
+        }
 
         Rendered?.Invoke();
     }
 
-    private static EffectValues ValuesOf(SceneConfig scene, EffectDefinition effect)
+    /// <summary>
+    /// Свой эффект устройства из галереи в его собственном пространстве — так он играет и на устройстве.
+    /// </summary>
+    private RgbColor[] RenderOwn(ContentConfig own, DeviceGeometry geometry)
     {
-        return EffectValues.From(scene.Effect.Effects.GetValueOrDefault(effect.Id));
+        var effect = EffectLibrary.FindOrSolid(own.EffectId);
+
+        return EffectRenderer.Render(effect, ValuesOf(own, effect), geometry, _time);
+    }
+
+    private static EffectValues ValuesOf(ContentConfig content, EffectDefinition effect)
+    {
+        return EffectValues.From(content.Effects.GetValueOrDefault(effect.Id));
     }
 }

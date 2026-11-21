@@ -53,7 +53,8 @@ public sealed partial class DeviceLightingViewModel : ObservableObject
         Editor = new EffectEditorViewModel(() => OnEditorChanged(ContentKindOption.Effect));
         ScreenEditor = new ScreenEditorViewModel(() => OnEditorChanged(ContentKindOption.Screen));
         MusicEditor = new MusicEditorViewModel(sources, () => OnEditorChanged(ContentKindOption.Music));
-        BuiltinEditor = new BuiltinEditorViewModel(manager, () => OnEditorChanged(ContentKindOption.Builtin));
+        BuiltinEditor = new BuiltinEditorViewModel(id => manager.Devices.FirstOrDefault(d => d.Id == id),
+            () => OnEditorChanged(ContentKindOption.Builtin));
 
         _manager.DevicesChanged += (_, _) => SyncDevices();
         SyncDevices();

@@ -153,13 +153,14 @@
                             <views:SceneEditor DataContext="{Binding Scene}"/>
                         </Grid>
 
-                        <!-- Эффект открытого устройства: та же галерея, что на странице устройства, но правит профиль -->
+                        <!-- Эффект открытого устройства: встроенные эффекты устройства и та же галерея, что на странице
+                             устройства, но правят профиль -->
                         <StackPanel Visibility="{Binding HasEditedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                             <TextBlock Style="{StaticResource SectionLabel}">
                                 <Run Text="Эффект в профиле:"/> <Run Text="{Binding EditedDevice.Name, Mode=OneWay}"/>
                             </TextBlock>
                             <Border Style="{StaticResource Card}">
-                                <views:EffectEditor DataContext="{Binding Editor}" ShowsSettings="{Binding IsPlaying}"/>
+                                <views:DeviceContentEditor DataContext="{Binding Content}"/>
                             </Border>
                         </StackPanel>
                     </StackPanel>

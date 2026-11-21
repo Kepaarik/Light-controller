@@ -159,50 +159,32 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
 }
 
 /// <summary>
-/// Редактор содержимого — встроенного эффекта: эффект каждого подключённого устройства, которое их умеет, скорость
-/// и цвет. Показать сам эффект в окне нельзя — его играет устройство. Все правки сразу попадают в содержимое.
+/// Редактор содержимого — встроенного эффекта одного устройства: какой эффект оно играет, скорость и цвет. Показать
+/// сам эффект в окне нельзя — его играет устройство. Все правки сразу попадают в содержимое.
 /// </summary>
 public sealed partial class BuiltinEditorViewModel : ObservableObject
 {
-    private readonly DeviceManager _manager;
+    private readonly Func<string, ManagedDevice?> _findDevice;
     private readonly Action _changed;
 
     private BuiltinConfig? _builtin;
-    private IReadOnlyList<BuiltinDeviceViewModel> _devices = Array.Empty<BuiltinDeviceViewModel>();
+    private BuiltinDeviceViewModel? _device;
     private IReadOnlyList<BuiltinTileViewModel> _tiles = Array.Empty<BuiltinTileViewModel>();
     private bool _isPlaying;
 
-    // Открытое устройство: редактор показывает только его; null — все устройства со встроенными эффектами
-    private string? _deviceId;
-
     /// <summary>
-    /// manager — откуда берутся подключённые устройства и их эффекты; changed вызывается после каждой правки.
+    /// findDevice находит известное устройство по идентификатору: эффекты есть только у подключённого; changed
+    /// вызывается после каждой правки.
     /// </summary>
-    public BuiltinEditorViewModel(DeviceManager manager, Action changed)
+    public BuiltinEditorViewModel(Func<string, ManagedDevice?> findDevice, Action changed)
     {
-        _manager = manager;
+        _findDevice = findDevice;
         _changed = changed;
-
-        // После поиска могли найтись или пропасть устройства со встроенными эффектами
-        _manager.DevicesChanged += (_, _) => RefreshDevices();
-    }
-
-    /// <summary>
-    /// Подключённые устройства со встроенными эффектами.
-    /// </summary>
-    public IReadOnlyList<BuiltinDeviceViewModel> Devices
-    {
-        get => _devices;
-        private set
-        {
-            if (SetProperty(ref _devices, value))
-                OnPropertyChanged(nameof(IsColorShown));
-        }
     }
 
     /// <summary>
     /// Плитки встроенных эффектов открытого устройства для галереи; варианты одного эффекта — одна плитка.
-    /// Пусто, если открыто не одно устройство.
+    /// Пусто, если у устройства встроенных эффектов нет или оно не подключено.
     /// </summary>
     public IReadOnlyList<BuiltinTileViewModel> Tiles
     {
@@ -217,9 +199,9 @@ public sealed partial class BuiltinEditorViewModel : ObservableObject
     public bool HasTiles => _tiles.Count > 0;
 
     /// <summary>
-    /// Открытое устройство, которому выбирают эффект плитками; null — открыто не одно устройство.
+    /// Открытое устройство, которому выбирают эффект плитками; null — встроенных эффектов у него нет или оно не подключено.
     /// </summary>
-    public BuiltinDeviceViewModel? Device => IsOneDevice && _devices.Count == 1 ? _devices[0] : null;
+    public BuiltinDeviceViewModel? Device => _device;
 
     /// <summary>
     /// Встроенный эффект сейчас играет — тогда в галерее выделена его плитка.
@@ -257,14 +239,9 @@ public sealed partial class BuiltinEditorViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Редактор открыт для одного устройства: его название и подсказки про другие устройства не нужны.
+    /// Выбор цвета виден, только если устройство умеет играть встроенный эффект одним цветом.
     /// </summary>
-    public bool IsOneDevice => _deviceId != null;
-
-    /// <summary>
-    /// Выбор цвета виден, только если его понимает хоть одно показанное устройство.
-    /// </summary>
-    public bool IsColorShown => _devices.Any(d => d.HasColor);
+    public bool IsColorShown => _device?.HasColor == true;
 
     /// <summary>
     /// Эффекты играют одним своим цветом — тогда виден выбор цвета; false — цветами самого эффекта.
@@ -319,54 +296,29 @@ public sealed partial class BuiltinEditorViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Открывает содержимое для правки; null — ничего не открыто. deviceId — показывать только это устройство;
-    /// null — все устройства со встроенными эффектами.
+    /// Открывает для правки содержимое устройства deviceId; null — ничего не открыто. Повторный вызов перечитывает
+    /// эффекты устройства: после поиска оно могло подключиться или пропасть.
     /// </summary>
-    public void Edit(ContentConfig? content, string? deviceId = null)
+    public void Edit(ContentConfig? content, string? deviceId)
     {
         _builtin = content?.Builtin;
-        _deviceId = deviceId;
 
-        RefreshDevices();
-        OnPropertyChanged(nameof(IsOneDevice));
-        OnPropertyChanged(nameof(UseColor));
-        OnPropertyChanged(nameof(Color));
-        OnPropertyChanged(nameof(Speed));
-    }
+        var device = deviceId != null ? _findDevice(deviceId) : null;
 
-    /// <summary>
-    /// Собирает строки подключённых устройств со встроенными эффектами для открытого содержимого.
-    /// </summary>
-    private void RefreshDevices()
-    {
-        if (_builtin == null)
-        {
-            Devices = Array.Empty<BuiltinDeviceViewModel>();
-            RefreshTiles();
-            return;
-        }
+        _device = _builtin != null && device?.Device is IBuiltinEffectsDevice { BuiltinEffects.Count: > 0 } effects
+            ? new BuiltinDeviceViewModel(_builtin, device, effects, _changed)
+            : null;
 
-        var builtin = _builtin;
-
-        Devices = _manager.Devices
-            .Where(d => d.Device is IBuiltinEffectsDevice { BuiltinEffects.Count: > 0 } && (_deviceId == null || d.Id == _deviceId))
-            .Select(d => new BuiltinDeviceViewModel(builtin, d, (IBuiltinEffectsDevice)d.Device!, _changed))
-            .ToList();
-
-        RefreshTiles();
-    }
-
-    /// <summary>
-    /// Собирает плитки эффектов открытого устройства.
-    /// </summary>
-    private void RefreshTiles()
-    {
-        Tiles = Device is { } device
-            ? device.EffectGroups.Select(g => new BuiltinTileViewModel(g)).ToList()
+        Tiles = _device != null
+            ? _device.EffectGroups.Select(g => new BuiltinTileViewModel(g)).ToList()
             : Array.Empty<BuiltinTileViewModel>();
 
         OnPropertyChanged(nameof(Device));
         OnPropertyChanged(nameof(SelectedTile));
+        OnPropertyChanged(nameof(IsColorShown));
+        OnPropertyChanged(nameof(UseColor));
+        OnPropertyChanged(nameof(Color));
+        OnPropertyChanged(nameof(Speed));
     }
 
     private void SetNumber(double value, Func<BuiltinConfig, int> get, Action<BuiltinConfig, int> set, [CallerMemberName] string? name = null)

@@ -66,6 +66,14 @@
                                           Visibility="{Binding SelectedDevice.IsHexagons, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                     <controls:ValueSlider Label="Яркость устройства" Unit="%" Minimum="0" Maximum="100" Step="1"
                                           Value="{Binding SelectedDevice.Brightness}" Margin="{StaticResource GapTop16}"/>
+
+                    <!-- Свой эффект: устройство остаётся на холсте, но играет выбранный для него эффект -->
+                    <CheckBox Content="Свой эффект" IsChecked="{Binding SelectedDevice.HasOwnEffect}"
+                              HorizontalAlignment="Left" Margin="{StaticResource GapTop16}"/>
+                    <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"
+                               Text="Выключено — устройство играет эффект сцены. Включено — свой эффект из галереи или встроенный эффект устройства."/>
+                    <views:DeviceContentEditor DataContext="{Binding SelectedDevice.Content}" Margin="{StaticResource GapTop8}"
+                                               Visibility="{Binding DataContext.SelectedDevice.HasOwnEffect, RelativeSource={RelativeSource AncestorType=views:SceneEditor}, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                 </StackPanel>
             </StackPanel>
         </Border>
