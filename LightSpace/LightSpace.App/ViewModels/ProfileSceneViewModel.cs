@@ -223,18 +223,17 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Просят открыть все настройки устройства сцены: передаётся идентификатор устройства.
+    /// На холсте щёлкнули по устройству или мимо них: передаётся идентификатор устройства, null — мимо.
     /// </summary>
-    public event Action<string>? DeviceOpenRequested;
+    public event Action<string?>? DevicePicked;
 
     /// <summary>
-    /// Открывает все настройки выбранного на холсте устройства: вид, яркость в сцене, свой эффект.
+    /// Выбирает устройство щелчком по холсту; null — щёлкнули мимо устройств.
     /// </summary>
-    [RelayCommand]
-    private void OpenSelectedDevice()
+    public void Pick(SceneDeviceViewModel? device)
     {
-        if (SelectedDevice != null)
-            DeviceOpenRequested?.Invoke(SelectedDevice.DeviceId);
+        SelectedDevice = device;
+        DevicePicked?.Invoke(device?.DeviceId);
     }
 
     /// <summary>

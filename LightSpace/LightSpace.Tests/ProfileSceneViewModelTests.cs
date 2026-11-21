@@ -330,47 +330,56 @@ public sealed class ProfileSceneViewModelTests
     }
 
     [Fact]
-    public void ProfileListSelectsSceneOrDeviceWithAllItsSettings()
+    public void CanvasPickAndDeviceSelectionStayInStep()
     {
         var config = ConfigWithDevices("a", "b");
         var profile = config.SaveProfile("Вечер");
         var devices = config.Devices.Select(d => new ManagedDevice(d)).ToList();
         var option = new ProfileOption(profile, id => devices.FirstOrDefault(d => d.Id == id), () => { });
 
-        // Слева сцена, затем устройства; сначала выбрана сцена
-        Assert.Equal(new object[] { option.Scene, option.Devices[0], option.Devices[1] }, option.Items);
-        Assert.True(option.IsSceneSelected);
         Assert.False(option.HasEditedDevice);
 
+        // Без сцены устройство открывается со своим эффектом в профиле
         option.Devices[0].EditCommand.Execute(null);
 
         Assert.Same(option.Devices[0], option.EditedDevice);
-        Assert.False(option.IsSceneSelected);
         Assert.False(option.IsEditedInScene);
         Assert.False(option.HasEditedMember);
 
         option.OpenSceneCommand.Execute(null);
-        option.SelectedItem = option.Devices[0];
 
-        // В собранной сцене у устройства свои настройки сцены и переход к нему на холсте
+        // Сцена собрана: открытое устройство выделено на холсте
+        Assert.True(option.IsSceneOpen);
         Assert.True(option.HasEditedMember);
         Assert.True(option.IsEditedInScene);
-        Assert.Equal("a", option.EditedSceneDevice!.DeviceId);
+        Assert.Same(option.EditedSceneDevice, option.Scene.SelectedDevice);
 
-        option.ShowOnCanvasCommand.Execute(null);
+        // Щелчок по другому устройству на холсте открывает его, щелчок мимо — эффект сцены
+        option.Scene.Pick(option.Scene.Devices.First(d => d.DeviceId == "b"));
 
-        Assert.True(option.IsSceneOpen);
-        Assert.Same(option.Scene.Devices.First(d => d.DeviceId == "a"), option.Scene.SelectedDevice);
+        Assert.Same(option.Devices[1], option.EditedDevice);
 
-        // «Все настройки устройства» на холсте возвращают к устройству
-        option.Scene.OpenSelectedDeviceCommand.Execute(null);
+        option.Scene.Pick(null);
 
-        Assert.Same(option.Devices[0], option.EditedDevice);
+        Assert.False(option.HasEditedDevice);
+        Assert.Null(option.Scene.SelectedDevice);
 
+        // Устройство, выведенное из сцены, остаётся открытым
+        option.EditedDevice = option.Devices[0];
         option.EditedMember!.IsIncluded = false;
 
+        Assert.Same(option.Devices[0], option.EditedDevice);
         Assert.False(option.IsEditedInScene);
-        Assert.True(option.HasEditedMember);
+        Assert.Null(option.Scene.SelectedDevice);
+
+        option.EditedMember!.IsIncluded = true;
+
+        Assert.Same(option.EditedSceneDevice, option.Scene.SelectedDevice);
+
+        option.CloseDeviceCommand.Execute(null);
+
+        Assert.False(option.HasEditedDevice);
+        Assert.Null(option.Scene.SelectedDevice);
     }
 
     [Fact]

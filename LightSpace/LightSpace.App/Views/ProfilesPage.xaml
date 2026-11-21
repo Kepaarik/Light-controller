@@ -62,13 +62,10 @@
                               Visibility="{Binding HasSelectedProfile, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                     <StackPanel MaxWidth="{StaticResource WideContentMaxWidth}" HorizontalAlignment="Stretch"
                                 DataContext="{Binding SelectedProfile}" d:DataContext="{d:DesignInstance vm:ProfileOption}">
-                        <!-- Название и действия с профилем -->
+                        <!-- Название и действия с профилем одной строкой -->
                         <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Text="Название" Style="{StaticResource Hint}" Margin="{StaticResource GapBottom4}"/>
-                                <TextBox Text="{Binding Name}" KeyDown="OnNameKeyDown"/>
-
-                                <WrapPanel Margin="{StaticResource GapTop16}">
+                            <DockPanel>
+                                <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="{StaticResource GapLeft16}">
                                     <Button Style="{StaticResource AccentButton}" Content="Применить" controls:Appearance.Icon="&#xE768;"
                                             Margin="{StaticResource GapWrap}" CommandParameter="{Binding}"
                                             Command="{Binding DataContext.ApplyProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
@@ -80,90 +77,88 @@
                                             Command="{Binding DataContext.DeleteProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                                 </WrapPanel>
 
-                                <TextBlock Text="Сейчас играет этот профиль." Style="{StaticResource Hint}" Foreground="{DynamicResource SuccessBrush}"
-                                           Visibility="{Binding IsActive, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-                            </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBox Text="{Binding Name}" KeyDown="OnNameKeyDown" ToolTip="Название профиля"/>
+                                    <TextBlock Text="Сейчас играет этот профиль." Style="{StaticResource Hint}" Foreground="{DynamicResource SuccessBrush}"
+                                               Margin="{StaticResource GapTop4}"
+                                               Visibility="{Binding IsActive, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                                </StackPanel>
+                            </DockPanel>
                         </Border>
 
-                        <!-- Слева сцена и устройства профиля, справа все настройки выбранного -->
+                        <!-- Устройства профиля: щелчок открывает настройки устройства в панели справа -->
+                        <TextBlock Text="Устройства" Style="{StaticResource SectionLabel}"/>
+                        <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Devices}" SelectedItem="{Binding EditedDevice}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="vm:ProfileDeviceViewModel">
+                                    <StackPanel Orientation="Horizontal" ToolTip="{Binding ContentText}">
+                                        <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
+                                                   VerticalAlignment="Center" Margin="{StaticResource GapRight8}"/>
+                                        <TextBlock x:Name="DeviceName" Text="{Binding Name}" MaxWidth="200" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <DataTemplate.Triggers>
+                                        <!-- Забытое устройство приглушено -->
+                                        <DataTrigger Binding="{Binding IsKnown}" Value="False">
+                                            <Setter TargetName="DeviceName" Property="Opacity" Value="{StaticResource OpacityDisabled}"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- Слева сцена, справа панель: эффект сцены или настройки выбранного устройства -->
                         <Grid Margin="{StaticResource GapTop16}">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="{StaticResource ProfileItemsWidth}"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="{StaticResource ProfilePanelWidth}"/>
                             </Grid.ColumnDefinitions>
 
-                            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" VerticalAlignment="Top">
-                                <ListBox.Resources>
-                                    <!-- Сцена: что играет и сколько устройств; пока её нет — «Не собрана» -->
-                                    <DataTemplate DataType="{x:Type vm:ProfileSceneViewModel}">
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Left" Text="&#xE771;" Style="{StaticResource Icon}"
-                                                       FontSize="20" Width="28" Margin="{StaticResource GapRight12}" VerticalAlignment="Center"/>
-                                            <StackPanel>
-                                                <TextBlock Text="Сцена" Style="{StaticResource BodyStrong}"/>
-                                                <TextBlock Text="{Binding SummaryText, TargetNullValue='Не собрана'}" Style="{StaticResource Caption}"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-                                        </DockPanel>
-                                    </DataTemplate>
-
-                                    <!-- Устройство: что играет и с какой яркостью; забытое — приглушено -->
-                                    <DataTemplate DataType="{x:Type vm:ProfileDeviceViewModel}">
-                                        <DockPanel>
-                                            <TextBlock x:Name="Glyph" DockPanel.Dock="Left" Text="{Binding Icon}" Style="{StaticResource Icon}"
-                                                       FontSize="20" Width="28" Margin="{StaticResource GapRight12}" VerticalAlignment="Center"/>
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Brightness, StringFormat='{}{0:0} %'}" Style="{StaticResource Caption}"
-                                                       VerticalAlignment="Center" Margin="{StaticResource GapLeft8}"/>
-                                            <StackPanel>
-                                                <TextBlock x:Name="DeviceName" Text="{Binding Name}" Style="{StaticResource BodyStrong}"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding ContentText}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-                                        </DockPanel>
-                                        <DataTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding IsKnown}" Value="False">
-                                                <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-                                                <Setter TargetName="DeviceName" Property="Foreground" Value="{DynamicResource MutedBrush}"/>
-                                            </DataTrigger>
-                                        </DataTemplate.Triggers>
-                                    </DataTemplate>
-                                </ListBox.Resources>
-                            </ListBox>
-
-                            <StackPanel Grid.Column="1" Margin="{StaticResource GapLeft24}">
+                            <StackPanel>
                                 <!-- Сцены ещё нет: что это и как собрать -->
                                 <Border Style="{StaticResource Card}"
-                                        Visibility="{Binding IsSceneSelected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                        Visibility="{Binding Scene.HasScene, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
                                     <StackPanel>
                                         <TextBlock Text="Сцена" Style="{StaticResource CardTitle}"/>
                                         <TextBlock Style="{StaticResource Hint}"
                                                    Text="Сцена объединяет устройства профиля: один эффект переходит с устройства на устройство по их местам на холсте или играет на всех синхронно. Устройства сцены играют её вместо своего эффекта."/>
-                                        <TextBlock Text="{Binding Scene.SummaryText}" Style="{StaticResource BodyStrong}" Margin="{StaticResource GapTop8}"
-                                                   Visibility="{Binding Scene.HasScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-
-                                        <WrapPanel Margin="{StaticResource GapTop16}">
-                                            <Button Style="{StaticResource AccentButton}" Content="Собрать сцену" controls:Appearance.Icon="&#xE710;"
-                                                    Margin="{StaticResource GapWrap}" Command="{Binding OpenSceneCommand}"
-                                                    Visibility="{Binding Scene.HasScene, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
-                                            <Button Style="{StaticResource DangerButton}" Content="Удалить сцену" controls:Appearance.Icon="&#xE74D;"
-                                                    Margin="{StaticResource GapWrap}" Command="{Binding RemoveSceneCommand}"
-                                                    Visibility="{Binding Scene.HasScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
-                                        </WrapPanel>
+                                        <Button Style="{StaticResource AccentButton}" Content="Собрать сцену" controls:Appearance.Icon="&#xE710;"
+                                                HorizontalAlignment="Left" Margin="{StaticResource GapTop16}" Command="{Binding OpenSceneCommand}"/>
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Сцена собрана: состав, холст, режим, направление, яркость и эффект -->
+                                <!-- Сцена собрана: холст, место устройств, режим, направление и яркость -->
                                 <Grid Visibility="{Binding IsSceneOpen, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                     <views:SceneEditor DataContext="{Binding Scene}"/>
                                 </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="{StaticResource GapLeft16}">
+                                <!-- Ничего не выбрано: эффект сцены, а без сцены — подсказка -->
+                                <StackPanel Visibility="{Binding HasEditedDevice, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                                    <Border Style="{StaticResource Card}"
+                                            Visibility="{Binding Scene.HasScene, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+                                        <StackPanel>
+                                            <TextBlock Text="Эффект сцены" Style="{StaticResource CardTitle}"/>
+                                            <views:EffectEditor DataContext="{Binding Scene.Editor}" ShowsSettings="{Binding IsPlaying}"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Style="{StaticResource Card}"
+                                            Visibility="{Binding Scene.HasScene, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}">
+                                        <TextBlock Style="{StaticResource Hint}"
+                                                   Text="Выберите устройство выше — здесь появятся его яркость и эффект в профиле."/>
+                                    </Border>
+                                </StackPanel>
 
                                 <!-- Устройство: яркость, место в сцене и эффект — всё про него здесь -->
                                 <StackPanel Visibility="{Binding HasEditedDevice, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
                                     <Border Style="{StaticResource Card}">
                                         <StackPanel>
                                             <DockPanel>
-                                                <Button DockPanel.Dock="Right" Style="{StaticResource DangerButton}" Content="Убрать из профиля"
-                                                        controls:Appearance.Icon="&#xE711;" VerticalAlignment="Center" Command="{Binding EditedDevice.RemoveCommand}"/>
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE711;"
+                                                        ToolTip="Закрыть — справа снова эффект сцены" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}"
+                                                        Command="{Binding CloseDeviceCommand}"/>
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" controls:Appearance.Icon="&#xE74D;"
+                                                        ToolTip="Убрать из профиля" VerticalAlignment="Center" Command="{Binding EditedDevice.RemoveCommand}"/>
                                                 <TextBlock DockPanel.Dock="Left" Text="{Binding EditedDevice.Icon}" Style="{StaticResource Icon}"
                                                            FontSize="24" Width="32" Margin="{StaticResource GapRight12}" VerticalAlignment="Center"/>
                                                 <StackPanel VerticalAlignment="Center">
@@ -201,13 +196,6 @@
                                                                           Visibility="{Binding EditedSceneDevice.IsHexagons, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
                                                     <controls:ValueSlider Label="Яркость в сцене" Unit="%" Minimum="0" Maximum="100" Step="1"
                                                                           Value="{Binding EditedSceneDevice.Brightness}" Margin="{StaticResource GapTop16}"/>
-
-                                                    <DockPanel Margin="{StaticResource GapTop16}">
-                                                        <Button DockPanel.Dock="Right" Content="Показать на холсте" controls:Appearance.Icon="&#xE7AD;"
-                                                                VerticalAlignment="Center" Command="{Binding ShowOnCanvasCommand}"/>
-                                                        <TextBlock Style="{StaticResource Hint}" VerticalAlignment="Center"
-                                                                   Text="Место, размер и поворот меняются на холсте сцены."/>
-                                                    </DockPanel>
 
                                                     <CheckBox Content="Свой эффект" IsChecked="{Binding EditedSceneDevice.HasOwnEffect}"
                                                               HorizontalAlignment="Left" Margin="{StaticResource GapTop16}"/>

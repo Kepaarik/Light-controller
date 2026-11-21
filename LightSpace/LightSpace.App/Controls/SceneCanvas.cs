@@ -456,7 +456,7 @@ public sealed class SceneCanvas : FrameworkElement
         var position = e.GetPosition(this);
         var device = DeviceAt(position, canvas);
 
-        Scene.SelectedDevice = device;
+        Scene.Pick(device);
         InvalidateVisual();
 
         if (device == null)
