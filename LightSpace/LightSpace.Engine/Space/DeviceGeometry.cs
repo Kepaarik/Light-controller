@@ -138,15 +138,6 @@ public sealed class DeviceGeometry
     }
 
     /// <summary>
-    /// Плоскость без своих светодиодов шириной width и высотой height — например, область слоя сцены, на которую
-    /// ложится эффект слоя.
-    /// </summary>
-    public static DeviceGeometry Plane(double width, double height)
-    {
-        return new DeviceGeometry(false, width, height, Array.Empty<EffectPixel?>(), new EffectPixel(width / 2, height / 2, 0));
-    }
-
-    /// <summary>
     /// Пространство с заданными местами светодиодов, например устройство внутри сцены. Пустой points — устройство
     /// одного цвета, его цвет берётся в center.
     /// </summary>

@@ -314,7 +314,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Игру пока не выбрать, а экран — только у ленты за монитором: устройство, которое их играет,
+    /// Экран выбирают только у ленты за монитором: устройство, которое его играет без монитора,
     /// переходит на обычный эффект, и экран не снимается впустую.
     /// </summary>
     private void DropUnavailableContent()
@@ -323,7 +323,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var isOnMonitor = _config.Monitors.Any(m => m.DeviceId != null && m.DeviceId == lighting.DeviceId);
 
-            if (lighting.Content.Kind == ContentKind.Game || lighting.Content.Kind == ContentKind.Screen && !isOnMonitor)
+            if (lighting.Content.Kind == ContentKind.Screen && !isOnMonitor)
                 lighting.Content.Kind = ContentKind.Effect;
         }
     }

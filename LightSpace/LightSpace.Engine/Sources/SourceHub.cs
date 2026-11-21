@@ -1,11 +1,10 @@
 namespace LightSpace.Engine.Sources;
 
 /// <summary>
-/// Что нужно одному потребителю источников: какие мониторы снимать, какие входы звука слушать и нужны ли события игр.
+/// Что нужно одному потребителю источников: какие мониторы снимать и какие входы звука слушать.
 /// </summary>
 /// <param name="Monitors">Системные имена мониторов; пустое имя — основной монитор Windows.</param>
-/// <param name="WantsGameState">Нужно последнее состояние, которое присылают игры.</param>
-public sealed record SourceDemand(IReadOnlySet<string> Monitors, IReadOnlySet<AudioInput> Inputs, bool WantsGameState = false)
+public sealed record SourceDemand(IReadOnlySet<string> Monitors, IReadOnlySet<AudioInput> Inputs)
 {
     /// <summary>
     /// Ничего не нужно.
@@ -13,17 +12,17 @@ public sealed record SourceDemand(IReadOnlySet<string> Monitors, IReadOnlySet<Au
     public static readonly SourceDemand None = new(new HashSet<string>(), new HashSet<AudioInput>());
 
     /// <summary>
-    /// Тот же набор мониторов и входов и та же нужда в событиях игр, что у other.
+    /// Тот же набор мониторов и входов, что у other.
     /// </summary>
     public bool IsSameAs(SourceDemand other)
     {
-        return Monitors.SetEquals(other.Monitors) && Inputs.SetEquals(other.Inputs) && WantsGameState == other.WantsGameState;
+        return Monitors.SetEquals(other.Monitors) && Inputs.SetEquals(other.Inputs);
     }
 }
 
 /// <summary>
-/// Источники данных для экрана, музыки и игр: каждый монитор и каждый вход звука снимается в своём потоке, а события
-/// игр принимает сервер, только пока они нужны хотя бы одному потребителю — потоку кадров или живому превью.
+/// Источники данных для экрана и музыки: каждый монитор и каждый вход звука снимается в своём потоке, только пока он
+/// нужен хотя бы одному потребителю — потоку кадров или живому превью.
 /// Читать последнее состояние источников можно из любого потока без ожидания.
 /// </summary>
 public sealed class SourceHub : IDisposable
@@ -35,8 +34,6 @@ public sealed class SourceHub : IDisposable
     private IReadOnlyDictionary<string, ScreenCapture> _screens = new Dictionary<string, ScreenCapture>();
     private IReadOnlyDictionary<AudioInput, AudioCapture> _inputs = new Dictionary<AudioInput, AudioCapture>();
 
-    // Сервер событий игр; null — события сейчас никому не нужны
-    private GsiServer? _games;
     private bool _isDisposed;
 
     /// <summary>
@@ -61,8 +58,6 @@ public sealed class SourceHub : IDisposable
 
             Volatile.Write(ref _screens, Reconcile(_screens, monitors, key => new ScreenCapture(key)));
             Volatile.Write(ref _inputs, Reconcile(_inputs, inputs, input => new AudioCapture(input)));
-
-            ReconcileGames(_demands.Values.Any(d => d.WantsGameState));
         }
     }
 
@@ -83,16 +78,6 @@ public sealed class SourceHub : IDisposable
     }
 
     /// <summary>
-    /// Последнее, что прислали игры; пусто — события сейчас никому не нужны или игры ещё ничего не прислали.
-    /// </summary>
-    public GameState Games => Volatile.Read(ref _games)?.State ?? GameState.None;
-
-    /// <summary>
-    /// Почему игры сейчас не могут присылать события, например порт занят; null — всё в порядке или события не нужны.
-    /// </summary>
-    public string? GamesProblem => Volatile.Read(ref _games)?.Problem;
-
-    /// <summary>
     /// Останавливает все источники; новые больше не запускаются.
     /// </summary>
     public void Dispose()
@@ -104,24 +89,6 @@ public sealed class SourceHub : IDisposable
 
             Volatile.Write(ref _screens, Reconcile(_screens, new HashSet<string>(), key => new ScreenCapture(key)));
             Volatile.Write(ref _inputs, Reconcile(_inputs, new HashSet<AudioInput>(), input => new AudioCapture(input)));
-
-            ReconcileGames(false);
-        }
-    }
-
-    /// <summary>
-    /// Запускает сервер событий игр, если он стал нужен, или останавливает, если больше не нужен никому.
-    /// </summary>
-    private void ReconcileGames(bool isWanted)
-    {
-        if (isWanted && _games == null)
-        {
-            Volatile.Write(ref _games, new GsiServer());
-        }
-        else if (!isWanted && _games != null)
-        {
-            _games.Dispose();
-            Volatile.Write(ref _games, null);
         }
     }
 

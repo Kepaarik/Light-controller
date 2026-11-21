@@ -104,7 +104,6 @@ public sealed partial class ProfileDeviceViewModel : ObservableObject
             ContentKind.Effect => $"Эффект · {EffectLibrary.FindOrSolid(content.EffectId).Title}",
             ContentKind.Music => "Музыка",
             ContentKind.Screen => "Экран",
-            ContentKind.Game => "Игра",
             ContentKind.Builtin => DescribeBuiltin(content.Builtin, deviceId, device),
             _ => "—"
         };

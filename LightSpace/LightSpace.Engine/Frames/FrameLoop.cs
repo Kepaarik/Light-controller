@@ -116,7 +116,7 @@ public sealed class FrameLoop : IDisposable
                 AdvanceClocks(playbacks, snapshot, (now - lastTick).TotalSeconds, _sources);
                 lastTick = now;
 
-                // Экран и звук снимаются, а события игр принимаются, только пока их играет хоть одна группа
+                // Экран и звук снимаются, только пока их играет хоть одна группа
                 _sources.Require(this, DemandOf(snapshot, playbacks));
 
                 var isLiveDue = _isLiveColorsWanted && now - lastLive >= LiveColorsInterval;
@@ -151,7 +151,7 @@ public sealed class FrameLoop : IDisposable
     }
 
     /// <summary>
-    /// Какие мониторы и входы звука и нужны ли события игр группам, у которых есть устройства.
+    /// Какие мониторы и входы звука нужны группам, у которых есть устройства.
     /// Выключенной подсветке не нужно ничего.
     /// </summary>
     private static SourceDemand DemandOf(FrameSnapshot snapshot, Dictionary<string, GroupPlayback> playbacks)
@@ -161,7 +161,6 @@ public sealed class FrameLoop : IDisposable
 
         var monitors = new HashSet<string>();
         var inputs = new HashSet<AudioInput>();
-        var wantsGameState = false;
 
         foreach (var group in snapshot.Groups)
         {
@@ -184,17 +183,9 @@ public sealed class FrameLoop : IDisposable
 
             if (content.Music is { } music)
                 inputs.Add(music.Input);
-
-            if (content.Game is { } game)
-            {
-                if (game.NeedsScreen)
-                    monitors.Add(game.Screen.MonitorKey);
-
-                wantsGameState |= game.NeedsGameState;
-            }
         }
 
-        return new SourceDemand(monitors, inputs, wantsGameState);
+        return new SourceDemand(monitors, inputs);
     }
 
     /// <summary>
@@ -374,18 +365,13 @@ public sealed class FrameLoop : IDisposable
         public MusicPlayback Music { get; } = new();
 
         /// <summary>
-        /// Урон, бомба и сглаженные цвета экрана, когда часы считают игру.
-        /// </summary>
-        public GamePlayback Game { get; } = new();
-
-        /// <summary>
         /// Устройства, на которых кадр этого содержимого сейчас не считается: о серии ошибок предупреждаем один раз.
         /// </summary>
         public HashSet<string> FailingDevices { get; } = new();
 
         /// <summary>
-        /// Двигает время содержимого на seconds секунд с учётом его скорости, у экрана, музыки и игры — берёт последнюю
-        /// картинку монитора, звук или состояние игры из источников.
+        /// Двигает время содержимого на seconds секунд с учётом его скорости, у экрана и музыки — берёт последнюю
+        /// картинку монитора или звук из источников.
         /// </summary>
         public void Advance(FrameContent content, double seconds, SourceHub sources)
         {
@@ -396,9 +382,6 @@ public sealed class FrameLoop : IDisposable
 
             if (content.Music is { } music)
                 Music.Advance(music, sources.LevelsOf(music.Input), seconds);
-
-            if (content.Game is { } game)
-                Game.Advance(game, sources.Games, sources.PictureOf(game.Screen.MonitorKey), seconds);
         }
     }
 
@@ -468,7 +451,7 @@ public sealed class FrameLoop : IDisposable
             if (content.Builtin != null)
                 return Dark(device);
 
-            if (content.Screen != null || content.Music != null || content.Game != null)
+            if (content.Screen != null || content.Music != null)
                 return RenderSource(content, clock, device);
 
             // Ошибка эффекта, как и у экрана, не останавливает поток кадров: устройство на этом кадре гаснет
@@ -491,7 +474,7 @@ public sealed class FrameLoop : IDisposable
         }
 
         /// <summary>
-        /// Кадр экрана, музыки или игры. Ошибка в нём не останавливает поток кадров: устройство на этом кадре гаснет.
+        /// Кадр экрана или музыки. Ошибка в нём не останавливает поток кадров: устройство на этом кадре гаснет.
         /// </summary>
         private static RgbColor[] RenderSource(FrameContent content, EffectClock clock, FrameDevice device)
         {
@@ -502,9 +485,7 @@ public sealed class FrameLoop : IDisposable
                 var geometry = device.Geometry;
 
                 // Картинка экрана без монитора ложится на пространство самого устройства
-                if (content.Game is { } game)
-                    colors = clock.Game.Render(device.Id, game, geometry, PointsOf(geometry), geometry.Width, geometry.Height);
-                else if (content.Screen is { } screen)
+                if (content.Screen is { } screen)
                     colors = device.Monitor is { } binding
                         ? clock.Screen.RenderBound(device.Id, screen, binding)
                         : clock.Screen.Render(device.Id, screen, PointsOf(geometry), geometry.Width, geometry.Height);

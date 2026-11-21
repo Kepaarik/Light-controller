@@ -14,9 +14,6 @@ public enum ContentKind
     /// <summary>Музыка: свет следует за звуком компьютера или микрофона.</summary>
     Music,
 
-    /// <summary>Игра: полоски здоровья и маны или брони и события матча Dota 2 и CS2; другие игры — картинка монитора.</summary>
-    Game,
-
     /// <summary>Встроенный эффект: устройства сами играют эффект из своего набора, без кадров от приложения.</summary>
     Builtin
 }
@@ -27,7 +24,7 @@ public enum ContentKind
 public sealed class ContentConfig
 {
     /// <summary>
-    /// Что играет: эффект из галереи, экран, музыка, игра или встроенный эффект устройств.
+    /// Что играет: эффект из галереи, экран, музыка или встроенный эффект устройств.
     /// </summary>
     public ContentKind Kind { get; set; } = ContentKind.Effect;
 
@@ -53,11 +50,6 @@ public sealed class ContentConfig
     public MusicConfig Music { get; set; } = new();
 
     /// <summary>
-    /// Настройки игры. Играют, только когда содержимое — игра; остаются, когда выбирают другой тип.
-    /// </summary>
-    public GameConfig Game { get; set; } = new();
-
-    /// <summary>
     /// Настройки встроенного эффекта. Играют, только когда содержимое — встроенный эффект; остаются, когда выбирают
     /// другой тип.
     /// </summary>
@@ -79,7 +71,6 @@ public sealed class ContentConfig
             }),
             Screen = Screen.Clone(),
             Music = Music.Clone(),
-            Game = Game.Clone(),
             Builtin = Builtin.Clone()
         };
     }
@@ -102,10 +93,6 @@ public sealed class ContentConfig
 
         Music ??= new MusicConfig();
         Music.Normalize();
-
-        // В файлах до игр этого раздела нет — тогда он получает настройки по умолчанию
-        Game ??= new GameConfig();
-        Game.Normalize();
 
         // В файлах до встроенных эффектов этого раздела нет — тогда он получает настройки по умолчанию
         Builtin ??= new BuiltinConfig();

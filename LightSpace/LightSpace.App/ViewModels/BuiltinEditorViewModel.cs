@@ -49,8 +49,6 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
         _deviceId = device.Id;
         _changed = changed;
 
-        Name = device.Name;
-        Protocol = device.Protocol;
         Effects = effects.BuiltinEffects;
         HasColor = effects.HasBuiltinColor;
 
@@ -60,13 +58,6 @@ public sealed class BuiltinDeviceViewModel : ObservableObject
             .Select(g => new BuiltinEffectGroup(g.Key, g.ToList()))
             .ToList();
     }
-
-    public string Name { get; }
-
-    /// <summary>
-    /// Способ подключения и тип контроллера.
-    /// </summary>
-    public string Protocol { get; }
 
     /// <summary>
     /// Встроенные эффекты устройства.
@@ -219,14 +210,9 @@ public sealed partial class BuiltinEditorViewModel : ObservableObject
         private set
         {
             if (SetProperty(ref _devices, value))
-            {
-                OnPropertyChanged(nameof(HasDevices));
                 OnPropertyChanged(nameof(IsColorShown));
-            }
         }
     }
-
-    public bool HasDevices => _devices.Count > 0;
 
     /// <summary>
     /// Плитки встроенных эффектов открытого устройства для галереи; варианты одного эффекта — одна плитка.

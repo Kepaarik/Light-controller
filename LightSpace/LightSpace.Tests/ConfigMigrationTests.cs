@@ -179,4 +179,37 @@ public sealed class ConfigMigrationTests
         Assert.Equal(10, saved.Brightness);
         Assert.Equal(ContentKind.Effect, saved.Content.Kind);
     }
+
+    [Fact]
+    public void GameContentFromVersion5BecomesEffect()
+    {
+        var config = ConfigStore.Parse("""
+            {
+              "Version": 5,
+              "Devices": [ { "Id": "a" } ],
+              "DeviceLighting": [
+                { "DeviceId": "a", "Brightness": 70, "Content": { "Kind": "Game", "EffectId": "fire", "Game": { "Game": "Dota2" } } }
+              ],
+              "Scene": { "Effect": { "Kind": "Game" }, "Devices": [ { "DeviceId": "a" } ] },
+              "Profiles": [
+                {
+                  "Name": "Ночь",
+                  "DeviceLighting": [ { "DeviceId": "a", "Content": { "Kind": "Game" } } ],
+                  "Scene": { "Effect": { "Kind": "Game" }, "Devices": [ { "DeviceId": "a" } ] }
+                }
+              ]
+            }
+            """);
+
+        var lighting = Assert.Single(config.DeviceLighting);
+        var profile = Assert.Single(config.Profiles);
+
+        Assert.Equal(AppConfig.CurrentVersion, config.Version);
+        Assert.Equal(ContentKind.Effect, lighting.Content.Kind);
+        Assert.Equal("fire", lighting.Content.EffectId);
+        Assert.Equal(70, lighting.Brightness);
+        Assert.Equal(ContentKind.Effect, config.Scene!.Effect.Kind);
+        Assert.Equal(ContentKind.Effect, Assert.Single(profile.DeviceLighting).Content.Kind);
+        Assert.Equal(ContentKind.Effect, profile.Scene!.Effect.Kind);
+    }
 }

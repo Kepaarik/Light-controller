@@ -51,7 +51,7 @@ public sealed partial class DeviceLightingViewModel : ObservableObject
 
         // Выбор в редакторе вкладки включает её тип содержимого: само переключение вкладок ничего не меняет
         Editor = new EffectEditorViewModel(() => OnEditorChanged(ContentKindOption.Effect));
-        ScreenEditor = new ScreenEditorViewModel(sources, () => OnEditorChanged(ContentKindOption.Screen));
+        ScreenEditor = new ScreenEditorViewModel(() => OnEditorChanged(ContentKindOption.Screen));
         MusicEditor = new MusicEditorViewModel(sources, () => OnEditorChanged(ContentKindOption.Music));
         BuiltinEditor = new BuiltinEditorViewModel(manager, () => OnEditorChanged(ContentKindOption.Builtin));
 
@@ -409,8 +409,8 @@ public sealed partial class DeviceLightingViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Сменился тип содержимого или открытое устройство: показываются редактор и превью этого типа, превью экрана
-    /// и музыки, которых больше не видно, отпускают свои источники.
+    /// Сменился тип содержимого или открытое устройство: показываются редактор и превью этого типа, превью музыки,
+    /// которого больше не видно, отпускает свой источник.
     /// </summary>
     private void OnContentKindChanged()
     {
@@ -426,16 +426,12 @@ public sealed partial class DeviceLightingViewModel : ObservableObject
         Editor.IsPlaying = PlayingContentKind == ContentKindOption.Effect;
         BuiltinEditor.IsPlaying = IsBuiltinPlaying;
 
-        if (!IsScreenContent)
-            ScreenEditor.StopPreview();
-
         if (!IsMusicContent)
             MusicEditor.StopPreview();
     }
 
     private void StopPreviews()
     {
-        ScreenEditor.StopPreview();
         MusicEditor.StopPreview();
     }
 
@@ -486,9 +482,7 @@ public sealed partial class DeviceLightingViewModel : ObservableObject
     /// </summary>
     private void AdvancePreview(double seconds)
     {
-        if (IsScreenContent)
-            ScreenEditor.Advance(seconds);
-        else if (IsMusicContent)
+        if (IsMusicContent)
             MusicEditor.Advance(seconds);
         else if (IsEffectContent)
             Editor.Advance(seconds);

@@ -29,7 +29,6 @@ public sealed class ProfileViewModelTests
     [Theory]
     [InlineData(ContentKind.Music, "Музыка")]
     [InlineData(ContentKind.Screen, "Экран")]
-    [InlineData(ContentKind.Game, "Игра")]
     public void OtherKindsAreDescribedByName(ContentKind kind, string expected)
     {
         Assert.Equal(expected, ProfileDeviceViewModel.DescribeContent(new ContentConfig { Kind = kind }, "a", null));

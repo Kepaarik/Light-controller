@@ -28,9 +28,6 @@ public sealed record FrameContent(EffectDefinition Effect, EffectValues Values)
     private const string ScreenClockId = "screen";
     private const string MusicClockId = "music";
 
-    // Игра помнит в часах урон, бомбу и сглаженные цвета экрана; другая игра начинает это заново
-    private const string GameClockId = "game";
-
     // Встроенный эффект играют сами устройства — часам считать нечего
     private const string BuiltinClockId = "builtin";
 
@@ -43,11 +40,6 @@ public sealed record FrameContent(EffectDefinition Effect, EffectValues Values)
     /// Настройки музыки, если содержимое — музыка; иначе null.
     /// </summary>
     public MusicSettings? Music { get; init; }
-
-    /// <summary>
-    /// Настройки игры, если содержимое — игра; иначе null.
-    /// </summary>
-    public GameSettings? Game { get; init; }
 
     /// <summary>
     /// Настройки встроенного эффекта, если содержимое — встроенный эффект; иначе null.
@@ -64,7 +56,6 @@ public sealed record FrameContent(EffectDefinition Effect, EffectValues Values)
     /// </summary>
     public string ClockId => Screen != null ? ScreenClockId
         : Music != null ? MusicClockId
-        : Game != null ? $"{GameClockId}:{Game.Game}"
         : Builtin != null ? BuiltinClockId
         : Effect.Id;
 
@@ -79,7 +70,6 @@ public sealed record FrameContent(EffectDefinition Effect, EffectValues Values)
         {
             Screen = content.Kind == ContentKind.Screen ? ScreenSettings.From(content.Screen) : null,
             Music = content.Kind == ContentKind.Music ? MusicSettings.From(content.Music) : null,
-            Game = content.Kind == ContentKind.Game ? GameSettings.From(content.Game) : null,
             Builtin = content.Kind == ContentKind.Builtin ? BuiltinSettings.From(content.Builtin) : null
         };
     }

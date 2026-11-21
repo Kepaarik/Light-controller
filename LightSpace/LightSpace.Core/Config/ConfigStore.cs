@@ -28,6 +28,10 @@ public static class ConfigStore
     private const string LayersKey = "Layers";
     private const string SceneKind = "Scene";
 
+    // Содержимое-игра и его настройки в файлах версии 5; с версии 6 игр нет
+    private const string GameKey = "Game";
+    private const string GameKind = "Game";
+
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LightSpace", "config.json");
 
@@ -57,7 +61,10 @@ public static class ConfigStore
 
         // 4 → 5: группы, вся сцена и расстановка устройств убраны; подсветка устройства хранит одно устройство
         // и его содержимое, поэтому после обновления каждое устройство играет то же, что и до него
-        MoveGroupsToDeviceLighting
+        MoveGroupsToDeviceLighting,
+
+        // 5 → 6: содержимое-игра убрано; устройство, которое играло игру, играет обычный эффект
+        RemoveGames
     };
 
     public static AppConfig Load()
@@ -267,6 +274,39 @@ public static class ConfigStore
             copy[nameof(ContentConfig.Kind)] = nameof(ContentKind.Effect);
 
         return copy;
+    }
+
+    /// <summary>
+    /// Раньше содержимым могла быть игра, теперь игр нет. Из каждого содержимого — подсветки устройств, сцены и
+    /// профилей — пропадают настройки игры, а содержимое-игра становится обычным эффектом.
+    /// </summary>
+    private static void RemoveGames(JsonObject root)
+    {
+        var profiles = (root[nameof(AppConfig.Profiles)] as JsonArray)?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>();
+
+        foreach (var owner in profiles.Prepend(root))
+        {
+            var lighting = (owner[nameof(AppConfig.DeviceLighting)] as JsonArray)?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>();
+
+            foreach (var device in lighting)
+                WithoutGame(device[nameof(DeviceLightingConfig.Content)] as JsonObject);
+
+            WithoutGame((owner[nameof(AppConfig.Scene)] as JsonObject)?[nameof(SceneConfig.Effect)] as JsonObject);
+        }
+    }
+
+    /// <summary>
+    /// Убирает из содержимого настройки игры; содержимое-игра становится обычным эффектом.
+    /// </summary>
+    private static void WithoutGame(JsonObject? content)
+    {
+        if (content == null)
+            return;
+
+        content.Remove(GameKey);
+
+        if (content[nameof(ContentConfig.Kind)] is JsonValue kind && kind.TryGetValue<string>(out var name) && name == GameKind)
+            content[nameof(ContentConfig.Kind)] = nameof(ContentKind.Effect);
     }
 
     /// <summary>

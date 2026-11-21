@@ -8,7 +8,7 @@ public sealed class AppConfig
     /// <summary>
     /// Версия формата настроек, которую понимает эта сборка приложения.
     /// </summary>
-    public const int CurrentVersion = 5;
+    public const int CurrentVersion = 6;
 
     /// <summary>
     /// Версия формата, в котором записан файл настроек.
