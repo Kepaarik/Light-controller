@@ -9,9 +9,7 @@ namespace LightSpace.Engine.Frames;
 /// <summary>
 /// Устройство в снимке: куда отправлять его кадры и где находятся его светодиоды.
 /// </summary>
-/// <param name="ScenePoints">Места светодиодов на сцене в единицах сцены, с теми же номерами, что в Geometry;
-/// у устройства одного цвета — одна точка в его середине.</param>
-public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry Geometry, IReadOnlyList<EffectPixel?> ScenePoints)
+public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry Geometry)
 {
     /// <summary>
     /// Монитор, вокруг которого висит устройство: экран оно играет по краям этого монитора, а не по месту на сцене.
@@ -23,12 +21,8 @@ public sealed record FrameDevice(string Id, DeviceOutput Output, DeviceGeometry 
 /// <summary>
 /// Содержимое, которое играет в группе: эффект с его настройками.
 /// </summary>
-/// <param name="Layers">Видимые слои сцены снизу вверх; null — содержимое-эффект.</param>
-public sealed record FrameContent(EffectDefinition Effect, EffectValues Values, IReadOnlyList<SceneLayer>? Layers)
+public sealed record FrameContent(EffectDefinition Effect, EffectValues Values)
 {
-    // Часы сцены считают время каждого её слоя отдельно, поэтому у всей сцены свой постоянный «эффект» для часов
-    private const string SceneClockId = "scene";
-
     // Экран и музыка помнят в часах сглаженные цвета и звук; когда тип меняется, это начинается заново
     private const string ScreenClockId = "screen";
     private const string MusicClockId = "music";
@@ -62,16 +56,16 @@ public sealed record FrameContent(EffectDefinition Effect, EffectValues Values, 
     /// <summary>
     /// Скорость эффекта: во сколько раз быстрее обычного идёт его время.
     /// </summary>
-    public double Speed => Layers == null ? Effect.Number(Values, "speed") : 1;
+    public double Speed => Effect.Number(Values, "speed");
 
     /// <summary>
-    /// Что считают часы содержимого: эффект или сцену. Когда это меняется, время начинается заново.
+    /// Что считают часы содержимого. Когда это меняется, время начинается заново.
     /// </summary>
     public string ClockId => Screen != null ? ScreenClockId
         : Music != null ? MusicClockId
         : Game != null ? $"{GameClockId}:{Game.Game}"
         : Builtin != null ? BuiltinClockId
-        : Layers == null ? Effect.Id : SceneClockId;
+        : Effect.Id;
 
     /// <summary>
     /// Неизменяемая копия сохранённого содержимого.
@@ -79,9 +73,8 @@ public sealed record FrameContent(EffectDefinition Effect, EffectValues Values, 
     public static FrameContent From(ContentConfig content)
     {
         var effect = EffectLibrary.FindOrSolid(content.EffectId);
-        var layers = content.Kind == ContentKind.Scene ? SceneLayer.ListOf(content) : null;
 
-        return new FrameContent(effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)), layers)
+        return new FrameContent(effect, EffectValues.From(content.Effects.GetValueOrDefault(effect.Id)))
         {
             Screen = content.Kind == ContentKind.Screen ? ScreenSettings.From(content.Screen) : null,
             Music = content.Kind == ContentKind.Music ? MusicSettings.From(content.Music) : null,
@@ -122,26 +115,20 @@ public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGr
 
             var geometry = DeviceGeometry.For(device.Id, output.Device.Capabilities);
 
-            // Устройство, которое ещё не расставили, стоит в середине сцены
-            var points = SceneProjection.Project(geometry, device.Settings.Placement ?? new DevicePlacement());
-
-            ready[device.Id] = new FrameDevice(device.Id, output, geometry, points)
+            ready[device.Id] = new FrameDevice(device.Id, output, geometry)
             {
                 Monitor = BindingOf(config, device.Id, geometry, screens)
             };
         }
 
-        foreach (var group in config.PlayingGroups())
+        foreach (var lighting in config.DeviceLighting)
         {
-            // Вся сцена играет на всех готовых устройствах
-            var targets = config.Mode == SceneMode.WholeScene
-                ? ready.Values.ToList()
-                : group.DeviceIds.Where(ready.ContainsKey).Select(id => ready[id]).ToList();
+            var targets = ready.TryGetValue(lighting.DeviceId, out var target) ? new[] { target } : Array.Empty<FrameDevice>();
 
             // Общая яркость приглушает все устройства разом, не трогая их собственную яркость
-            var brightness = (int)Math.Round(group.Brightness * config.MasterBrightness / 100.0);
+            var brightness = (int)Math.Round(lighting.Brightness * config.MasterBrightness / 100.0);
 
-            groups.Add(new FrameGroup(group.Id, FrameContent.From(group.DefaultContent), brightness, targets));
+            groups.Add(new FrameGroup(lighting.DeviceId, FrameContent.From(lighting.Content), brightness, targets));
         }
 
         return new FrameSnapshot(config.LightingEnabled, groups);

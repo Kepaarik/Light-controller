@@ -5,7 +5,6 @@ namespace LightSpace.App.ViewModels;
 /// </summary>
 public enum AppPage
 {
-    Scene,
     Devices,
     Monitors,
 
@@ -33,7 +32,7 @@ public sealed record PageOption(AppPage Page, string Title, string Icon)
 /// <summary>
 /// Найденное устройство в левом меню окна: открывает выбор его эффекта. Рядом со значком — живой цвет устройства.
 /// </summary>
-public sealed record DeviceNavOption(SceneDeviceViewModel Device)
+public sealed record DeviceNavOption(LiveDeviceViewModel Device)
 {
     public string Id => Device.Id;
 

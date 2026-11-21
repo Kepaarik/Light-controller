@@ -29,7 +29,6 @@ public sealed class ProfileViewModelTests
     [Theory]
     [InlineData(ContentKind.Music, "Музыка")]
     [InlineData(ContentKind.Screen, "Экран")]
-    [InlineData(ContentKind.Scene, "Сцена")]
     [InlineData(ContentKind.Game, "Игра")]
     public void OtherKindsAreDescribedByName(ContentKind kind, string expected)
     {
@@ -69,7 +68,7 @@ public sealed class ProfileViewModelTests
     [Fact]
     public void ForgottenDeviceIsShownAsForgotten()
     {
-        var row = new ProfileDeviceViewModel(GroupConfig.Solo("a", new ContentConfig(), 50), null, () => { }, _ => { });
+        var row = new ProfileDeviceViewModel(DeviceLightingConfig.For("a", new ContentConfig(), 50), null, () => { }, _ => { });
 
         Assert.Equal("Забытое устройство", row.Name);
         Assert.False(row.IsKnown);
@@ -80,7 +79,7 @@ public sealed class ProfileViewModelTests
     public void KnownDeviceShowsItsNameAndChosenIcon()
     {
         var device = new ManagedDevice(new DeviceConfig { Id = "a", Name = "ELK-BLE", CustomName = "Стол", Icon = DeviceIcons.All[4] });
-        var row = new ProfileDeviceViewModel(GroupConfig.Solo("a", new ContentConfig(), 50), device, () => { }, _ => { });
+        var row = new ProfileDeviceViewModel(DeviceLightingConfig.For("a", new ContentConfig(), 50), device, () => { }, _ => { });
 
         Assert.Equal("Стол", row.Name);
         Assert.True(row.IsKnown);
@@ -91,7 +90,7 @@ public sealed class ProfileViewModelTests
     public void ConnectedKeyboardWithoutChosenIconGetsKeyboardIcon()
     {
         var device = ConnectedDevice(new FakeKeyboard("a"));
-        var row = new ProfileDeviceViewModel(GroupConfig.Solo("a", new ContentConfig(), 50), device, () => { }, _ => { });
+        var row = new ProfileDeviceViewModel(DeviceLightingConfig.For("a", new ContentConfig(), 50), device, () => { }, _ => { });
 
         Assert.Equal(DeviceIcons.Keyboard, row.Icon);
 
@@ -102,7 +101,7 @@ public sealed class ProfileViewModelTests
     public void BrightnessIsClampedAndReportedOncePerChange()
     {
         var changes = 0;
-        var lighting = GroupConfig.Solo("a", new ContentConfig(), 50);
+        var lighting = DeviceLightingConfig.For("a", new ContentConfig(), 50);
         var row = new ProfileDeviceViewModel(lighting, null, () => changes++, _ => { });
 
         row.Brightness = 150;
@@ -147,7 +146,7 @@ public sealed class ProfileViewModelTests
         option.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
         option.Devices[0].RemoveCommand.Execute(null);
 
-        Assert.Equal("b", Assert.Single(profile.DeviceLighting).DeviceIds[0]);
+        Assert.Equal("b", Assert.Single(profile.DeviceLighting).DeviceId);
         Assert.Single(option.Devices);
         Assert.Equal("Устройств: 1", option.DevicesText);
         Assert.Contains(nameof(ProfileOption.DevicesText), changed);
@@ -208,7 +207,7 @@ public sealed class ProfileViewModelTests
         var profile = Profile(("a", 30));
         var option = new ProfileOption(profile, id => Device(id), () => { });
 
-        profile.DeviceLighting = new List<GroupConfig> { GroupConfig.Solo("b", new ContentConfig { Kind = ContentKind.Music }, 70) };
+        profile.DeviceLighting = new List<DeviceLightingConfig> { DeviceLightingConfig.For("b", new ContentConfig { Kind = ContentKind.Music }, 70) };
         option.Reload();
 
         var row = Assert.Single(option.Devices);
@@ -244,7 +243,7 @@ public sealed class ProfileViewModelTests
         var profile = Profile(("a", 30), ("b", 80));
         var other = EffectLibrary.All.First(e => e.Id != "solid");
 
-        profile.DeviceLighting[1].DefaultContent.EffectId = other.Id;
+        profile.DeviceLighting[1].Content.EffectId = other.Id;
 
         var option = new ProfileOption(profile, id => Device(id), () => { });
 
@@ -268,7 +267,7 @@ public sealed class ProfileViewModelTests
         option.Devices[0].PropertyChanged += (_, e) => changed.Add(e.PropertyName);
         option.Editor.SelectedTile = option.Editor.Tiles.Single(t => t.Definition.Id == other.Id);
 
-        var content = profile.DeviceLighting[0].DefaultContent;
+        var content = profile.DeviceLighting[0].Content;
 
         Assert.Equal(ContentKind.Effect, content.Kind);
         Assert.Equal(other.Id, content.EffectId);
@@ -284,7 +283,7 @@ public sealed class ProfileViewModelTests
         var changes = 0;
         var profile = Profile(("a", 30));
 
-        profile.DeviceLighting[0].DefaultContent.Kind = ContentKind.Music;
+        profile.DeviceLighting[0].Content.Kind = ContentKind.Music;
 
         var option = new ProfileOption(profile, id => Device(id), () => changes++);
 
@@ -297,7 +296,7 @@ public sealed class ProfileViewModelTests
         // Плитка того же эффекта, что сохранён в содержимом, тоже включает эффект
         option.Editor.SelectedTile = option.Editor.Tiles.Single(t => t.Definition.Id == "solid");
 
-        Assert.Equal(ContentKind.Effect, profile.DeviceLighting[0].DefaultContent.Kind);
+        Assert.Equal(ContentKind.Effect, profile.DeviceLighting[0].Content.Kind);
         Assert.True(option.Editor.IsPlaying);
         Assert.Equal($"Эффект · {EffectLibrary.Solid.Title}", option.Devices[0].ContentText);
         Assert.Equal(1, changes);
@@ -347,7 +346,7 @@ public sealed class ProfileViewModelTests
 
         option.Editor.SelectedTile = option.Editor.Tiles.Single(t => t.Definition.Id == other.Id);
 
-        Assert.Equal("solid", profile.DeviceLighting[0].DefaultContent.EffectId);
+        Assert.Equal("solid", profile.DeviceLighting[0].Content.EffectId);
         Assert.Equal(0, changes);
     }
 
@@ -370,9 +369,9 @@ public sealed class ProfileViewModelTests
     {
         return new ProfileConfig
         {
-            Id = GroupConfig.NewId(),
+            Id = ProfileConfig.NewId(),
             Name = "Вечер",
-            DeviceLighting = devices.Select(d => GroupConfig.Solo(d.Id, new ContentConfig(), d.Brightness)).ToList()
+            DeviceLighting = devices.Select(d => DeviceLightingConfig.For(d.Id, new ContentConfig(), d.Brightness)).ToList()
         };
     }
 

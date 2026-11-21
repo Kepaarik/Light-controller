@@ -8,10 +8,7 @@ public enum ContentKind
     /// <summary>Эффект из галереи: каждое устройство показывает его целиком в своём пространстве.</summary>
     Effect,
 
-    /// <summary>Сцена со слоями: эффекты слоёв ложатся на устройства по их местам на сцене.</summary>
-    Scene,
-
-    /// <summary>Экран: каждый светодиод повторяет цвет картинки монитора под своим местом на сцене.</summary>
+    /// <summary>Экран: лента повторяет цвета краёв монитора, за которым висит.</summary>
     Screen,
 
     /// <summary>Музыка: свет следует за звуком компьютера или микрофона.</summary>
@@ -30,7 +27,7 @@ public enum ContentKind
 public sealed class ContentConfig
 {
     /// <summary>
-    /// Что играет: эффект из галереи, сцена со слоями, экран, музыка, игра или встроенный эффект устройств.
+    /// Что играет: эффект из галереи, экран, музыка, игра или встроенный эффект устройств.
     /// </summary>
     public ContentKind Kind { get; set; } = ContentKind.Effect;
 
@@ -44,12 +41,6 @@ public sealed class ContentConfig
     /// Настройки остаются, когда выбирают другой эффект, и возвращаются вместе с ним.
     /// </summary>
     public Dictionary<string, EffectValuesConfig> Effects { get; set; } = new();
-
-    /// <summary>
-    /// Слои сцены сверху вниз: верхний слой ложится поверх нижних. Играют, только когда содержимое — сцена;
-    /// остаются, когда выбирают эффект, и возвращаются вместе со сценой.
-    /// </summary>
-    public List<SceneLayerConfig> Layers { get; set; } = new();
 
     /// <summary>
     /// Настройки экрана. Играют, только когда содержимое — экран; остаются, когда выбирают другой тип.
@@ -86,7 +77,6 @@ public sealed class ContentConfig
                 Numbers = new Dictionary<string, double>(e.Value.Numbers),
                 Colors = new Dictionary<string, string>(e.Value.Colors)
             }),
-            Layers = Layers.Select(l => l.Clone()).ToList(),
             Screen = Screen.Clone(),
             Music = Music.Clone(),
             Game = Game.Clone(),
@@ -105,22 +95,6 @@ public sealed class ContentConfig
         // Тип, которого нет в этой сборке, мог попасть в файл из другой версии или из правки руками
         if (!Enum.IsDefined(Kind))
             Kind = ContentKind.Effect;
-
-        Layers = (Layers ?? new List<SceneLayerConfig>()).Where(l => l != null).ToList();
-
-        var ids = new HashSet<string>();
-
-        foreach (var layer in Layers)
-        {
-            layer.Normalize();
-
-            // Слой без идентификатора или с повтором путал бы часы эффектов слоёв
-            if (string.IsNullOrWhiteSpace(layer.Id) || !ids.Add(layer.Id))
-            {
-                layer.Id = GroupConfig.NewId();
-                ids.Add(layer.Id);
-            }
-        }
 
         // В файлах до экрана и музыки этих разделов нет — тогда они получают настройки по умолчанию
         Screen ??= new ScreenConfig();

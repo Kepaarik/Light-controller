@@ -41,9 +41,6 @@ public sealed partial class MainViewModel : ObservableObject
         _config = config;
         Settings = new SettingsViewModel(config);
 
-        // Страницы «Сцена» пока нет: у каждого устройства своё содержимое, оно выбирается на странице устройства
-        config.Mode = SceneMode.Devices;
-
         DropUnavailableContent();
 
         _deviceManager = new DeviceManager(config);
@@ -54,7 +51,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         _frameLoop = new FrameLoop(FrameSnapshot.Build(config, _deviceManager.Devices), _sources);
         Devices = new DevicesViewModel(_deviceManager, _frameLoop, Settings.ScheduleSave, OpenDevice);
-        Scene = new SceneViewModel(config, _deviceManager, _frameLoop, _sources, OnLightingEdited);
+        Lighting = new DeviceLightingViewModel(config, _deviceManager, _frameLoop, _sources, OnLightingEdited);
         Monitors = new MonitorsViewModel(config, _deviceManager, OnContentChanged);
 
         Settings.PropertyChanged += OnSettingsChanged;
@@ -107,7 +104,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     public DevicesViewModel Devices { get; }
 
-    public SceneViewModel Scene { get; }
+    /// <summary>
+    /// Живые цвета устройств и страница устройства, открытого в левом меню.
+    /// </summary>
+    public DeviceLightingViewModel Lighting { get; }
 
     public MonitorsViewModel Monitors { get; }
 
@@ -147,7 +147,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         Settings.PropertyChanged -= OnSettingsChanged;
         _deviceManager.DevicesChanged -= OnDevicesChanged;
-        Scene.SetLive(false, false);
+        Lighting.SetLive(false, false);
 
         // Сначала поток кадров: иначе он клал бы кадры в уже закрытые выводы устройств
         _frameLoop.Dispose();
@@ -253,10 +253,7 @@ public sealed partial class MainViewModel : ObservableObject
         DropUnavailableContent();
 
         // Открытая страница устройства показывает уже новое содержимое
-        Scene.Reload();
-
-        if (SelectedPage == AppPage.Device && _openedDeviceId != null)
-            Scene.OpenDevice(_openedDeviceId);
+        Lighting.Reload();
 
         OnContentChanged();
         SetActiveProfile(profile);
@@ -317,18 +314,17 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Сцену и игру пока не выбрать, а экран — только у ленты за монитором: устройство, которое их играет,
+    /// Игру пока не выбрать, а экран — только у ленты за монитором: устройство, которое их играет,
     /// переходит на обычный эффект, и экран не снимается впустую.
     /// </summary>
     private void DropUnavailableContent()
     {
         foreach (var lighting in _config.DeviceLighting)
         {
-            var isOnMonitor = _config.Monitors.Any(m => m.DeviceId != null && lighting.DeviceIds.Contains(m.DeviceId));
+            var isOnMonitor = _config.Monitors.Any(m => m.DeviceId != null && m.DeviceId == lighting.DeviceId);
 
-            if (lighting.DefaultContent.Kind is ContentKind.Scene or ContentKind.Game
-                || lighting.DefaultContent.Kind == ContentKind.Screen && !isOnMonitor)
-                lighting.DefaultContent.Kind = ContentKind.Effect;
+            if (lighting.Content.Kind == ContentKind.Game || lighting.Content.Kind == ContentKind.Screen && !isOnMonitor)
+                lighting.Content.Kind = ContentKind.Effect;
         }
     }
 
@@ -378,7 +374,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         DeviceNav.Clear();
 
-        foreach (var device in Scene.Devices)
+        foreach (var device in Lighting.Devices)
             DeviceNav.Add(new DeviceNavOption(device));
 
         if (SelectedPage != AppPage.Device || opened == null)
@@ -415,7 +411,7 @@ public sealed partial class MainViewModel : ObservableObject
             return;
 
         device.Settings.CustomName = customName;
-        OnDeviceLookChanged(deviceId);
+        OnDeviceLookChanged();
     }
 
     /// <summary>
@@ -429,7 +425,7 @@ public sealed partial class MainViewModel : ObservableObject
             return;
 
         device.Settings.Icon = icon;
-        OnDeviceLookChanged(deviceId);
+        OnDeviceLookChanged();
     }
 
     /// <summary>
@@ -450,12 +446,10 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>
     /// Название или значок устройства сменились: меню и открытая страница показывают новые, настройки сохраняются.
     /// </summary>
-    private void OnDeviceLookChanged(string deviceId)
+    private void OnDeviceLookChanged()
     {
-        Scene.Reload();
-
-        if (SelectedPage == AppPage.Device && _openedDeviceId == deviceId)
-            Scene.OpenDevice(deviceId);
+        // Открытая страница устройства показывается заново — уже с новыми названием и значком
+        Lighting.Reload();
 
         RefreshDeviceNav();
         Settings.ScheduleSave();
@@ -478,12 +472,12 @@ public sealed partial class MainViewModel : ObservableObject
             return;
 
         _openedDeviceId = value;
-        Scene.OpenDevice(value);
+        Lighting.OpenDevice(value);
         SelectedPage = AppPage.Device;
     }
 
     /// <summary>
-    /// Группы, режим сцены, эффект, настройки эффекта или яркость изменились: движку — новый снимок, в файл — с задержкой.
+    /// Эффект, настройки эффекта или яркость изменились: движку — новый снимок, в файл — с задержкой.
     /// </summary>
     private void OnContentChanged()
     {
@@ -518,10 +512,10 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Живые цвета устройств идут, пока окно видно; превью редакторов — пока открыта страница устройства или сцены.
+    /// Живые цвета устройств идут, пока окно видно; превью редакторов — пока открыта страница устройства.
     /// </summary>
     private void UpdateLive()
     {
-        Scene.SetLive(_isWindowShown, SelectedPage is AppPage.Scene or AppPage.Device);
+        Lighting.SetLive(_isWindowShown, SelectedPage == AppPage.Device);
     }
 }

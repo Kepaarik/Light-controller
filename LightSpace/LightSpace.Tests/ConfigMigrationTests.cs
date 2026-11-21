@@ -15,11 +15,11 @@ public sealed class ConfigMigrationTests
         Assert.Equal(AppConfig.CurrentVersion, config.Version);
         Assert.True(config.LightingEnabled);
         Assert.Empty(config.Devices);
-        Assert.Empty(config.Groups);
+        Assert.Empty(config.DeviceLighting);
     }
 
     [Fact]
-    public void DeviceColorFromVersion2BecomesSolidEffectOfItsGroup()
+    public void DeviceColorFromVersion2BecomesSolidEffectOfTheDevice()
     {
         var config = ConfigStore.Parse("""
             {
@@ -30,13 +30,12 @@ public sealed class ConfigMigrationTests
             }
             """);
 
-        var group = Assert.Single(config.Groups);
+        var lighting = Assert.Single(config.DeviceLighting);
 
-        Assert.True(group.IsSolo);
-        Assert.Equal(new[] { "ble:AABBCCDDEEFF" }, group.DeviceIds);
-        Assert.Equal(40, group.Brightness);
-        Assert.Equal("solid", group.DefaultContent.EffectId);
-        Assert.Equal("#FF0000", group.DefaultContent.Effects["solid"].Colors["color"]);
+        Assert.Equal("ble:AABBCCDDEEFF", lighting.DeviceId);
+        Assert.Equal(40, lighting.Brightness);
+        Assert.Equal("solid", lighting.Content.EffectId);
+        Assert.Equal("#FF0000", lighting.Content.Effects["solid"].Colors["color"]);
     }
 
     [Fact]
@@ -52,21 +51,19 @@ public sealed class ConfigMigrationTests
             """);
 
         Assert.Equal(AppConfig.CurrentVersion, config.Version);
-        Assert.Equal(2, config.Groups.Count);
+        Assert.Equal(2, config.DeviceLighting.Count);
 
         foreach (var id in new[] { "a", "b" })
         {
-            var group = config.GroupOf(id);
+            var lighting = config.EnsureDeviceLighting(id);
 
-            Assert.NotNull(group);
-            Assert.True(group.IsSolo);
-            Assert.Equal(70, group.Brightness);
-            Assert.Equal("rainbow", group.DefaultContent.EffectId);
+            Assert.Equal(70, lighting.Brightness);
+            Assert.Equal("rainbow", lighting.Content.EffectId);
         }
 
-        // Копии независимы: правка одной группы не меняет другую
-        config.GroupOf("a")!.DefaultContent.EffectId = "solid";
-        Assert.Equal("rainbow", config.GroupOf("b")!.DefaultContent.EffectId);
+        // Копии независимы: правка одного устройства не меняет другое
+        config.EnsureDeviceLighting("a").Content.EffectId = "solid";
+        Assert.Equal("rainbow", config.EnsureDeviceLighting("b").Content.EffectId);
     }
 
     [Fact]
@@ -93,7 +90,6 @@ public sealed class ConfigMigrationTests
         var device = Assert.Single(config.Devices);
 
         Assert.Equal("a", device.Id);
-        Assert.Single(config.Groups);
         Assert.Single(config.DeviceLighting);
     }
 
@@ -108,6 +104,79 @@ public sealed class ConfigMigrationTests
             }
             """);
 
-        Assert.Equal(100, config.GroupOf("a")!.Brightness);
+        Assert.Equal(100, config.EnsureDeviceLighting("a").Brightness);
+    }
+
+    [Fact]
+    public void DeviceLightingFromVersion4KeepsItsContentAndBrightness()
+    {
+        var config = ConfigStore.Parse("""
+            {
+              "Version": 4,
+              "Devices": [ { "Id": "a" } ],
+              "DeviceLighting": [
+                {
+                  "Id": "x", "IsSolo": true, "Name": "", "Color": "", "DeviceIds": [ "a" ], "Brightness": 35,
+                  "DefaultContent": { "Kind": "Music", "EffectId": "rainbow" }
+                }
+              ]
+            }
+            """);
+
+        var lighting = Assert.Single(config.DeviceLighting);
+
+        Assert.Equal("a", lighting.DeviceId);
+        Assert.Equal(35, lighting.Brightness);
+        Assert.Equal(ContentKind.Music, lighting.Content.Kind);
+        Assert.Equal("rainbow", lighting.Content.EffectId);
+    }
+
+    [Fact]
+    public void DeviceLightingWinsOverGroupOfVersion4()
+    {
+        var config = ConfigStore.Parse("""
+            {
+              "Version": 4,
+              "Devices": [ { "Id": "a" }, { "Id": "b" } ],
+              "Groups": [
+                { "Id": "g", "Name": "Стол", "DeviceIds": [ "a", "b" ], "Brightness": 20, "DefaultContent": { "EffectId": "fire" } }
+              ],
+              "DeviceLighting": [ { "IsSolo": true, "DeviceIds": [ "a" ], "Brightness": 90, "DefaultContent": { "EffectId": "rainbow" } } ]
+            }
+            """);
+
+        // У «a» своя запись, «b» без записи играет то же, что его группа
+        Assert.Equal("rainbow", config.EnsureDeviceLighting("a").Content.EffectId);
+        Assert.Equal(90, config.EnsureDeviceLighting("a").Brightness);
+        Assert.Equal("fire", config.EnsureDeviceLighting("b").Content.EffectId);
+        Assert.Equal(20, config.EnsureDeviceLighting("b").Brightness);
+    }
+
+    [Fact]
+    public void SceneContentFromVersion4BecomesEffect()
+    {
+        var config = ConfigStore.Parse("""
+            {
+              "Version": 4,
+              "Mode": "WholeScene",
+              "Scene": { "Id": "scene", "DefaultContent": { "Kind": "Scene" } },
+              "Devices": [ { "Id": "a", "Placement": { "X": 10, "Y": 20, "Size": 30, "Rotation": 90 } } ],
+              "DeviceLighting": [
+                { "DeviceIds": [ "a" ], "DefaultContent": { "Kind": "Scene", "EffectId": "wave", "Layers": [ { "Id": "l" } ] } }
+              ],
+              "Profiles": [
+                { "Name": "Ночь", "DeviceLighting": [ { "DeviceIds": [ "a" ], "Brightness": 10, "DefaultContent": { "Kind": "Scene" } } ] }
+              ]
+            }
+            """);
+
+        var lighting = Assert.Single(config.DeviceLighting);
+        var saved = Assert.Single(Assert.Single(config.Profiles).DeviceLighting);
+
+        Assert.Equal(ContentKind.Effect, lighting.Content.Kind);
+        Assert.Equal("wave", lighting.Content.EffectId);
+        Assert.Equal("a", saved.DeviceId);
+        Assert.Equal(10, saved.Brightness);
+        Assert.Equal(ContentKind.Effect, saved.Content.Kind);
     }
 }

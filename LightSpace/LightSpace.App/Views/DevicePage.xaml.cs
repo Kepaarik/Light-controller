@@ -16,7 +16,7 @@ public partial class DevicePage : UserControl
     }
 
     // Устройство, чья страница открыта
-    private SceneDeviceViewModel? OpenedDevice => (DataContext as SceneViewModel)?.SelectedGroup?.Device;
+    private LiveDeviceViewModel? OpenedDevice => (DataContext as DeviceLightingViewModel)?.Device;
 
     private MainViewModel? Main => Window.GetWindow(this)?.DataContext as MainViewModel;
 

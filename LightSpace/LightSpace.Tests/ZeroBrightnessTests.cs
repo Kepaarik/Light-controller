@@ -95,14 +95,14 @@ public sealed class ZeroBrightnessTests
 
     private static AppConfig Config(ContentConfig content, int brightness)
     {
-        var config = new AppConfig { Mode = SceneMode.Devices };
+        var config = new AppConfig();
 
         config.Devices.Add(new DeviceConfig { Id = "a", Name = "Лента a" });
         config.Normalize();
 
         var lighting = config.EnsureDeviceLighting("a");
 
-        lighting.DefaultContent = content;
+        lighting.Content = content;
         lighting.Brightness = brightness;
 
         return config;

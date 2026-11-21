@@ -1,24 +1,19 @@
 namespace LightSpace.App.ViewModels;
 
 /// <summary>
-/// Тип содержимого сценария в сегментах «Что»: эффект, сцена, экран, музыка, игра, встроенный эффект.
+/// Тип содержимого устройства в сегментах: эффект, экран, музыка, встроенный эффект.
 /// </summary>
 /// <param name="Title">Название типа на сегменте.</param>
 /// <param name="IsAvailable">Тип уже можно выбрать; остальные показаны выключенными.</param>
 public sealed record ContentKindOption(string Title, bool IsAvailable)
 {
     /// <summary>
-    /// Эффект из галереи на всех устройствах группы.
+    /// Эффект из галереи.
     /// </summary>
     public static readonly ContentKindOption Effect = new("Эффект", true);
 
     /// <summary>
-    /// Слои эффектов, разложенные по сцене.
-    /// </summary>
-    public static readonly ContentKindOption Scene = new("Сцена", true);
-
-    /// <summary>
-    /// Цвета картинки монитора под местами светодиодов на сцене.
+    /// Цвета краёв монитора, за которым висит лента.
     /// </summary>
     public static readonly ContentKindOption Screen = new("Экран", true);
 
@@ -28,17 +23,12 @@ public sealed record ContentKindOption(string Title, bool IsAvailable)
     public static readonly ContentKindOption Music = new("Музыка", true);
 
     /// <summary>
-    /// Полоски здоровья и маны или брони и события Dota 2 и CS2; другие игры — картинка монитора.
-    /// </summary>
-    public static readonly ContentKindOption Game = new("Игра", true);
-
-    /// <summary>
     /// Эффекты, которые устройства играют сами, без кадров от приложения.
     /// </summary>
     public static readonly ContentKindOption Builtin = new("Встроенный", true);
 
     /// <summary>
-    /// Все типы содержимого по порядку. Сцена и игра пока не выбираются; экран — только у ленты за монитором.
+    /// Все типы содержимого по порядку; экран — только у ленты за монитором.
     /// </summary>
     public static readonly IReadOnlyList<ContentKindOption> All = new ContentKindOption[]
     {

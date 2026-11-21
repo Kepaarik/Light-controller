@@ -8,7 +8,7 @@ public sealed class AppConfig
     /// <summary>
     /// Версия формата настроек, которую понимает эта сборка приложения.
     /// </summary>
-    public const int CurrentVersion = 4;
+    public const int CurrentVersion = 5;
 
     /// <summary>
     /// Версия формата, в котором записан файл настроек.
@@ -46,25 +46,9 @@ public sealed class AppConfig
     public List<DeviceConfig> Devices { get; set; } = new();
 
     /// <summary>
-    /// Группы устройств, включая группы-одиночки: каждое известное устройство входит ровно в одну группу.
+    /// Яркость и содержимое каждого известного устройства: по одной записи на устройство.
     /// </summary>
-    public List<GroupConfig> Groups { get; set; } = new();
-
-    /// <summary>
-    /// Что играет на устройствах: вся сцена, группы или каждое устройство отдельно. Настройки остальных режимов
-    /// сохраняются и снова играют, когда к ним возвращаются.
-    /// </summary>
-    public SceneMode Mode { get; set; }
-
-    /// <summary>
-    /// Яркость и содержимое всей сцены. Своего списка устройств у неё нет: в неё входят все.
-    /// </summary>
-    public GroupConfig Scene { get; set; } = NewScene();
-
-    /// <summary>
-    /// Яркость и содержимое каждого устройства в режиме «Устройства»: по одной группе-одиночке на устройство.
-    /// </summary>
-    public List<GroupConfig> DeviceLighting { get; set; } = new();
+    public List<DeviceLightingConfig> DeviceLighting { get; set; } = new();
 
     /// <summary>
     /// Подсветка мониторов: ленты вокруг мониторов, повороты мониторов и раскладки лент.
@@ -88,7 +72,7 @@ public sealed class AppConfig
     {
         var profile = new ProfileConfig
         {
-            Id = GroupConfig.NewId(),
+            Id = ProfileConfig.NewId(),
             Name = name,
             DeviceLighting = CurrentLighting()
         };
@@ -107,9 +91,9 @@ public sealed class AppConfig
     }
 
     // Копия яркости и содержимого каждого устройства: правки профиля не меняют то, что играет
-    private List<GroupConfig> CurrentLighting()
+    private List<DeviceLightingConfig> CurrentLighting()
     {
-        return DeviceLighting.Select(l => GroupConfig.Solo(l.DeviceIds[0], l.DefaultContent.Clone(), l.Brightness)).ToList();
+        return DeviceLighting.Select(l => l.Clone()).ToList();
     }
 
     /// <summary>
@@ -120,12 +104,12 @@ public sealed class AppConfig
     {
         var devices = Devices.Select(d => d.Id).ToHashSet();
 
-        foreach (var saved in profile.DeviceLighting.Where(l => devices.Contains(l.DeviceIds[0])))
+        foreach (var saved in profile.DeviceLighting.Where(l => devices.Contains(l.DeviceId)))
         {
-            var lighting = EnsureDeviceLighting(saved.DeviceIds[0]);
+            var lighting = EnsureDeviceLighting(saved.DeviceId);
 
             lighting.Brightness = saved.Brightness;
-            lighting.DefaultContent = saved.DefaultContent.Clone();
+            lighting.Content = saved.Content.Clone();
         }
     }
 
@@ -134,10 +118,6 @@ public sealed class AppConfig
     /// </summary>
     public void Normalize()
     {
-        // Режим, которого нет в этой сборке, мог попасть в файл из правки руками
-        if (!Enum.IsDefined(Mode))
-            Mode = SceneMode.Groups;
-
         // Пустой раздел стекла в файле дал бы null вместо настроек по умолчанию
         Glass ??= new GlassConfig();
         Glass.Normalize();
@@ -149,11 +129,7 @@ public sealed class AppConfig
             .Select(g => g.First())
             .ToList();
 
-        foreach (var device in Devices)
-            device.Placement?.Normalize();
-
         // Пустые разделы в файле дали бы null вместо содержимого и настроек эффектов
-        NormalizeGroups();
         NormalizeDeviceLighting();
         NormalizeMonitors();
 
@@ -166,125 +142,27 @@ public sealed class AppConfig
     }
 
     /// <summary>
-    /// То, что сейчас играет на устройствах: вся сцена, группы или каждое устройство отдельно.
+    /// Яркость и содержимое устройства; у нового устройства они появляются при первом обращении.
     /// </summary>
-    public IReadOnlyList<GroupConfig> PlayingGroups()
+    public DeviceLightingConfig EnsureDeviceLighting(string deviceId)
     {
-        return Mode switch
-        {
-            SceneMode.WholeScene => new[] { Scene },
-            SceneMode.Devices => DeviceLighting,
-            _ => Groups
-        };
-    }
-
-    /// <summary>
-    /// Яркость и содержимое устройства в режиме «Устройства»; у нового устройства они появляются при первом обращении.
-    /// </summary>
-    public GroupConfig EnsureDeviceLighting(string deviceId)
-    {
-        var lighting = DeviceLighting.FirstOrDefault(g => g.DeviceIds.Contains(deviceId));
+        var lighting = DeviceLighting.FirstOrDefault(l => l.DeviceId == deviceId);
 
         if (lighting != null)
             return lighting;
 
-        lighting = GroupConfig.Solo(deviceId, new ContentConfig(), 100);
+        lighting = DeviceLightingConfig.For(deviceId, new ContentConfig(), 100);
         DeviceLighting.Add(lighting);
 
         return lighting;
     }
 
     /// <summary>
-    /// Группа, в которую входит устройство; null — устройство ещё ни в одну группу не входит.
+    /// Убирает подсветку забытого устройства.
     /// </summary>
-    public GroupConfig? GroupOf(string deviceId)
+    public void RemoveDeviceLighting(string deviceId)
     {
-        return Groups.FirstOrDefault(g => g.DeviceIds.Contains(deviceId));
-    }
-
-    /// <summary>
-    /// Группа устройства; устройство без группы становится группой-одиночкой с содержимым по умолчанию.
-    /// </summary>
-    public GroupConfig EnsureGroup(string deviceId)
-    {
-        var group = GroupOf(deviceId);
-
-        if (group != null)
-            return group;
-
-        group = GroupConfig.Solo(deviceId, new ContentConfig(), 100);
-        Groups.Add(group);
-
-        return group;
-    }
-
-    /// <summary>
-    /// Убирает устройство из его группы, например когда устройство забыли; опустевшая группа пропадает.
-    /// </summary>
-    public void RemoveFromGroups(string deviceId)
-    {
-        foreach (var group in Groups)
-            group.DeviceIds.Remove(deviceId);
-
-        Groups.RemoveAll(g => g.DeviceIds.Count == 0);
-    }
-
-    /// <summary>
-    /// Собирает устройства в новую группу. Устройства уходят из прежних групп; новая группа играет то же,
-    /// что играла группа первого устройства, с той же яркостью.
-    /// </summary>
-    public GroupConfig MakeGroup(IReadOnlyCollection<string> deviceIds, string name, string color)
-    {
-        var source = deviceIds.Select(GroupOf).FirstOrDefault(g => g != null);
-
-        var group = new GroupConfig
-        {
-            Id = GroupConfig.NewId(),
-            Name = name,
-            Color = color,
-            Brightness = source?.Brightness ?? 100,
-            DefaultContent = source?.DefaultContent.Clone() ?? new ContentConfig()
-        };
-
-        foreach (var id in deviceIds)
-            RemoveFromGroups(id);
-
-        // Устройства группы идут в том же порядке, что и в списке устройств
-        group.DeviceIds = Devices.Select(d => d.Id).Where(id => deviceIds.Contains(id)).ToList();
-        Groups.Add(group);
-
-        return group;
-    }
-
-    /// <summary>
-    /// Распускает группу: каждое её устройство становится группой-одиночкой и продолжает играть то же, что играла группа.
-    /// </summary>
-    public void Ungroup(GroupConfig group)
-    {
-        Groups.Remove(group);
-
-        foreach (var id in group.DeviceIds)
-            Groups.Add(SoloCopyOf(group, id));
-    }
-
-    /// <summary>
-    /// Убирает устройство из его группы: оно становится группой-одиночкой и продолжает играть то же, что играла группа.
-    /// Если в группе больше никого не осталось, группа пропадает.
-    /// </summary>
-    public void TakeOutOfGroup(string deviceId)
-    {
-        var group = GroupOf(deviceId);
-
-        if (group == null || group.IsSolo)
-            return;
-
-        RemoveFromGroups(deviceId);
-        Groups.Add(SoloCopyOf(group, deviceId));
-    }
-
-    private static GroupConfig NewScene()
-    {
-        return new GroupConfig { Id = "scene", Name = "Вся сцена" };
+        DeviceLighting.RemoveAll(l => l.DeviceId == deviceId);
     }
 
     /// <summary>
@@ -311,97 +189,21 @@ public sealed class AppConfig
     }
 
     /// <summary>
-    /// Группа-одиночка с теми же содержимым и яркостью, что у группы.
-    /// </summary>
-    private static GroupConfig SoloCopyOf(GroupConfig group, string deviceId)
-    {
-        return GroupConfig.Solo(deviceId, group.DefaultContent.Clone(), group.Brightness);
-    }
-
-    /// <summary>
-    /// В режиме «Устройства» у каждого известного устройства ровно одна запись, записей забытых устройств нет.
+    /// У каждого известного устройства ровно одна запись подсветки, записей забытых устройств нет.
     /// </summary>
     private void NormalizeDeviceLighting()
     {
         var devices = Devices.Select(d => d.Id).ToHashSet();
         var taken = new HashSet<string>();
 
-        DeviceLighting = (DeviceLighting ?? new List<GroupConfig>())
-            .Where(g => g?.DeviceIds is { Count: 1 } && devices.Contains(g.DeviceIds[0]) && taken.Add(g.DeviceIds[0]))
+        DeviceLighting = (DeviceLighting ?? new List<DeviceLightingConfig>())
+            .Where(l => l?.DeviceId != null && devices.Contains(l.DeviceId) && taken.Add(l.DeviceId))
             .ToList();
 
         foreach (var lighting in DeviceLighting)
-        {
-            if (string.IsNullOrWhiteSpace(lighting.Id))
-                lighting.Id = GroupConfig.NewId();
-
-            lighting.IsSolo = true;
-            lighting.Name = "";
-            lighting.Color = "";
-            lighting.Brightness = Math.Clamp(lighting.Brightness, 0, 100);
-            lighting.DefaultContent ??= new ContentConfig();
-            lighting.DefaultContent.Normalize();
-        }
+            lighting.Normalize();
 
         foreach (var device in Devices)
             EnsureDeviceLighting(device.Id);
-    }
-
-    /// <summary>
-    /// Каждое известное устройство — ровно в одной группе, в группе-одиночке — ровно одно устройство,
-    /// пустых групп и ссылок на неизвестные устройства нет.
-    /// </summary>
-    private void NormalizeGroups()
-    {
-        var devices = Devices.Select(d => d.Id).ToHashSet();
-        var taken = new HashSet<string>();
-        var ids = new HashSet<string>();
-
-        Groups = (Groups ?? new List<GroupConfig>()).Where(g => g != null).ToList();
-
-        foreach (var group in Groups)
-        {
-            if (string.IsNullOrWhiteSpace(group.Id) || !ids.Add(group.Id))
-            {
-                group.Id = GroupConfig.NewId();
-                ids.Add(group.Id);
-            }
-
-            // Устройство, которое уже попало в группу выше, из остальных групп уходит
-            group.DeviceIds = (group.DeviceIds ?? new List<string>()).Where(id => devices.Contains(id) && taken.Add(id)).ToList();
-
-            // Лишние устройства группы-одиночки ниже получат свои группы-одиночки
-            if (group.IsSolo && group.DeviceIds.Count > 1)
-            {
-                taken.ExceptWith(group.DeviceIds.Skip(1));
-                group.DeviceIds.RemoveRange(1, group.DeviceIds.Count - 1);
-            }
-
-            group.Name ??= "";
-            group.Color ??= "";
-            group.Brightness = Math.Clamp(group.Brightness, 0, 100);
-            group.DefaultContent ??= new ContentConfig();
-            group.DefaultContent.Normalize();
-        }
-
-        Groups.RemoveAll(g => g.DeviceIds.Count == 0);
-
-        foreach (var device in Devices)
-            EnsureGroup(device.Id);
-
-        // Вся сцена — не группа из списка: у неё постоянный идентификатор, нет своих устройств и обводки
-        var scene = Scene ?? NewScene();
-        var defaults = NewScene();
-
-        scene.Id = defaults.Id;
-        scene.IsSolo = false;
-        scene.Name = defaults.Name;
-        scene.Color = "";
-        scene.DeviceIds = new List<string>();
-        scene.Brightness = Math.Clamp(scene.Brightness, 0, 100);
-        scene.DefaultContent ??= new ContentConfig();
-        scene.DefaultContent.Normalize();
-
-        Scene = scene;
     }
 }

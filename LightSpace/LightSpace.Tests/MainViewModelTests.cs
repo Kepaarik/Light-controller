@@ -175,7 +175,7 @@ public sealed class MainViewModelTests
         WithViewModel(vm =>
         {
             vm.NewProfileCommand.Execute(null);
-            vm.Profiles[0].Devices.Single(d => d.Lighting.DeviceIds[0] == "a").Brightness = 25;
+            vm.Profiles[0].Devices.Single(d => d.Lighting.DeviceId == "a").Brightness = 25;
 
             vm.ApplyProfileCommand.Execute(vm.Profiles[0]);
 

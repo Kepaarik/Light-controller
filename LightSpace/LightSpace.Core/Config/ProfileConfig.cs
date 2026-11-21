@@ -14,9 +14,17 @@ public sealed class ProfileConfig
     public string Name { get; set; } = "";
 
     /// <summary>
-    /// Яркость и содержимое устройств: по одной группе-одиночке на устройство, как в режиме «Устройства».
+    /// Яркость и содержимое устройств: по одной записи на устройство.
     /// </summary>
-    public List<GroupConfig> DeviceLighting { get; set; } = new();
+    public List<DeviceLightingConfig> DeviceLighting { get; set; } = new();
+
+    /// <summary>
+    /// Новый уникальный идентификатор профиля.
+    /// </summary>
+    public static string NewId()
+    {
+        return Guid.NewGuid().ToString("N");
+    }
 
     /// <summary>
     /// Приводит значения к допустимым: файл могли поправить руками.
@@ -24,21 +32,17 @@ public sealed class ProfileConfig
     public void Normalize()
     {
         if (string.IsNullOrWhiteSpace(Id))
-            Id = GroupConfig.NewId();
+            Id = NewId();
 
         Name ??= "";
 
-        DeviceLighting = (DeviceLighting ?? new List<GroupConfig>())
-            .Where(g => g?.DeviceIds is { Count: 1 } && !string.IsNullOrWhiteSpace(g.DeviceIds[0]))
-            .GroupBy(g => g.DeviceIds[0])
+        DeviceLighting = (DeviceLighting ?? new List<DeviceLightingConfig>())
+            .Where(l => l != null && !string.IsNullOrWhiteSpace(l.DeviceId))
+            .GroupBy(l => l.DeviceId)
             .Select(g => g.First())
             .ToList();
 
         foreach (var lighting in DeviceLighting)
-        {
-            lighting.Brightness = Math.Clamp(lighting.Brightness, 0, 100);
-            lighting.DefaultContent ??= new ContentConfig();
-            lighting.DefaultContent.Normalize();
-        }
+            lighting.Normalize();
     }
 }

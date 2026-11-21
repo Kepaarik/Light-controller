@@ -13,17 +13,17 @@ public sealed class ProfileTests
         var config = ConfigWithDevices("a", "b");
 
         config.EnsureDeviceLighting("a").Brightness = 30;
-        config.EnsureDeviceLighting("a").DefaultContent.EffectId = "rainbow";
+        config.EnsureDeviceLighting("a").Content.EffectId = "rainbow";
 
         var profile = config.SaveProfile("Вечер");
 
         config.EnsureDeviceLighting("a").Brightness = 100;
-        config.EnsureDeviceLighting("a").DefaultContent.EffectId = "solid";
+        config.EnsureDeviceLighting("a").Content.EffectId = "solid";
 
         config.ApplyProfile(profile);
 
         Assert.Equal(30, config.EnsureDeviceLighting("a").Brightness);
-        Assert.Equal("rainbow", config.EnsureDeviceLighting("a").DefaultContent.EffectId);
+        Assert.Equal("rainbow", config.EnsureDeviceLighting("a").Content.EffectId);
     }
 
     [Fact]
@@ -32,9 +32,9 @@ public sealed class ProfileTests
         var config = ConfigWithDevices("a");
         var profile = config.SaveProfile("Вечер");
 
-        config.EnsureDeviceLighting("a").DefaultContent.EffectId = "rainbow";
+        config.EnsureDeviceLighting("a").Content.EffectId = "rainbow";
 
-        Assert.Equal("solid", profile.DeviceLighting[0].DefaultContent.EffectId);
+        Assert.Equal("solid", profile.DeviceLighting[0].Content.EffectId);
     }
 
     [Fact]
@@ -44,11 +44,11 @@ public sealed class ProfileTests
         var profile = config.SaveProfile("Только a");
 
         config.Devices.Add(new DeviceConfig { Id = "b" });
-        config.EnsureDeviceLighting("b").DefaultContent.EffectId = "rainbow";
+        config.EnsureDeviceLighting("b").Content.EffectId = "rainbow";
 
         config.ApplyProfile(profile);
 
-        Assert.Equal("rainbow", config.EnsureDeviceLighting("b").DefaultContent.EffectId);
+        Assert.Equal("rainbow", config.EnsureDeviceLighting("b").Content.EffectId);
     }
 
     [Fact]
@@ -58,11 +58,11 @@ public sealed class ProfileTests
         var profile = config.SaveProfile("Оба");
 
         config.Devices.RemoveAll(d => d.Id == "b");
-        config.DeviceLighting.RemoveAll(l => l.DeviceIds.Contains("b"));
+        config.RemoveDeviceLighting("b");
 
         config.ApplyProfile(profile);
 
-        Assert.DoesNotContain(config.DeviceLighting, l => l.DeviceIds.Contains("b"));
+        Assert.DoesNotContain(config.DeviceLighting, l => l.DeviceId == "b");
     }
 
     [Fact]
@@ -72,13 +72,13 @@ public sealed class ProfileTests
         var profile = config.SaveProfile("Вечер");
 
         config.EnsureDeviceLighting("a").Brightness = 40;
-        config.EnsureDeviceLighting("b").DefaultContent.EffectId = "rainbow";
+        config.EnsureDeviceLighting("b").Content.EffectId = "rainbow";
 
         config.UpdateProfile(profile);
 
         Assert.Equal(2, profile.DeviceLighting.Count);
-        Assert.Equal(40, profile.DeviceLighting.Single(l => l.DeviceIds[0] == "a").Brightness);
-        Assert.Equal("rainbow", profile.DeviceLighting.Single(l => l.DeviceIds[0] == "b").DefaultContent.EffectId);
+        Assert.Equal(40, profile.DeviceLighting.Single(l => l.DeviceId == "a").Brightness);
+        Assert.Equal("rainbow", profile.DeviceLighting.Single(l => l.DeviceId == "b").Content.EffectId);
     }
 
     [Fact]
@@ -89,10 +89,10 @@ public sealed class ProfileTests
 
         config.UpdateProfile(profile);
         config.EnsureDeviceLighting("a").Brightness = 5;
-        config.EnsureDeviceLighting("a").DefaultContent.EffectId = "rainbow";
+        config.EnsureDeviceLighting("a").Content.EffectId = "rainbow";
 
         Assert.Equal(100, profile.DeviceLighting[0].Brightness);
-        Assert.Equal("solid", profile.DeviceLighting[0].DefaultContent.EffectId);
+        Assert.Equal("solid", profile.DeviceLighting[0].Content.EffectId);
     }
 
     [Fact]
@@ -116,11 +116,11 @@ public sealed class ProfileTests
         var profile = config.SaveProfile("Оба");
 
         config.Devices.RemoveAll(d => d.Id == "b");
-        config.DeviceLighting.RemoveAll(l => l.DeviceIds.Contains("b"));
+        config.RemoveDeviceLighting("b");
 
         config.UpdateProfile(profile);
 
-        Assert.Equal("a", Assert.Single(profile.DeviceLighting).DeviceIds[0]);
+        Assert.Equal("a", Assert.Single(profile.DeviceLighting).DeviceId);
     }
 
     [Fact]

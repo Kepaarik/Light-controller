@@ -364,11 +364,6 @@ public sealed class FrameLoop : IDisposable
         public double Time { get; set; }
 
         /// <summary>
-        /// Время слоёв, когда часы считают сцену.
-        /// </summary>
-        public SceneClock Layers { get; } = new();
-
-        /// <summary>
         /// Сглаженные цвета, когда часы считают экран.
         /// </summary>
         public ScreenPlayback Screen { get; } = new();
@@ -389,15 +384,12 @@ public sealed class FrameLoop : IDisposable
         public HashSet<string> FailingDevices { get; } = new();
 
         /// <summary>
-        /// Двигает время содержимого на seconds секунд с учётом его скорости, у сцены — время каждого её слоя,
-        /// у экрана, музыки и игры — берёт последнюю картинку монитора, звук или состояние игры из источников.
+        /// Двигает время содержимого на seconds секунд с учётом его скорости, у экрана, музыки и игры — берёт последнюю
+        /// картинку монитора, звук или состояние игры из источников.
         /// </summary>
         public void Advance(FrameContent content, double seconds, SourceHub sources)
         {
             Time += seconds * content.Speed;
-
-            if (content.Layers != null)
-                Layers.Advance(content.Layers, seconds);
 
             if (content.Screen is { } screen)
                 Screen.Advance(screen, sources.PictureOf(screen.MonitorKey), seconds, sources.PictureOf);
@@ -467,25 +459,22 @@ public sealed class FrameLoop : IDisposable
         }
 
         /// <summary>
-        /// Кадр содержимого на устройстве: эффект и музыка играют в пространстве самого устройства, сцена и экран — по местам его
-        /// светодиодов на сцене, полоски игры — в пространстве устройства, а картинка экрана в игре — по местам на сцене.
-        /// У устройства одного цвета во всех случаях один цвет.
+        /// Кадр содержимого на устройстве: всё играет в пространстве самого устройства, а лента за монитором в «Экране» —
+        /// по краям этого монитора. У устройства одного цвета во всех случаях один цвет.
         /// </summary>
         private static RgbColor[] RenderContent(FrameContent content, EffectClock clock, FrameDevice device)
         {
             // Встроенный эффект кадрами не показать: устройство без встроенных эффектов не светится
             if (content.Builtin != null)
-                return new RgbColor[Math.Max(device.ScenePoints.Count, 1)];
+                return Dark(device);
 
             if (content.Screen != null || content.Music != null || content.Game != null)
                 return RenderSource(content, clock, device);
 
-            // Ошибка эффекта или сцены, как и у экрана, не останавливает поток кадров: устройство на этом кадре гаснет
+            // Ошибка эффекта, как и у экрана, не останавливает поток кадров: устройство на этом кадре гаснет
             try
             {
-                var colors = content.Layers is { } layers
-                    ? SceneRenderer.Render(layers, clock.Layers, device.ScenePoints)
-                    : EffectRenderer.Render(content.Effect, content.Values, device.Geometry, clock.Time);
+                var colors = EffectRenderer.Render(content.Effect, content.Values, device.Geometry, clock.Time);
 
                 clock.FailingDevices.Remove(device.Id);
 
@@ -497,7 +486,7 @@ public sealed class FrameLoop : IDisposable
                 if (clock.FailingDevices.Add(device.Id))
                     Trace.TraceWarning($"Light Space: не удалось посчитать кадр устройства {device.Id}: {e.Message}");
 
-                return new RgbColor[Math.Max(device.ScenePoints.Count, 1)];
+                return Dark(device);
             }
         }
 
@@ -510,14 +499,17 @@ public sealed class FrameLoop : IDisposable
             {
                 RgbColor[] colors;
 
+                var geometry = device.Geometry;
+
+                // Картинка экрана без монитора ложится на пространство самого устройства
                 if (content.Game is { } game)
-                    colors = clock.Game.Render(device.Id, game, device.Geometry, device.ScenePoints, SceneArea.Width, SceneArea.Height);
+                    colors = clock.Game.Render(device.Id, game, geometry, PointsOf(geometry), geometry.Width, geometry.Height);
                 else if (content.Screen is { } screen)
                     colors = device.Monitor is { } binding
                         ? clock.Screen.RenderBound(device.Id, screen, binding)
-                        : clock.Screen.Render(device.Id, screen, device.ScenePoints, SceneArea.Width, SceneArea.Height);
+                        : clock.Screen.Render(device.Id, screen, PointsOf(geometry), geometry.Width, geometry.Height);
                 else
-                    colors = clock.Music.Render(content.Music!, device.Geometry);
+                    colors = clock.Music.Render(content.Music!, geometry);
 
                 clock.FailingDevices.Remove(device.Id);
 
@@ -529,8 +521,24 @@ public sealed class FrameLoop : IDisposable
                 if (clock.FailingDevices.Add(device.Id))
                     Trace.TraceWarning($"Light Space: не удалось посчитать кадр устройства {device.Id}: {e.Message}");
 
-                return new RgbColor[Math.Max(device.ScenePoints.Count, 1)];
+                return Dark(device);
             }
+        }
+
+        /// <summary>
+        /// Места светодиодов устройства; у устройства одного цвета — одна точка в его середине.
+        /// </summary>
+        private static IReadOnlyList<EffectPixel?> PointsOf(DeviceGeometry geometry)
+        {
+            return geometry.IsAddressable ? geometry.Points : new EffectPixel?[] { geometry.Center };
+        }
+
+        /// <summary>
+        /// Погасшее устройство: чёрный цвет на каждый светодиод, у устройства одного цвета — один.
+        /// </summary>
+        private static RgbColor[] Dark(FrameDevice device)
+        {
+            return new RgbColor[Math.Max(device.Geometry.Points.Count, 1)];
         }
     }
 

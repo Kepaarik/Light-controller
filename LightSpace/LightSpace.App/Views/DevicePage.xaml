@@ -7,7 +7,7 @@
              xmlns:controls="clr-namespace:LightSpace.App.Controls"
              xmlns:views="clr-namespace:LightSpace.App.Views"
              mc:Ignorable="d"
-             d:DataContext="{d:DesignInstance vm:SceneViewModel}">
+             d:DataContext="{d:DesignInstance vm:DeviceLightingViewModel}">
 
     <!-- Устройство, открытое в левом меню: яркость, монитор ленты и что на устройстве играет.
          Справа выезжает панель с настройками выбранного эффекта -->
@@ -25,7 +25,7 @@
                     <ToggleButton x:Name="IconOpener" Width="48" Height="48" Padding="{StaticResource SpaceNone}"
                                   ToolTip="Значок в левом меню"
                                   IsHitTestVisible="{Binding IsOpen, ElementName=IconFlyout, Converter={x:Static controls:InverseBooleanConverter.Instance}}">
-                        <TextBlock Text="{Binding SelectedGroup.Device.Icon}" Style="{StaticResource Icon}" FontSize="22"/>
+                        <TextBlock Text="{Binding Device.Icon}" Style="{StaticResource Icon}" FontSize="22"/>
                     </ToggleButton>
 
                     <Popup x:Name="IconFlyout" PlacementTarget="{Binding ElementName=IconOpener}" Placement="Bottom" StaysOpen="False"
@@ -36,7 +36,7 @@
                             <StackPanel Margin="{StaticResource Space8}">
                                 <TextBlock Text="Значок в меню" Style="{StaticResource Caption}" Margin="{StaticResource GapBottom8}"/>
                                 <ListBox x:Name="IconList" ItemsSource="{x:Static vm:DeviceIcons.All}"
-                                         SelectedItem="{Binding SelectedGroup.Device.Icon, Mode=OneWay}"
+                                         SelectedItem="{Binding Device.Icon, Mode=OneWay}"
                                          SelectionChanged="OnIconSelected" FocusVisualStyle="{x:Null}">
                                     <ListBox.Template>
                                         <ControlTemplate TargetType="ListBox">
@@ -88,19 +88,19 @@
 
                 <!-- Выключатель устройства — справа в шапке; у неподключённого тоже: оно останется выключенным, когда найдётся -->
                 <CheckBox x:Name="PowerSwitch" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="{StaticResource GapLeft24}"
-                          ToolTip="Подсветка устройства" IsChecked="{Binding SelectedGroup.Device.IsOn, Mode=OneWay}"
+                          ToolTip="Подсветка устройства" IsChecked="{Binding Device.IsOn, Mode=OneWay}"
                           Click="OnPowerClicked"/>
 
                 <!-- Яркость устройства — в шапке, под рукой; у неподключённого её нет -->
                 <controls:ValueSlider DockPanel.Dock="Right" Width="240" VerticalAlignment="Center" Margin="{StaticResource GapLeft24}"
                                       Label="Яркость" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                      Value="{Binding SelectedGroup.Brightness}"
-                                      Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
+                                      Value="{Binding Brightness}"
+                                      Visibility="{Binding Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}"/>
 
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Grid>
-                            <TextBlock x:Name="TitleText" Text="{Binding SelectedGroup.Title}" Style="{StaticResource PageTitle}"
+                            <TextBlock x:Name="TitleText" Text="{Binding Device.Name}" Style="{StaticResource PageTitle}"
                                        Margin="{StaticResource SpaceNone}"/>
                             <!-- Поле названия: Enter или уход фокуса сохраняет, Esc — отменяет; пустое возвращает название устройства -->
                             <TextBox x:Name="NameBox" FontSize="{StaticResource FontSizeTitle}" MinWidth="280" HorizontalAlignment="Left"
@@ -111,17 +111,17 @@
                                 ToolTip="Переименовать" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}" Click="OnRenameClicked"/>
                     </StackPanel>
                     <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}">
-                        <Run Text="{Binding SelectedGroup.Device.KindText, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding SelectedGroup.Device.StatusTitle, Mode=OneWay}">
+                        <Run Text="{Binding Device.KindText, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding Device.StatusTitle, Mode=OneWay}">
                             <Run.Style>
                                 <Style TargetType="Run">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SelectedGroup.Device.Status}" Value="Connected">
+                                        <DataTrigger Binding="{Binding Device.Status}" Value="Connected">
                                             <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
                                         </DataTrigger>
-                                        <DataTrigger Binding="{Binding SelectedGroup.Device.Status}" Value="NeedsSetup">
+                                        <DataTrigger Binding="{Binding Device.Status}" Value="NeedsSetup">
                                             <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
                                         </DataTrigger>
-                                        <DataTrigger Binding="{Binding SelectedGroup.Device.Status}" Value="Failing">
+                                        <DataTrigger Binding="{Binding Device.Status}" Value="Failing">
                                             <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -133,15 +133,15 @@
             </DockPanel>
 
             <!-- Живые цвета, которые сейчас уходят на устройство; у встроенного эффекта их не знает и само приложение -->
-            <Border Height="10" CornerRadius="5" Margin="{StaticResource GapTop16}" Background="{Binding SelectedGroup.Device.Preview}"
+            <Border Height="10" CornerRadius="5" Margin="{StaticResource GapTop16}" Background="{Binding Device.Preview}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeThin}">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedGroup.Device.IsConnected}" Value="False">
+                            <DataTrigger Binding="{Binding Device.IsConnected}" Value="False">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding SelectedGroup.Device.IsBuiltinPlaying}" Value="True">
+                            <DataTrigger Binding="{Binding Device.IsBuiltinPlaying}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
                         </Style.Triggers>
@@ -154,9 +154,9 @@
                                  Hint="Включите его и запустите поиск — настройки появятся здесь."
                                  ActionText="Найти устройства" ActionIcon="&#xE721;"
                                  Command="{Binding DataContext.FindDevicesCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                 Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
+                                 Visibility="{Binding Device.IsConnected, Converter={x:Static controls:InverseBooleanToVisibilityConverter.Instance}}"/>
 
-            <StackPanel Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+            <StackPanel Visibility="{Binding Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
             <!-- Лента за монитором: пока она играет «Экран», она берёт цвета краёв этого монитора -->
             <Border Style="{StaticResource Card}" Margin="{StaticResource GapTop16}"
                     Visibility="{Binding IsStripSelected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
@@ -232,11 +232,6 @@
                         <TextBlock Text="Сильное сглаживание делает смену цветов плавнее, но свет отстаёт от картинки."
                                    Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>
                     </StackPanel>
-
-                    <!-- Встроенный эффект: подсказка вместо превью, эффект устройства, скорость и цвет -->
-                    <StackPanel Visibility="{Binding IsBuiltinContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                        <views:BuiltinEditor DataContext="{Binding BuiltinEditor}"/>
-                    </StackPanel>
                 </StackPanel>
             </Border>
             </StackPanel>
@@ -244,7 +239,7 @@
     </ScrollViewer>
 
         <!-- Панель настроек эффекта: только у «Эффекта», выезжает справа -->
-        <Grid Grid.Column="1" Visibility="{Binding SelectedGroup.Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
+        <Grid Grid.Column="1" Visibility="{Binding Device.IsConnected, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
         <Grid Visibility="{Binding IsEffectContent, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
             <Border Width="{StaticResource EffectPanelWidth}" Margin="{StaticResource EffectPanelMargin}" Padding="{StaticResource SpaceNone}"
                     Visibility="{Binding IsChecked, ElementName=SettingsToggle, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">

@@ -6,6 +6,13 @@
         <ResourceDictionary Source="/LightSpace;component/Themes/Tokens.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
+    <!-- Крупное живое превью содержимого в редакторе: кадр эффекта задаёт Background -->
+    <Style x:Key="LivePreview" TargetType="Border">
+        <Setter Property="Height" Value="{StaticResource ScenarioPreviewHeight}"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Background" Value="{DynamicResource InsetBrush}"/>
+    </Style>
+
     <!-- Список: прозрачный, со своей прокруткой -->
     <Style TargetType="ListBox">
         <Setter Property="Background" Value="Transparent"/>

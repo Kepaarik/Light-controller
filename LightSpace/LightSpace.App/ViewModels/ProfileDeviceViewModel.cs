@@ -22,7 +22,7 @@ public sealed partial class ProfileDeviceViewModel : ObservableObject
     /// changed вызывается после каждой правки, remove — по просьбе убрать устройство из профиля,
     /// edit — по просьбе выбрать эффект устройства в профиле.
     /// </summary>
-    public ProfileDeviceViewModel(GroupConfig lighting, ManagedDevice? device, Action changed, Action<ProfileDeviceViewModel> remove,
+    public ProfileDeviceViewModel(DeviceLightingConfig lighting, ManagedDevice? device, Action changed, Action<ProfileDeviceViewModel> remove,
         Action<ProfileDeviceViewModel>? edit = null)
     {
         Lighting = lighting;
@@ -39,7 +39,7 @@ public sealed partial class ProfileDeviceViewModel : ObservableObject
     /// <summary>
     /// Яркость и содержимое устройства в профиле.
     /// </summary>
-    public GroupConfig Lighting { get; }
+    public DeviceLightingConfig Lighting { get; }
 
     public string Name { get; }
 
@@ -53,7 +53,7 @@ public sealed partial class ProfileDeviceViewModel : ObservableObject
     /// <summary>
     /// Что профиль включает на устройстве, например «Эффект · Радуга» или «Музыка».
     /// </summary>
-    public string ContentText => DescribeContent(Lighting.DefaultContent, Lighting.DeviceIds[0], _device);
+    public string ContentText => DescribeContent(Lighting.Content, Lighting.DeviceId, _device);
 
     /// <summary>
     /// Содержимое устройства в профиле поменяли: описание показывает новое.
@@ -104,7 +104,6 @@ public sealed partial class ProfileDeviceViewModel : ObservableObject
             ContentKind.Effect => $"Эффект · {EffectLibrary.FindOrSolid(content.EffectId).Title}",
             ContentKind.Music => "Музыка",
             ContentKind.Screen => "Экран",
-            ContentKind.Scene => "Сцена",
             ContentKind.Game => "Игра",
             ContentKind.Builtin => DescribeBuiltin(content.Builtin, deviceId, device),
             _ => "—"

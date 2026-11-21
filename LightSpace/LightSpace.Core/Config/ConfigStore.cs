@@ -13,6 +13,21 @@ public static class ConfigStore
     private const string SharedBrightnessKey = "Brightness";
     private const string SharedContentKey = "DefaultContent";
 
+    // Поля групп и всей сцены в файлах версии 4; с версии 5 групп и всей сцены нет
+    private const string GroupsKey = "Groups";
+    private const string SceneKey = "Scene";
+    private const string ModeKey = "Mode";
+    private const string GroupIdKey = "Id";
+    private const string GroupIsSoloKey = "IsSolo";
+    private const string GroupDeviceIdsKey = "DeviceIds";
+    private const string GroupBrightnessKey = "Brightness";
+    private const string GroupContentKey = "DefaultContent";
+
+    // Расстановка устройства на сцене и слои сцены в содержимом в файлах версии 4
+    private const string PlacementKey = "Placement";
+    private const string LayersKey = "Layers";
+    private const string SceneKind = "Scene";
+
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LightSpace", "config.json");
 
@@ -38,7 +53,11 @@ public static class ConfigStore
 
         // 3 → 4: появились группы Groups со своей яркостью и содержимым; общие Brightness и DefaultContent переезжают
         // в группы-одиночки всех устройств, поэтому после обновления каждое устройство играет то же, что и до него
-        MoveContentToGroups
+        MoveContentToGroups,
+
+        // 4 → 5: группы, вся сцена и расстановка устройств убраны; подсветка устройства хранит одно устройство
+        // и его содержимое, поэтому после обновления каждое устройство играет то же, что и до него
+        MoveGroupsToDeviceLighting
     };
 
     public static AppConfig Load()
@@ -153,23 +172,112 @@ public static class ConfigStore
 
             var group = new JsonObject
             {
-                [nameof(GroupConfig.Id)] = GroupConfig.NewId(),
-                [nameof(GroupConfig.IsSolo)] = true,
-                [nameof(GroupConfig.DeviceIds)] = new JsonArray { deviceId }
+                [GroupIdKey] = ProfileConfig.NewId(),
+                [GroupIsSoloKey] = true,
+                [GroupDeviceIdsKey] = new JsonArray { deviceId }
             };
 
             // Чего не было в файле, группа берёт по умолчанию — как и раньше брали общие настройки
             if (brightness != null)
-                group[nameof(GroupConfig.Brightness)] = brightness.DeepClone();
+                group[GroupBrightnessKey] = brightness.DeepClone();
 
             if (content != null)
-                group[nameof(GroupConfig.DefaultContent)] = content.DeepClone();
+                group[GroupContentKey] = content.DeepClone();
 
             groups.Add(group);
         }
 
         root.Remove(SharedBrightnessKey);
         root.Remove(SharedContentKey);
-        root[nameof(AppConfig.Groups)] = groups;
+        root[GroupsKey] = groups;
+    }
+
+    /// <summary>
+    /// Раньше подсветка устройства была группой-одиночкой, а рядом жили группы, вся сцена и расстановка устройств.
+    /// Теперь у подсветки одно устройство и его содержимое: записи устройств переводятся в новый вид, устройство без
+    /// своей записи берёт содержимое и яркость своей группы, а сцена в содержимом становится обычным эффектом.
+    /// </summary>
+    private static void MoveGroupsToDeviceLighting(JsonObject root)
+    {
+        var lighting = ToDeviceLighting(root[nameof(AppConfig.DeviceLighting)] as JsonArray);
+        var covered = lighting.OfType<JsonObject>().Select(l => l[nameof(DeviceLightingConfig.DeviceId)]!.GetValue<string>()).ToHashSet();
+
+        // До версии 4 содержимое жило в группах: устройство без своей записи играет то же, что его группа
+        foreach (var group in (root[GroupsKey] as JsonArray)?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+        {
+            foreach (var deviceId in DeviceIdsOf(group).Where(covered.Add))
+                lighting.Add(LightingOf(deviceId, group));
+        }
+
+        root[nameof(AppConfig.DeviceLighting)] = lighting;
+
+        foreach (var profile in (root[nameof(AppConfig.Profiles)] as JsonArray)?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+            profile[nameof(ProfileConfig.DeviceLighting)] = ToDeviceLighting(profile[nameof(ProfileConfig.DeviceLighting)] as JsonArray);
+
+        foreach (var device in (root[nameof(AppConfig.Devices)] as JsonArray)?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+            device.Remove(PlacementKey);
+
+        root.Remove(GroupsKey);
+        root.Remove(SceneKey);
+        root.Remove(ModeKey);
+    }
+
+    /// <summary>
+    /// Записи подсветки в виде групп-одиночек — в записи нового вида; запись без устройства пропадает.
+    /// </summary>
+    private static JsonArray ToDeviceLighting(JsonArray? groups)
+    {
+        var lighting = new JsonArray();
+
+        foreach (var group in groups?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+        {
+            if (DeviceIdsOf(group).FirstOrDefault() is { } deviceId)
+                lighting.Add(LightingOf(deviceId, group));
+        }
+
+        return lighting;
+    }
+
+    /// <summary>
+    /// Подсветка устройства с яркостью и содержимым группы; чего не было в группе, берётся по умолчанию.
+    /// </summary>
+    private static JsonObject LightingOf(string deviceId, JsonObject group)
+    {
+        var lighting = new JsonObject { [nameof(DeviceLightingConfig.DeviceId)] = deviceId };
+
+        if (group[GroupBrightnessKey] is { } brightness)
+            lighting[nameof(DeviceLightingConfig.Brightness)] = brightness.DeepClone();
+
+        if (group[GroupContentKey] is JsonObject content)
+            lighting[nameof(DeviceLightingConfig.Content)] = WithoutScene(content);
+
+        return lighting;
+    }
+
+    /// <summary>
+    /// Копия содержимого без слоёв сцены; содержимое-сцена становится обычным эффектом.
+    /// </summary>
+    private static JsonObject WithoutScene(JsonObject content)
+    {
+        var copy = (JsonObject)content.DeepClone();
+
+        copy.Remove(LayersKey);
+
+        if (copy[nameof(ContentConfig.Kind)] is JsonValue kind && kind.TryGetValue<string>(out var name) && name == SceneKind)
+            copy[nameof(ContentConfig.Kind)] = nameof(ContentKind.Effect);
+
+        return copy;
+    }
+
+    /// <summary>
+    /// Непустые идентификаторы устройств группы по порядку.
+    /// </summary>
+    private static IEnumerable<string> DeviceIdsOf(JsonObject group)
+    {
+        return (group[GroupDeviceIdsKey] as JsonArray)?
+            .OfType<JsonValue>()
+            .Select(v => v.TryGetValue<string>(out var id) ? id : null)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!) ?? Enumerable.Empty<string>();
     }
 }

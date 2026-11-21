@@ -44,8 +44,8 @@ public sealed partial class ProfileOption : ObservableObject
 
     partial void OnEditedDeviceChanged(ProfileDeviceViewModel? value)
     {
-        Editor.Edit(value?.Lighting.DefaultContent);
-        Editor.IsPlaying = value?.Lighting.DefaultContent.Kind == ContentKind.Effect;
+        Editor.Edit(value?.Lighting.Content);
+        Editor.IsPlaying = value?.Lighting.Content.Kind == ContentKind.Effect;
 
         OnPropertyChanged(nameof(HasEditedDevice));
     }
@@ -104,7 +104,7 @@ public sealed partial class ProfileOption : ObservableObject
         Devices.Clear();
 
         foreach (var lighting in Settings.DeviceLighting)
-            Devices.Add(new ProfileDeviceViewModel(lighting, _findDevice(lighting.DeviceIds[0]), OnDeviceChanged, Remove, Edit));
+            Devices.Add(new ProfileDeviceViewModel(lighting, _findDevice(lighting.DeviceId), OnDeviceChanged, Remove, Edit));
 
         OnPropertyChanged(nameof(DevicesText));
         OnPropertyChanged(nameof(SummaryText));
@@ -132,7 +132,7 @@ public sealed partial class ProfileOption : ObservableObject
         if (EditedDevice == null)
             return;
 
-        EditedDevice.Lighting.DefaultContent.Kind = ContentKind.Effect;
+        EditedDevice.Lighting.Content.Kind = ContentKind.Effect;
         Editor.IsPlaying = true;
         EditedDevice.RefreshContent();
 

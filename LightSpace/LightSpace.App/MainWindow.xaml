@@ -136,7 +136,7 @@
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource StrokeThin}">
             <!-- Страница, которая становится видимой, плавно проявляется -->
             <Grid>
-                <views:DevicePage DataContext="{Binding Scene}" controls:PageTransition.IsEnabled="True"
+                <views:DevicePage DataContext="{Binding Lighting}" controls:PageTransition.IsEnabled="True"
                                   Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Device}"/>
                 <views:DevicesPage DataContext="{Binding Devices}" controls:PageTransition.IsEnabled="True"
                                    Visibility="{Binding DataContext.SelectedPage, RelativeSource={RelativeSource AncestorType=Window}, Converter={x:Static controls:EqualsToVisibilityConverter.Instance}, ConverterParameter=Devices}"/>
