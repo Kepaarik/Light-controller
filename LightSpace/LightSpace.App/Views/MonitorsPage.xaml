@@ -10,7 +10,7 @@
 
     <!-- Подсветка мониторов: у каждого монитора своя лента, ориентация и раскладка -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource WideContentMaxWidth}" HorizontalAlignment="Left">
+        <StackPanel Margin="{StaticResource PaddingPage}">
             <TextBlock Text="Мониторы" Style="{StaticResource PageTitle}"/>
             <TextBlock Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}" TextWrapping="Wrap"
                        Text="Лента вокруг монитора, пока её группа играет «Экран», повторяет цвета именно этого монитора: обычная лента — средним цветом картинки, адресная — цветами краёв по раскладке. Лента без монитора берёт экран по своему месту на сцене."/>

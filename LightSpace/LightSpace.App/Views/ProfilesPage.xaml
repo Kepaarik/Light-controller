@@ -60,8 +60,7 @@
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding HasSelectedProfile, Converter={x:Static controls:BooleanToVisibilityConverter.Instance}}">
-                    <StackPanel MaxWidth="{StaticResource WideContentMaxWidth}" HorizontalAlignment="Stretch"
-                                DataContext="{Binding SelectedProfile}" d:DataContext="{d:DesignInstance vm:ProfileOption}">
+                    <StackPanel DataContext="{Binding SelectedProfile}" d:DataContext="{d:DesignInstance vm:ProfileOption}">
                         <!-- Название и действия с профилем одной строкой -->
                         <Border Style="{StaticResource Card}">
                             <DockPanel>
@@ -109,8 +108,9 @@
                         <!-- Слева сцена, справа панель: эффект сцены или настройки выбранного устройства -->
                         <Grid Margin="{StaticResource GapTop16}">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="{StaticResource ProfilePanelWidth}"/>
+                                <!-- Обе колонки растут с окном: в панели справа больше плиток эффектов в ряд -->
+                                <ColumnDefinition Width="3*"/>
+                                <ColumnDefinition Width="2*" MinWidth="{StaticResource ProfilePanelMinWidth}"/>
                             </Grid.ColumnDefinitions>
 
                             <StackPanel>

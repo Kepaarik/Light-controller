@@ -13,7 +13,7 @@ public partial class MainWindow : Window
     /// <summary>
     /// Ширина, уже которой меню разделов сворачивается до значков.
     /// </summary>
-    private const double CompactNavWidth = 1100;
+    private const double CompactNavWidth = 1280;
 
     private const double NavWidth = 232;
     private const double CompactNavItemWidth = 68;

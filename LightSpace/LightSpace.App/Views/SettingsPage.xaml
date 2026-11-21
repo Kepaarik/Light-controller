@@ -9,7 +9,7 @@
              d:DataContext="{d:DesignInstance vm:SettingsViewModel}">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{StaticResource PaddingPage}" MaxWidth="{StaticResource WideContentMaxWidth}" HorizontalAlignment="Left">
+        <StackPanel Margin="{StaticResource PaddingPage}">
             <!-- Семь щелчков по заголовку открывают скрытый раздел «Журнал устройств» -->
             <TextBlock Text="Настройки" Style="{StaticResource PageTitle}" MouseLeftButtonUp="OnTitleClicked"/>
             <TextBlock Text="Внешний вид и поведение приложения" Style="{StaticResource Hint}" Margin="{StaticResource GapTop4}"/>

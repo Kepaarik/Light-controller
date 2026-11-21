@@ -126,9 +126,8 @@
     <!-- Живое превью содержимого в редакторе -->
     <sys:Double x:Key="ScenarioPreviewHeight">96</sys:Double>
     <sys:Double x:Key="DialogMaxWidth">440</sys:Double>
+    <!-- Длинный поясняющий текст: строки не шире этого, чтобы их было удобно читать в широком окне -->
     <sys:Double x:Key="ContentMaxWidth">880</sys:Double>
-    <!-- Страница с карточками в две колонки -->
-    <sys:Double x:Key="WideContentMaxWidth">1240</sys:Double>
     <sys:Double x:Key="ColorWheelSize">200</sys:Double>
     <!-- Холст сцены в профиле -->
     <sys:Double x:Key="SceneCanvasHeight">320</sys:Double>
@@ -143,8 +142,8 @@
     <sys:Double x:Key="EmptyStateMaxWidth">360</sys:Double>
     <!-- Колонка списка слева от панели выбранного элемента -->
     <GridLength x:Key="ListPaneWidth">300</GridLength>
-    <!-- Панель эффекта сцены или выбранного устройства справа от сцены профиля: шире галереи в три плитки -->
-    <GridLength x:Key="ProfilePanelWidth">460</GridLength>
+    <!-- Панель эффекта сцены или выбранного устройства справа от сцены профиля растёт с окном, но не уже галереи в три плитки -->
+    <sys:Double x:Key="ProfilePanelMinWidth">460</sys:Double>
     <!-- Раскладка клавиатуры: сторона стандартной клавиши и зазор между клавишами -->
     <sys:Double x:Key="KeyUnitSize">32</sys:Double>
     <sys:Double x:Key="KeyGap">4</sys:Double>
