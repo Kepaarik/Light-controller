@@ -156,12 +156,37 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Выключает всю подсветку или включает её обратно.
+    /// Вся подсветка погашена: выключена целиком или выключено по отдельности каждое устройство.
+    /// </summary>
+    public bool IsLightingOff => !Settings.LightingEnabled || AreAllDevicesOff;
+
+    /// <summary>
+    /// Устройства есть, и каждое выключено по отдельности.
+    /// </summary>
+    private bool AreAllDevicesOff => _deviceManager.Devices.Count > 0 && _deviceManager.Devices.All(d => !d.Settings.IsOn);
+
+    /// <summary>
+    /// Выключает всю подсветку или включает её обратно. Если каждое устройство выключено по отдельности,
+    /// включение включает их все.
     /// </summary>
     [RelayCommand]
     private void ToggleLighting()
     {
-        Settings.LightingEnabled = !Settings.LightingEnabled;
+        if (!IsLightingOff)
+        {
+            Settings.LightingEnabled = false;
+            return;
+        }
+
+        if (AreAllDevicesOff)
+        {
+            foreach (var device in _deviceManager.Devices)
+                _deviceManager.SetDeviceOn(device, true);
+
+            Settings.ScheduleSave();
+        }
+
+        Settings.LightingEnabled = true;
     }
 
     /// <summary>
@@ -358,12 +383,18 @@ public sealed partial class MainViewModel : ObservableObject
         // Выключенная подсветка — тоже часть снимка для потока кадров
         if (e.PropertyName == nameof(SettingsViewModel.LightingEnabled))
             UpdateFrames();
+
+        if (e.PropertyName == nameof(SettingsViewModel.LightingEnabled))
+            OnPropertyChanged(nameof(IsLightingOff));
     }
 
     private void OnDevicesChanged(object? sender, EventArgs e)
     {
         UpdateFrames();
         RefreshDeviceNav();
+
+        // Устройства включили или выключили по отдельности — меню трея предлагает включить всё
+        OnPropertyChanged(nameof(IsLightingOff));
     }
 
     /// <summary>

@@ -34,7 +34,7 @@
                         <Setter Property="Content" Value="Выключить всю подсветку"/>
                         <Setter Property="controls:Appearance.Icon" Value="&#xE7E8;"/>
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding Settings.LightingEnabled}" Value="False">
+                            <DataTrigger Binding="{Binding IsLightingOff}" Value="True">
                                 <Setter Property="Content" Value="Включить подсветку"/>
                                 <Setter Property="controls:Appearance.Icon" Value="&#xE706;"/>
                             </DataTrigger>

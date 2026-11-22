@@ -153,6 +153,57 @@ public sealed class DevicePowerTests
     }
 
     [Fact]
+    public void AllDevicesSwitchedOffCountsAsLightingOff()
+    {
+        WithViewModel(vm =>
+        {
+            vm.SetDeviceOn("a", false);
+
+            Assert.False(vm.IsLightingOff);
+
+            vm.SetDeviceOn("b", false);
+
+            Assert.True(vm.IsLightingOff);
+            Assert.True(vm.Settings.LightingEnabled);
+        });
+    }
+
+    [Fact]
+    public void TurningLightingOnSwitchesOnDevicesWhenAllWereOff()
+    {
+        WithViewModel(vm =>
+        {
+            vm.SetDeviceOn("a", false);
+            vm.SetDeviceOn("b", false);
+
+            vm.ToggleLightingCommand.Execute(null);
+
+            Assert.False(vm.IsLightingOff);
+            Assert.All(vm.Devices.Items, i => Assert.True(i.IsOn));
+            Assert.All(vm.Devices.Items, i => Assert.True(i.Device.Output!.IsEnabled));
+        });
+    }
+
+    [Fact]
+    public void TurningLightingOnKeepsSingleSwitchedOffDeviceOff()
+    {
+        WithViewModel(vm =>
+        {
+            vm.SetDeviceOn("a", false);
+
+            vm.ToggleLightingCommand.Execute(null);
+
+            Assert.True(vm.IsLightingOff);
+
+            vm.ToggleLightingCommand.Execute(null);
+
+            Assert.False(vm.IsLightingOff);
+            Assert.False(vm.Devices.Items.Single(i => i.Device.Id == "a").IsOn);
+            Assert.True(vm.Devices.Items.Single(i => i.Device.Id == "b").IsOn);
+        });
+    }
+
+    [Fact]
     public void SwitchingUnknownDeviceDoesNothing()
     {
         WithViewModel(vm =>
