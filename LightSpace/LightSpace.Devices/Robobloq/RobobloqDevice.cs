@@ -264,12 +264,17 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
             data.AddRange(payload);
             data.Add((byte)data.Sum(b => (int)b));
 
+            // Значимая часть команды для журнала — до дополнения нулями
+            var meaningful = data.Count;
+
             while (data.Count % 64 != 0)
                 data.Add(0x00);
 
             await Task.Run(() =>
             {
                 WaitReportGap();
+
+                var started = Stopwatch.GetTimestamp();
 
                 for (var offset = 0; offset < data.Count; offset += 64)
                 {
@@ -282,6 +287,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
                 }
 
                 _lastWriteAt = Stopwatch.GetTimestamp();
+
+                DeviceLog.Write($"Robobloq «{Name}» → {DeviceLog.Hex(data.GetRange(0, meaningful))} ({data.Count / 64} отч.), "
+                    + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
             }, ct);
         }
         finally
@@ -354,8 +362,16 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
             await Task.Run(() =>
             {
                 WaitReportGap();
-                _stream.Write(BuildReport(command));
+
+                var report = BuildReport(command);
+                var started = Stopwatch.GetTimestamp();
+
+                _stream.Write(report);
                 _lastWriteAt = Stopwatch.GetTimestamp();
+
+                // Значимая часть отчёта: заголовок, команда и контрольная сумма, без дополнения нулями
+                DeviceLog.Write($"Robobloq «{Name}» → {DeviceLog.Hex(report[1..(command.Length + 6)])}, "
+                    + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
             }, ct);
         }
         finally
