@@ -41,6 +41,12 @@ public abstract class LedDevice : IDisposable
     public virtual bool NeedsPowerOnAtStart => false;
 
     /// <summary>
+    /// Кадр, который не меняется, можно не отправлять каждый раз, а повторять изредка. false — устройство показывает
+    /// кадр с задержкой в несколько команд, и каждый кадр должен уходить, иначе новый цвет доходит до него через секунды.
+    /// </summary>
+    public virtual bool CanSkipSameFrames => true;
+
+    /// <summary>
     /// Что устройство умеет: адресное ли оно, сколько у него светодиодов, как часто принимает кадры, есть ли раскладка клавиш.
     /// </summary>
     public DeviceCapabilities Capabilities => new(

@@ -368,7 +368,7 @@ public sealed class DeviceOutput : IDisposable
         var now = _clock.Elapsed;
 
         // Неподвижный эффект не гоняет по проводу и радио одно и то же 20 раз в секунду
-        if (!isRepeat && !_isSmoothing && _lastSent is { } sent && _lastFrameAt is { } sentAt
+        if (_device.CanSkipSameFrames && !isRepeat && !_isSmoothing && _lastSent is { } sent && _lastFrameAt is { } sentAt
             && now - sentAt < SameFrameResendInterval && IsSameFrame(frame, sent))
             return true;
 

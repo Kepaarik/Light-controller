@@ -85,6 +85,10 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
     public override bool IsReady => _ledCount > 0;
 
+    // Лента 24" (прошивка 1.7.3) показывает кадр только через несколько команд: при повторе раз в 2 секунды
+    // новый цвет доходил до неё секунд через 15
+    public override bool CanSkipSameFrames => false;
+
     public int LedCount => _ledCount;
 
     public IReadOnlyList<BuiltinEffect> BuiltinEffects => DynamicEffects;
