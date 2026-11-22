@@ -138,12 +138,12 @@ public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGr
             groups.Add(SceneGroup(scene, ready, config));
 
             // Устройство сцены со своим эффектом играет его само, со своими часами, яркость — как в сцене
-            foreach (var placement in scene.Devices.Where(d => d.Effect != null))
+            foreach (var placement in scene.Devices.Where(d => scene.PlayedOwnEffect(d) != null))
             {
                 var targets = ready.TryGetValue(placement.DeviceId, out var target) ? new[] { target } : Array.Empty<FrameDevice>();
                 var brightness = (int)Math.Round(scene.Brightness * placement.Brightness / 100.0);
 
-                groups.Add(new FrameGroup(placement.DeviceId, FrameContent.From(placement.Effect!), Dimmed(brightness, config), targets));
+                groups.Add(new FrameGroup(placement.DeviceId, FrameContent.From(scene.PlayedOwnEffect(placement)!), Dimmed(brightness, config), targets));
             }
         }
 
@@ -158,7 +158,7 @@ public sealed record FrameSnapshot(bool IsLightingEnabled, IReadOnlyList<FrameGr
         var devices = new List<FrameDevice>();
 
         // Устройство со своим эффектом играет его в своей группе, а не эффект сцены
-        foreach (var placement in scene.Devices.Where(d => d.Effect == null))
+        foreach (var placement in scene.Devices.Where(d => scene.PlayedOwnEffect(d) == null))
         {
             if (!ready.TryGetValue(placement.DeviceId, out var device))
                 continue;

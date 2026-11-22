@@ -67,6 +67,11 @@ public sealed class SceneConfig
     public int Brightness { get; set; } = 100;
 
     /// <summary>
+    /// Эффект сцены играет на всех её устройствах: свои эффекты устройств сохранены, но не играют.
+    /// </summary>
+    public bool IsWholeScene { get; set; }
+
+    /// <summary>
     /// Эффект сцены и его настройки; другие типы содержимого сцена не играет.
     /// </summary>
     public ContentConfig Effect { get; set; } = new();
@@ -75,6 +80,14 @@ public sealed class SceneConfig
     /// Устройства сцены и их места на холсте.
     /// </summary>
     public List<SceneDeviceConfig> Devices { get; set; } = new();
+
+    /// <summary>
+    /// Свой эффект, который устройство сцены играет; null — оно играет эффект сцены.
+    /// </summary>
+    public ContentConfig? PlayedOwnEffect(SceneDeviceConfig device)
+    {
+        return IsWholeScene ? null : device.Effect;
+    }
 
     /// <summary>
     /// Независимая копия: правки копии не меняют оригинал.
@@ -86,6 +99,7 @@ public sealed class SceneConfig
             Spread = Spread,
             Direction = Direction,
             Brightness = Brightness,
+            IsWholeScene = IsWholeScene,
             Effect = Effect.Clone(),
             Devices = Devices.Select(d => d.Clone()).ToList()
         };

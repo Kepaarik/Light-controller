@@ -40,18 +40,9 @@
                                       Value="{Binding SelectedDevice.SizePercent}"/>
             </DockPanel>
 
-            <!-- Как эффект идёт по сцене и насколько ярко -->
-            <Grid Margin="{StaticResource GapTop16}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <CheckBox Content="Синхронно" IsChecked="{Binding IsSynced}" VerticalAlignment="Bottom" Margin="{StaticResource GapRight12}"
-                          ToolTip="Выключено — эффект идёт по холсту с устройства на устройство. Включено — каждое устройство играет эффект целиком, все в такт."/>
-                <controls:ValueSlider Grid.Column="1" Label="Яркость сцены" Unit="%" Minimum="0" Maximum="100" Step="1"
-                                      Value="{Binding Brightness}" Margin="{StaticResource GapLeft12}"/>
-            </Grid>
+            <!-- Куда идёт эффект по сцене и насколько ярко; растянуть или каждому отдельно — в панели эффекта сцены -->
+            <controls:ValueSlider Label="Яркость сцены" Unit="%" Minimum="0" Maximum="100" Step="1"
+                                  Value="{Binding Brightness}" Margin="{StaticResource GapTop16}"/>
 
             <ListBox Style="{StaticResource Segments}" ItemsSource="{Binding Directions}" SelectedItem="{Binding SelectedDirection}"
                      Margin="{StaticResource GapTop16}"/>

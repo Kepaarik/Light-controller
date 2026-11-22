@@ -123,6 +123,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
             scene.Spread = spread;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsSpaceSpread));
+            OnPropertyChanged(nameof(SelectedSpread));
             OnSceneChanged();
         }
     }
@@ -131,6 +132,49 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     /// Эффект идёт по холсту: места устройств на холсте важны.
     /// </summary>
     public bool IsSpaceSpread => _profile.Scene?.Spread == SceneSpread.Space;
+
+    /// <summary>
+    /// Как эффект сцены ложится на устройства: растягивается на всю сцену или играет на каждом отдельно.
+    /// </summary>
+    public IReadOnlyList<SceneChoice<SceneSpread>> Spreads { get; } = new[]
+    {
+        new SceneChoice<SceneSpread>(SceneSpread.Space, "Растянуть на всю сцену"),
+        new SceneChoice<SceneSpread>(SceneSpread.Synced, "Каждому отдельно")
+    };
+
+    /// <summary>
+    /// Как эффект сцены ложится на устройства; null — сцены нет.
+    /// </summary>
+    public SceneChoice<SceneSpread>? SelectedSpread
+    {
+        get => _profile.Scene is { } scene ? Spreads.First(s => s.Value == scene.Spread) : null;
+        set
+        {
+            // Сегменты сбрасывают выбор в null, когда пересобираются
+            if (value == null)
+                return;
+
+            IsSynced = value.Value == SceneSpread.Synced;
+        }
+    }
+
+    /// <summary>
+    /// Эффект сцены играет на всех устройствах сцены; false — устройства со своим эффектом играют его.
+    /// Свои эффекты не забываются: выключили переключатель — у устройств те же эффекты, что были.
+    /// </summary>
+    public bool IsWholeScene
+    {
+        get => _profile.Scene?.IsWholeScene == true;
+        set
+        {
+            if (_profile.Scene is not { } scene || scene.IsWholeScene == value)
+                return;
+
+            scene.IsWholeScene = value;
+            OnPropertyChanged();
+            OnSceneChanged();
+        }
+    }
 
     /// <summary>
     /// Куда идёт эффект; null — сцены нет.
@@ -246,22 +290,6 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     }
 
     /// <summary>
-    /// У каких-то устройств сцены свой эффект: они не играют эффект сцены.
-    /// </summary>
-    public bool HasOwnEffects => Devices.Any(d => d.HasOwnEffect);
-
-    /// <summary>
-    /// Выключает свой эффект у всех устройств: вся сцена играет один эффект сцены. Свои эффекты не забываются —
-    /// включённый снова, у устройства тот же эффект, что был.
-    /// </summary>
-    [RelayCommand]
-    private void PlaySceneEffectEverywhere()
-    {
-        foreach (var device in Devices)
-            device.HasOwnEffect = false;
-    }
-
-    /// <summary>
     /// Поворачивает выбранное устройство на четверть оборота.
     /// </summary>
     [RelayCommand]
@@ -299,7 +327,6 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
     /// </summary>
     public void OnPlacementChanged()
     {
-        OnPropertyChanged(nameof(HasOwnEffects));
         Render();
         _changed();
     }
@@ -349,9 +376,10 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
         OnPropertyChanged(nameof(HasScene));
         OnPropertyChanged(nameof(HasDevices));
-        OnPropertyChanged(nameof(HasOwnEffects));
+        OnPropertyChanged(nameof(IsWholeScene));
         OnPropertyChanged(nameof(IsSynced));
         OnPropertyChanged(nameof(IsSpaceSpread));
+        OnPropertyChanged(nameof(SelectedSpread));
         OnPropertyChanged(nameof(SelectedDirection));
         OnPropertyChanged(nameof(Brightness));
         OnPropertyChanged(nameof(SummaryText));
@@ -441,7 +469,6 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
     private void OnSceneChanged()
     {
-        OnPropertyChanged(nameof(HasOwnEffects));
         Render();
         _changed();
     }
@@ -460,7 +487,7 @@ public sealed partial class ProfileSceneViewModel : ObservableObject
 
         foreach (var device in Devices)
         {
-            if (device.Placement.Effect is { } own)
+            if (scene.PlayedOwnEffect(device.Placement) is { } own)
             {
                 device.Colors = own.Kind == ContentKind.Builtin
                     ? Enumerable.Repeat(BuiltinPreviewColor, device.Colors.Length).ToArray()

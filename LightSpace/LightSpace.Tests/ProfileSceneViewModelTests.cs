@@ -281,18 +281,14 @@ public sealed class ProfileSceneViewModelTests
     [Fact]
     public void WholeSceneGetsSceneEffectBack()
     {
-        var (scene, profile, _) = SceneOf("a", "b");
+        var (scene, profile, edits) = SceneOf("a", "b");
         var picked = new List<string?>();
+        var gray = new LightSpace.Core.RgbColor(0x60, 0x64, 0x70);
 
         scene.BuildCommand.Execute(null);
         scene.DevicePicked += picked.Add;
-
-        Assert.False(scene.HasOwnEffects);
-
-        scene.Devices[0].HasOwnEffect = true;
-        scene.Devices[1].Content.Editor.SelectedTile = scene.Devices[1].Content.Editor.Tiles.Single(t => t.Definition.Id == "fire");
-
-        Assert.True(scene.HasOwnEffects);
+        profile.Scene!.Devices[0].Effect = new ContentConfig { Kind = ContentKind.Builtin };
+        scene.Reload();
 
         // «Эффект сцены» снимает выбор устройства
         scene.SelectedDevice = scene.Devices[0];
@@ -300,16 +296,43 @@ public sealed class ProfileSceneViewModelTests
 
         Assert.Null(scene.SelectedDevice);
         Assert.Equal(new string?[] { null }, picked);
+        Assert.False(scene.IsWholeScene);
+        Assert.Equal(gray, Assert.Single(scene.Devices[0].Colors));
 
-        // «Всем устройствам» — вся сцена играет эффект сцены, свои эффекты не забываются
-        scene.PlaySceneEffectEverywhereCommand.Execute(null);
+        // «На всю сцену» — устройство со своим эффектом играет эффект сцены, свой эффект не забывается
+        scene.IsWholeScene = true;
 
-        Assert.False(scene.HasOwnEffects);
-        Assert.All(profile.Scene!.Devices, d => Assert.Null(d.Effect));
+        Assert.True(profile.Scene.IsWholeScene);
+        Assert.NotEqual(gray, Assert.Single(scene.Devices[0].Colors));
+        Assert.Equal(ContentKind.Builtin, profile.Scene.Devices[0].Effect!.Kind);
+        Assert.Equal(2, edits.Count);
 
-        scene.Devices[1].HasOwnEffect = true;
+        scene.IsWholeScene = false;
 
-        Assert.Equal("fire", profile.Scene.Devices[1].Effect!.EffectId);
+        Assert.Equal(gray, Assert.Single(scene.Devices[0].Colors));
+        Assert.Equal(3, edits.Count);
+    }
+
+    [Fact]
+    public void SpreadIsChosenBetweenWholeSceneAndEachDevice()
+    {
+        var (scene, profile, edits) = SceneOf("a");
+
+        scene.BuildCommand.Execute(null);
+
+        Assert.Equal(SceneSpread.Space, scene.SelectedSpread!.Value);
+
+        scene.SelectedSpread = scene.Spreads.Single(s => s.Value == SceneSpread.Synced);
+
+        Assert.Equal(SceneSpread.Synced, profile.Scene!.Spread);
+        Assert.True(scene.IsSynced);
+        Assert.Equal(2, edits.Count);
+
+        // Сегменты сбрасывают выбор в null, когда пересобираются — это не правка
+        scene.SelectedSpread = null;
+
+        Assert.Equal(SceneSpread.Synced, profile.Scene.Spread);
+        Assert.Equal(2, edits.Count);
     }
 
     [Fact]

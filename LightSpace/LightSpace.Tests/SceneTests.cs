@@ -345,6 +345,37 @@ public sealed class SceneTests
     }
 
     [Fact]
+    public void WholeScenePlaysSceneEffectOnDeviceWithOwnEffect()
+    {
+        var config = ConfigWithDevices("a", "b");
+        var devices = config.Devices.Select(d => new ManagedDevice(d)).ToList();
+
+        foreach (var device in devices)
+            device.Connect(new FakeLed(device.Id), isLightingEnabled: true);
+
+        config.Scene = SceneOf("a", "b");
+        config.Scene.Devices[1].Effect = new ContentConfig { Kind = ContentKind.Effect, EffectId = "fire" };
+        config.Scene.IsWholeScene = true;
+
+        try
+        {
+            var snapshot = FrameSnapshot.Build(config, devices);
+
+            // b играет эффект сцены вместе с a, свой эффект у него остаётся в настройках
+            var scene = Assert.Single(snapshot.Groups);
+
+            Assert.Equal(new[] { "a", "b" }, scene.Devices.Select(d => d.Id));
+            Assert.Equal("fire", config.Scene.Clone().Devices[1].Effect!.EffectId);
+            Assert.True(config.Scene.Clone().IsWholeScene);
+        }
+        finally
+        {
+            foreach (var device in devices)
+                device.Disconnect();
+        }
+    }
+
+    [Fact]
     public void OwnEffectInSceneIsEffectOrBuiltinAndIsCopied()
     {
         var scene = SceneOf("a");
