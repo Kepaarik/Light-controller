@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using HidSharp;
 using LightSpace.Core;
 
@@ -31,6 +32,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
     private static readonly TimeSpan ReplyTimeout = TimeSpan.FromSeconds(1);
 
+    // Пауза между отчётами: команды, пришедшие вплотную друг к другу, контроллер ленты может потерять
+    private static readonly TimeSpan ReportGap = TimeSpan.FromMilliseconds(5);
+
     private static readonly IReadOnlyList<BuiltinEffect> DynamicEffects = new BuiltinEffect[]
     {
         new(0x00, "Радужная волна"),
@@ -52,6 +56,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     private string? _serial;
     private string? _firmware;
     private byte? _sentBrightness;
+
+    // Когда ушёл последний отчёт (отметка Stopwatch); меняется только под _lock
+    private long _lastWriteAt;
 
     // Встроенный эффект и скорость, которые сейчас играет лента; null — она показывает цвет, кадры или выключена
     private (int EffectId, int Speed)? _playingBuiltin;
@@ -113,6 +120,7 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         if (isOn)
         {
             await SetColorAsync(_lastColor, _lastBrightness, ct);
+            await PushAsync(ct);
             return;
         }
 
@@ -120,9 +128,13 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         await SendAsync(new[] { CommandTurnOff }, ct);
         await SendColorAsync(new RgbColor(0, 0, 0), ct);
 
+        // Чёрный кадр гасит ленту так же, как нулевая яркость: лента, которая показывала кадры, слушается именно их
+        await SendBlackFrameAsync(ct);
+
         // Некоторые ленты (прошивка 1.7.3) выполняют команду, только когда приходит следующая, а после выключения
         // следующей нет — повтор чёрного цвета проталкивает предыдущий; ленте, которая уже погасла, он ничего не меняет
         await SendColorAsync(new RgbColor(0, 0, 0), ct);
+        await PushAsync(ct);
     }
 
     public override async Task SetColorAsync(RgbColor color, int brightness, CancellationToken ct = default)
@@ -167,6 +179,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         }
 
         await SendBrightnessAsync(brightness, ct);
+
+        // За встроенным эффектом кадры не идут — отстающей ленте последнюю команду проталкиваем сами
+        await PushAsync(ct);
     }
 
     /// <summary>
@@ -213,6 +228,29 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     }
 
     /// <summary>
+    /// Повторяет яркость, которая уже на ленте. Лента, выполняющая команду только с приходом следующей, выполняет
+    /// предыдущую; ленте без задержки повтор ничего не меняет.
+    /// </summary>
+    private async Task PushAsync(CancellationToken ct)
+    {
+        if (_sentBrightness is not { } level)
+            return;
+
+        await SendAsync(new[] { CommandSetBrightness, level }, ct);
+    }
+
+    /// <summary>
+    /// Все светодиоды ленты гаснут командой кадра.
+    /// </summary>
+    private Task SendBlackFrameAsync(CancellationToken ct)
+    {
+        if (_ledCount == 0)
+            return Task.CompletedTask;
+
+        return SendMultiReportAsync(CommandSetSyncScreen, new byte[] { 0x01, 0x00, 0x00, 0x00, _ledCount }, ct);
+    }
+
+    /// <summary>
     /// Отправляет длинную команду несколькими отчётами: заголовок "SC", двухбайтовая длина,
     /// номер пакета, команда, данные, контрольная сумма, дополнение нулями до кратного 64.
     /// </summary>
@@ -231,6 +269,8 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
             await Task.Run(() =>
             {
+                WaitReportGap();
+
                 for (var offset = 0; offset < data.Count; offset += 64)
                 {
                     var report = new byte[ReportLength];
@@ -240,6 +280,8 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
                     // Пауза между отчётами, чтобы не перегружать контроллер ленты
                     Thread.Sleep(1);
                 }
+
+                _lastWriteAt = Stopwatch.GetTimestamp();
             }, ct);
         }
         finally
@@ -309,12 +351,28 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         await _lock.WaitAsync(ct);
         try
         {
-            await Task.Run(() => _stream.Write(BuildReport(command)), ct);
+            await Task.Run(() =>
+            {
+                WaitReportGap();
+                _stream.Write(BuildReport(command));
+                _lastWriteAt = Stopwatch.GetTimestamp();
+            }, ct);
         }
         finally
         {
             _lock.Release();
         }
+    }
+
+    /// <summary>
+    /// Ждёт, пока с прошлого отчёта пройдёт пауза <see cref="ReportGap"/>; вызывается под _lock.
+    /// </summary>
+    private void WaitReportGap()
+    {
+        var wait = ReportGap - Stopwatch.GetElapsedTime(_lastWriteAt);
+
+        if (wait > TimeSpan.Zero)
+            Thread.Sleep(wait);
     }
 
     /// <summary>
