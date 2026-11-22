@@ -32,8 +32,13 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
     private static readonly TimeSpan ReplyTimeout = TimeSpan.FromSeconds(1);
 
-    // Пауза между отчётами: команды, пришедшие вплотную друг к другу, контроллер ленты может потерять
-    private static readonly TimeSpan ReportGap = TimeSpan.FromMilliseconds(5);
+    // Пауза между отчётами: команды, пришедшие вплотную друг к другу, контроллер ленты может потерять.
+    // Столько же, сколько между отчётами одного кадра: за кадром уходят ещё и повторы для проталкивания
+    private static readonly TimeSpan ReportGap = TimeSpan.FromMilliseconds(1);
+
+    // Лента 24" (прошивка 1.7.3) выполняет команду, только когда за ней придут ещё около семи: новый цвет при
+    // повторе раз в 2 секунды доходил через ~15 секунд. Столько повторов с запасом проталкивают последнюю команду сразу
+    private const int PushCount = 8;
 
     private static readonly IReadOnlyList<BuiltinEffect> DynamicEffects = new BuiltinEffect[]
     {
@@ -164,6 +169,9 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
         await SendMultiReportAsync(CommandSetSyncScreen, payload, ct);
         await SendBrightnessAsync(brightness, ct);
+
+        // Отстающая лента показывает кадр сразу, а не когда за ним придут следующие
+        await PushAsync(ct);
     }
 
     /// <summary>
@@ -232,15 +240,37 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     }
 
     /// <summary>
-    /// Повторяет яркость, которая уже на ленте. Лента, выполняющая команду только с приходом следующей, выполняет
-    /// предыдущую; ленте без задержки повтор ничего не меняет.
+    /// Повторяет яркость, которая уже на ленте, <see cref="PushCount"/> раз. Лента, выполняющая команду только с
+    /// приходом следующих, выполняет всё, что отправлено до повторов; ленте без задержки повторы ничего не меняют.
     /// </summary>
     private async Task PushAsync(CancellationToken ct)
     {
         if (_sentBrightness is not { } level)
             return;
 
-        await SendAsync(new[] { CommandSetBrightness, level }, ct);
+        await _lock.WaitAsync(ct);
+        try
+        {
+            await Task.Run(() =>
+            {
+                var started = Stopwatch.GetTimestamp();
+
+                for (var i = 0; i < PushCount; i++)
+                {
+                    WaitReportGap();
+                    _stream.Write(BuildReport(new[] { CommandSetBrightness, level }));
+                    _lastWriteAt = Stopwatch.GetTimestamp();
+                }
+
+                // Повторы уходят за каждым кадром — в журнал одна строка на все
+                DeviceLog.Write($"Robobloq «{Name}» → повтор яркости {level} ×{PushCount}, "
+                    + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
+            }, ct);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     /// <summary>
