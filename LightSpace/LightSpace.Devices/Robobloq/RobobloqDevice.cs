@@ -90,10 +90,6 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
 
     public override bool IsReady => _ledCount > 0;
 
-    // Лента 24" (прошивка 1.7.3) показывает кадр только через несколько команд: при повторе раз в 2 секунды
-    // новый цвет доходил до неё секунд через 15
-    public override bool CanSkipSameFrames => false;
-
     public int LedCount => _ledCount;
 
     public IReadOnlyList<BuiltinEffect> BuiltinEffects => DynamicEffects;
@@ -167,11 +163,15 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
             .SelectMany(r => new[] { (byte)r.Start, r.Color.R, r.Color.G, r.Color.B, (byte)r.End })
             .ToArray();
 
-        await SendMultiReportAsync(CommandSetSyncScreen, payload, ct);
-        await SendBrightnessAsync(brightness, ct);
+        // Кадр уходит одной пачкой: ни одна другая команда не встаёт между ним и его повторами
+        await WriteLockedAsync(() =>
+        {
+            WriteMultiReport(CommandSetSyncScreen, payload);
+            WriteBrightness(brightness);
 
-        // Отстающая лента показывает кадр сразу, а не когда за ним придут следующие
-        await PushAsync(ct);
+            // Отстающая лента показывает кадр сразу, а не когда за ним придут следующие
+            WritePush();
+        }, ct);
     }
 
     /// <summary>
@@ -226,7 +226,15 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         return SendAsync(command, ct);
     }
 
-    private async Task SendBrightnessAsync(int brightness, CancellationToken ct)
+    private Task SendBrightnessAsync(int brightness, CancellationToken ct)
+    {
+        return WriteLockedAsync(() => WriteBrightness(brightness), ct);
+    }
+
+    /// <summary>
+    /// Отправляет яркость, если на ленте другая; вызывается под _lock.
+    /// </summary>
+    private void WriteBrightness(int brightness)
     {
         // Яркость ленты 1–255; ноль лента воспринимает как максимум
         var level = (byte)Math.Max(1, Math.Round(Math.Clamp(brightness, 0, 100) * 255 / 100.0));
@@ -235,7 +243,7 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         if (level == _sentBrightness)
             return;
 
-        await SendAsync(new[] { CommandSetBrightness, level }, ct);
+        WriteCommand(new[] { CommandSetBrightness, level });
         _sentBrightness = level;
     }
 
@@ -243,34 +251,32 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     /// Повторяет яркость, которая уже на ленте, <see cref="PushCount"/> раз. Лента, выполняющая команду только с
     /// приходом следующих, выполняет всё, что отправлено до повторов; ленте без задержки повторы ничего не меняют.
     /// </summary>
-    private async Task PushAsync(CancellationToken ct)
+    private Task PushAsync(CancellationToken ct)
+    {
+        return WriteLockedAsync(WritePush, ct);
+    }
+
+    /// <summary>
+    /// Повторы яркости для проталкивания; вызывается под _lock.
+    /// </summary>
+    private void WritePush()
     {
         if (_sentBrightness is not { } level)
             return;
 
-        await _lock.WaitAsync(ct);
-        try
-        {
-            await Task.Run(() =>
-            {
-                var started = Stopwatch.GetTimestamp();
+        var started = Stopwatch.GetTimestamp();
 
-                for (var i = 0; i < PushCount; i++)
-                {
-                    WaitReportGap();
-                    _stream.Write(BuildReport(new[] { CommandSetBrightness, level }));
-                    _lastWriteAt = Stopwatch.GetTimestamp();
-                }
-
-                // Повторы уходят за каждым кадром — в журнал одна строка на все
-                DeviceLog.Write($"Robobloq «{Name}» → повтор яркости {level} ×{PushCount}, "
-                    + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
-            }, ct);
-        }
-        finally
+        for (var i = 0; i < PushCount; i++)
         {
-            _lock.Release();
+            WaitReportGap();
+            _stream.Write(BuildReport(new[] { CommandSetBrightness, level }));
+            _lastWriteAt = Stopwatch.GetTimestamp();
         }
+
+        // Повторы уходят за каждым кадром — в журнал одна строка на все
+        if (DeviceLog.IsEnabled)
+            DeviceLog.Write($"Robobloq «{Name}» → повтор яркости {level} ×{PushCount}, "
+                + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
     }
 
     /// <summary>
@@ -281,55 +287,47 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         if (_ledCount == 0)
             return Task.CompletedTask;
 
-        return SendMultiReportAsync(CommandSetSyncScreen, new byte[] { 0x01, 0x00, 0x00, 0x00, _ledCount }, ct);
+        var payload = new byte[] { 0x01, 0x00, 0x00, 0x00, _ledCount };
+
+        return WriteLockedAsync(() => WriteMultiReport(CommandSetSyncScreen, payload), ct);
     }
 
     /// <summary>
     /// Отправляет длинную команду несколькими отчётами: заголовок "SC", двухбайтовая длина,
-    /// номер пакета, команда, данные, контрольная сумма, дополнение нулями до кратного 64.
+    /// номер пакета, команда, данные, контрольная сумма, дополнение нулями до кратного 64. Вызывается под _lock.
     /// </summary>
-    private async Task SendMultiReportAsync(byte command, byte[] payload, CancellationToken ct)
+    private void WriteMultiReport(byte command, byte[] payload)
     {
-        await _lock.WaitAsync(ct);
-        try
+        var length = payload.Length + 7;
+        var data = new List<byte> { 0x53, 0x43, (byte)(length >> 8), (byte)length, _packetIndex++, command };
+        data.AddRange(payload);
+        data.Add((byte)data.Sum(b => (int)b));
+
+        // Значимая часть команды для журнала — до дополнения нулями
+        var meaningful = data.Count;
+
+        while (data.Count % 64 != 0)
+            data.Add(0x00);
+
+        WaitReportGap();
+
+        var started = Stopwatch.GetTimestamp();
+
+        for (var offset = 0; offset < data.Count; offset += 64)
         {
-            var length = payload.Length + 7;
-            var data = new List<byte> { 0x53, 0x43, (byte)(length >> 8), (byte)length, _packetIndex++, command };
-            data.AddRange(payload);
-            data.Add((byte)data.Sum(b => (int)b));
+            var report = new byte[ReportLength];
+            data.CopyTo(offset, report, 1, 64);
+            _stream.Write(report);
 
-            // Значимая часть команды для журнала — до дополнения нулями
-            var meaningful = data.Count;
-
-            while (data.Count % 64 != 0)
-                data.Add(0x00);
-
-            await Task.Run(() =>
-            {
-                WaitReportGap();
-
-                var started = Stopwatch.GetTimestamp();
-
-                for (var offset = 0; offset < data.Count; offset += 64)
-                {
-                    var report = new byte[ReportLength];
-                    data.CopyTo(offset, report, 1, 64);
-                    _stream.Write(report);
-
-                    // Пауза между отчётами, чтобы не перегружать контроллер ленты
-                    Thread.Sleep(1);
-                }
-
-                _lastWriteAt = Stopwatch.GetTimestamp();
-
-                DeviceLog.Write($"Robobloq «{Name}» → {DeviceLog.Hex(data.GetRange(0, meaningful))} ({data.Count / 64} отч.), "
-                    + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
-            }, ct);
+            // Пауза между отчётами, чтобы не перегружать контроллер ленты
+            Thread.Sleep(1);
         }
-        finally
-        {
-            _lock.Release();
-        }
+
+        _lastWriteAt = Stopwatch.GetTimestamp();
+
+        if (DeviceLog.IsEnabled)
+            DeviceLog.Write($"Robobloq «{Name}» → {DeviceLog.Hex(data.GetRange(0, meaningful))} ({data.Count / 64} отч.), "
+                + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
     }
 
     /// <summary>
@@ -388,30 +386,44 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         return dr * dr + dg * dg + db * db;
     }
 
-    private async Task SendAsync(byte[] command, CancellationToken ct)
+    private Task SendAsync(byte[] command, CancellationToken ct)
+    {
+        return WriteLockedAsync(() => WriteCommand(command), ct);
+    }
+
+    /// <summary>
+    /// Выполняет запись в ленту вне вызывающего потока и под _lock: всё, что пишет write, уходит подряд.
+    /// </summary>
+    private async Task WriteLockedAsync(Action write, CancellationToken ct)
     {
         await _lock.WaitAsync(ct);
         try
         {
-            await Task.Run(() =>
-            {
-                WaitReportGap();
-
-                var report = BuildReport(command);
-                var started = Stopwatch.GetTimestamp();
-
-                _stream.Write(report);
-                _lastWriteAt = Stopwatch.GetTimestamp();
-
-                // Значимая часть отчёта: заголовок, команда и контрольная сумма, без дополнения нулями
-                DeviceLog.Write($"Robobloq «{Name}» → {DeviceLog.Hex(report[1..(command.Length + 6)])}, "
-                    + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
-            }, ct);
+            await Task.Run(write, ct);
         }
         finally
         {
             _lock.Release();
         }
+    }
+
+    /// <summary>
+    /// Отправляет короткую команду одним отчётом; вызывается под _lock.
+    /// </summary>
+    private void WriteCommand(byte[] command)
+    {
+        WaitReportGap();
+
+        var report = BuildReport(command);
+        var started = Stopwatch.GetTimestamp();
+
+        _stream.Write(report);
+        _lastWriteAt = Stopwatch.GetTimestamp();
+
+        // Значимая часть отчёта: заголовок, команда и контрольная сумма, без дополнения нулями
+        if (DeviceLog.IsEnabled)
+            DeviceLog.Write($"Robobloq «{Name}» → {DeviceLog.Hex(report[1..(command.Length + 6)])}, "
+                + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
     }
 
     /// <summary>

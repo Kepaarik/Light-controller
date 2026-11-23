@@ -239,7 +239,8 @@ public sealed class BleLedDevice : LedDevice, IBuiltinEffectsDevice
 
             var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(started);
 
-            DeviceLog.Write($"BLE «{Name}» → {DeviceLog.Hex(data)} ({option}): {status}, {elapsed.TotalMilliseconds:0} мс");
+            if (DeviceLog.IsEnabled)
+                DeviceLog.Write($"BLE «{Name}» → {DeviceLog.Hex(data)} ({option}): {status}, {elapsed.TotalMilliseconds:0} мс");
 
             if (status != GattCommunicationStatus.Success)
                 throw new IOException($"Ошибка записи по Bluetooth: {status}");
