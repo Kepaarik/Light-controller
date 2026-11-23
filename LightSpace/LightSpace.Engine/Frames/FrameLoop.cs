@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using LightSpace.Core;
@@ -28,6 +29,9 @@ public sealed class FrameLoop : IDisposable
 
     // Вес нового кадра в среднем времени расчёта: среднее примерно по последним 20 кадрам
     private const double AverageWeight = 0.05;
+
+    // Чёрные кадры по числу светодиодов: их никто не меняет, поэтому на все кадры хватает одного массива
+    private static readonly ConcurrentDictionary<int, RgbColor[]> DarkFrames = new();
 
     private readonly ManualResetEventSlim _stop = new();
     private readonly Thread _thread;
@@ -267,7 +271,7 @@ public sealed class FrameLoop : IDisposable
                 // Нулевая яркость гасит устройство целиком: и кадры, и встроенный эффект, который свою яркость может не уметь
                 if (brightness == 0)
                 {
-                    var dark = new RgbColor[Math.Max(device.Geometry.Points.Count, 1)];
+                    var dark = DarkFrame(device);
 
                     try
                     {
@@ -522,8 +526,16 @@ public sealed class FrameLoop : IDisposable
         /// </summary>
         private static RgbColor[] Dark(FrameDevice device)
         {
-            return new RgbColor[Math.Max(device.Geometry.Points.Count, 1)];
+            return DarkFrame(device);
         }
+    }
+
+    /// <summary>
+    /// Чёрный цвет на каждый светодиод устройства, у устройства одного цвета — один. Массив общий, менять его нельзя.
+    /// </summary>
+    private static RgbColor[] DarkFrame(FrameDevice device)
+    {
+        return DarkFrames.GetOrAdd(Math.Max(device.Geometry.Points.Count, 1), count => new RgbColor[count]);
     }
 
     [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]

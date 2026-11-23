@@ -392,6 +392,10 @@ public sealed class DeviceOutput : IDisposable
         if (a.Leds == null || b.Leds == null)
             return a.Leds == null && b.Leds == null;
 
+        // Кадры эффектов — массивы: их сравнение идёт без перебора через интерфейс
+        if (a.Leds is RgbColor[] left && b.Leds is RgbColor[] right)
+            return left.AsSpan().SequenceEqual(right);
+
         return a.Leds.SequenceEqual(b.Leds);
     }
 

@@ -158,10 +158,21 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         // Кадр останавливает встроенный эффект
         _playingBuiltin = null;
 
+        var ranges = MergeRanges(colors, MaxColorRanges);
+        var payload = new byte[ranges.Count * 5];
+
         // Каждый диапазон — пять байт: первый светодиод (с 1), R, G, B, последний светодиод
-        var payload = MergeRanges(colors, MaxColorRanges)
-            .SelectMany(r => new[] { (byte)r.Start, r.Color.R, r.Color.G, r.Color.B, (byte)r.End })
-            .ToArray();
+        for (var i = 0; i < ranges.Count; i++)
+        {
+            var (start, end, color) = ranges[i];
+            var at = i * 5;
+
+            payload[at] = (byte)start;
+            payload[at + 1] = color.R;
+            payload[at + 2] = color.G;
+            payload[at + 3] = color.B;
+            payload[at + 4] = (byte)end;
+        }
 
         // Кадр уходит одной пачкой: ни одна другая команда не встаёт между ним и его повторами
         await WriteLockedAsync(() =>
@@ -264,12 +275,13 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         if (_sentBrightness is not { } level)
             return;
 
+        var command = new[] { CommandSetBrightness, level };
         var started = Stopwatch.GetTimestamp();
 
         for (var i = 0; i < PushCount; i++)
         {
             WaitReportGap();
-            _stream.Write(BuildReport(new[] { CommandSetBrightness, level }));
+            _stream.Write(BuildReport(command));
             _lastWriteAt = Stopwatch.GetTimestamp();
         }
 
@@ -299,24 +311,36 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
     private void WriteMultiReport(byte command, byte[] payload)
     {
         var length = payload.Length + 7;
-        var data = new List<byte> { 0x53, 0x43, (byte)(length >> 8), (byte)length, _packetIndex++, command };
-        data.AddRange(payload);
-        data.Add((byte)data.Sum(b => (int)b));
 
         // Значимая часть команды для журнала — до дополнения нулями
-        var meaningful = data.Count;
+        var meaningful = length;
 
-        while (data.Count % 64 != 0)
-            data.Add(0x00);
+        // Массив сразу кратен 64: хвост остаётся нулями
+        var data = new byte[(length + 63) / 64 * 64];
+
+        data[0] = 0x53;
+        data[1] = 0x43;
+        data[2] = (byte)(length >> 8);
+        data[3] = (byte)length;
+        data[4] = _packetIndex++;
+        data[5] = command;
+        payload.CopyTo(data, 6);
+
+        var checksum = 0;
+
+        for (var i = 0; i < length - 1; i++)
+            checksum += data[i];
+
+        data[length - 1] = (byte)checksum;
 
         WaitReportGap();
 
         var started = Stopwatch.GetTimestamp();
 
-        for (var offset = 0; offset < data.Count; offset += 64)
+        for (var offset = 0; offset < data.Length; offset += 64)
         {
             var report = new byte[ReportLength];
-            data.CopyTo(offset, report, 1, 64);
+            Array.Copy(data, offset, report, 1, 64);
             _stream.Write(report);
 
             // Пауза между отчётами, чтобы не перегружать контроллер ленты
@@ -326,7 +350,7 @@ public sealed class RobobloqDevice : LedDevice, IAddressableLedDevice, IBuiltinE
         _lastWriteAt = Stopwatch.GetTimestamp();
 
         if (DeviceLog.IsEnabled)
-            DeviceLog.Write($"Robobloq «{Name}» → {DeviceLog.Hex(data.GetRange(0, meaningful))} ({data.Count / 64} отч.), "
+            DeviceLog.Write($"Robobloq «{Name}» → {DeviceLog.Hex(data[..meaningful])} ({data.Length / 64} отч.), "
                 + $"{Stopwatch.GetElapsedTime(started).TotalMilliseconds:0} мс");
     }
 
